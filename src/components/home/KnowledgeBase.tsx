@@ -34,7 +34,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[] }> = ({ documents }) =
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 15 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Knowledge base</div>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Knowledge base</h2>
         <div style={{ position: 'relative', width: '100%', maxWidth: 250, minWidth: 160 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ position: 'absolute', left: 12, top: 10 }}>
             <circle cx="11" cy="11" r="7" stroke="#5A6478" strokeWidth="2" />

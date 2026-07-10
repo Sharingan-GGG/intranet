@@ -12,9 +12,9 @@ export const QuickLinks: React.FC<{ links: QuickLink[] }> = ({ links }) => (
       boxShadow: '0 1px 2px rgba(17,46,129,0.04)',
     }}
   >
-    <div style={{ fontSize: 16, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em', marginBottom: 15 }}>
+    <h2 style={{ margin: '0 0 15px', fontSize: 16, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>
       Quickest links
-    </div>
+    </h2>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 11 }}>
       {links.map((q) => (
         <a

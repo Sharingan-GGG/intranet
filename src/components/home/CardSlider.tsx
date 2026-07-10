@@ -46,7 +46,7 @@ export const CardSlider: React.FC<Props> = ({ id, title, step = 680, children })
   return (
     <div id={id} style={{ scrollMarginTop: 82 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{title}</div>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{title}</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <RoundBtn dir="prev" onClick={() => scroll(-step)} />
           <RoundBtn dir="next" onClick={() => scroll(step)} />

@@ -38,7 +38,7 @@ export const Feedback: React.FC = () => {
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 20, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Feedback</div>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Feedback</h2>
         <div style={{ fontSize: 13.5, color: '#5A6478', marginTop: 5 }}>
           Spotted something broken, or have an idea for the intranet? Tell us.
         </div>

@@ -32,7 +32,7 @@ export const Events: React.FC<{ groups: EventGroup[] }> = ({ groups: allGroups }
     }}
   >
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Upcoming events</div>
+      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Upcoming events</h2>
       <a href="/calendar" style={{ fontSize: 13, fontWeight: 700, color: '#4382DF' }}>
         View all
       </a>

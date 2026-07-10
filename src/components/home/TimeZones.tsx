@@ -47,7 +47,7 @@ export const TimeZones: React.FC<{ offices: OfficeZone[] }> = ({ offices }) => {
       }}
     >
       <div style={{ flex: 'none', width: 150 }}>
-        <div style={{ color: '#fff', fontSize: 16, fontWeight: 800, lineHeight: 1.25 }}>Time in our offices</div>
+        <h2 style={{ margin: 0, color: '#fff', fontSize: 16, fontWeight: 800, lineHeight: 1.25 }}>Time in our offices</h2>
         <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12.5, marginTop: 4 }}>Live · updates every second</div>
       </div>
       <div
