@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import React, { useMemo, useState } from 'react'
 
 import { SEARCH_POOL, SEARCH_TINT } from '@/lib/home'
@@ -8,11 +9,14 @@ import { AccountMenu, type AccountUser } from '@/components/intranet/AccountMenu
 
 const NAV = [
   { label: 'Home', href: '/' },
-  { label: 'News', href: '/#news' },
-  { label: 'Calendar', href: '/#calendar' },
+  { label: 'News', href: '/posts' },
+  { label: 'Calendar', href: '/calendar' },
   { label: 'Knowledge Base', href: '/#knowledge-base' },
   { label: 'Support', href: '/#support' },
 ]
+
+const isActive = (pathname: string, href: string) =>
+  href === '/' ? pathname === '/' : !href.includes('#') && pathname.startsWith(href)
 
 interface HeaderClientProps {
   /** Signed-in user, or null when not authenticated. */
@@ -20,6 +24,7 @@ interface HeaderClientProps {
 }
 
 export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
+  const pathname = usePathname()
   const [q, setQ] = useState('')
   const [focused, setFocused] = useState(false)
 
@@ -54,8 +59,8 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
       </Link>
 
       <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none' }}>
-        {NAV.map((item, i) => {
-          const active = i === 0
+        {NAV.map((item) => {
+          const active = isActive(pathname, item.href)
           return (
             <Link
               key={item.label}
