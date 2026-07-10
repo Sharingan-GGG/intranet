@@ -139,6 +139,15 @@
   }
 }
 
+/* Header wraps into rows on narrow viewports instead of overflowing */
+@media (max-width: 900px) {
+  .il-header {
+    flex-wrap: wrap;
+    gap: 8px 16px !important;
+    padding: 10px 16px !important;
+  }
+}
+
 /* Horizontal scroll tracks */
 .il-track {
   scrollbar-width: none;

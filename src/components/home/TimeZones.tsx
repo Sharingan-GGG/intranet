@@ -42,6 +42,7 @@ export const TimeZones: React.FC<{ offices: OfficeZone[] }> = ({ offices }) => {
         padding: '22px 30px',
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 26,
       }}
     >
@@ -53,7 +54,7 @@ export const TimeZones: React.FC<{ offices: OfficeZone[] }> = ({ offices }) => {
         style={{
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: `repeat(${Math.min(offices.length, 4) || 4},1fr)`,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(205px, 1fr))',
           gap: 14,
         }}
       >

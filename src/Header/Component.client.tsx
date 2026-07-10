@@ -37,14 +37,14 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
 
   return (
     <header
-      className="il-root"
+      className="il-root il-header"
       style={{
         background: '#112E81',
         display: 'flex',
         alignItems: 'center',
         gap: 28,
         padding: '0 32px',
-        height: 66,
+        minHeight: 66,
         position: 'sticky',
         top: 0,
         zIndex: 40,
@@ -58,7 +58,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
         </div>
       </Link>
 
-      <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none' }}>
+      <nav style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, flex: 'none' }}>
         {NAV.map((item) => {
           const active = isActive(pathname, item.href)
           return (
@@ -82,7 +82,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
       </nav>
 
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
-        <div style={{ position: 'relative', width: 340 }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 340, minWidth: 150 }}>
           <svg
             width="15"
             height="15"
