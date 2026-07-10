@@ -38,7 +38,18 @@ export const Card: React.FC<{
       ref={card.ref}
     >
       <div className="relative w-full ">
-        {!metaImage && <div className="">No image</div>}
+        {!metaImage && (
+          <div
+            aria-hidden
+            className="flex aspect-[16/9] w-full items-center justify-center"
+            style={{ background: 'linear-gradient(120deg,#112E81,#4647AE 70%,#4382DF)' }}
+          >
+            <svg width="56" height="34" viewBox="0 0 56 34" fill="none" style={{ opacity: 0.35 }}>
+              <circle cx="17" cy="17" r="13" stroke="#fff" strokeWidth="5" />
+              <circle cx="39" cy="17" r="13" stroke="#fff" strokeWidth="5" />
+            </svg>
+          </div>
+        )}
         {metaImage && typeof metaImage !== 'string' && <Media resource={metaImage} size="33vw" />}
       </div>
       <div className="p-4">
