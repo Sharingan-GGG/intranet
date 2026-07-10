@@ -58,7 +58,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
         </div>
       </Link>
 
-      <nav style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, flex: 'none' }}>
+      <nav style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, flex: '0 1 auto', maxWidth: '100%' }}>
         {NAV.map((item) => {
           const active = isActive(pathname, item.href)
           return (
