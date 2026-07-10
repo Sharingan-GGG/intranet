@@ -7,6 +7,14 @@ node_modules
 next-env.d.ts
 .vercel
 
+# SQLite database (local dev data)
+*.db
+*.db-shm
+*.db-wal
+
+# TypeScript build info
+*.tsbuildinfo
+
 # Payload default media upload directory
 public/media/
 
