@@ -9,6 +9,7 @@ import { imageHero1 } from './image-hero-1'
 import { post1 } from './post-1'
 import { post2 } from './post-2'
 import { post3 } from './post-3'
+import { post4 } from './post-4'
 
 const collections: CollectionSlug[] = [
   'categories',
@@ -170,7 +171,26 @@ export const seed = async ({
     data: post3({ heroImage: image3Doc, blockImage: image1Doc, author: demoAuthor }),
   })
 
-  // update each post with related posts
+  const post4Doc = await payload.create({
+    collection: 'posts',
+    depth: 0,
+    context: {
+      disableRevalidate: true,
+    },
+    data: post4({ author: demoAuthor }),
+  })
+
+  // Fetch the News category
+  const newsCategory = await payload.find({
+    collection: 'categories',
+    where: {
+      title: {
+        equals: 'News',
+      },
+    },
+  })
+
+  // update each post with related posts and categories
   await payload.update({
     id: post1Doc.id,
     collection: 'posts',
@@ -190,6 +210,14 @@ export const seed = async ({
     collection: 'posts',
     data: {
       relatedPosts: [post1Doc.id, post2Doc.id],
+    },
+  })
+  await payload.update({
+    id: post4Doc.id,
+    collection: 'posts',
+    data: {
+      categories: newsCategory.docs.length > 0 ? [newsCategory.docs[0].id] : [],
+      relatedPosts: [post1Doc.id, post2Doc.id, post3Doc.id],
     },
   })
 

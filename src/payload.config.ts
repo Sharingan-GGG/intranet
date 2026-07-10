@@ -6,7 +6,11 @@ import { fileURLToPath } from 'url'
 
 import { Categories } from './collections/Categories'
 import { Departments } from './collections/Departments'
+import { Events } from './collections/Events'
+import { KnowledgeBase } from './collections/KnowledgeBase'
 import { Media } from './collections/Media'
+import { QuickLinks } from './collections/QuickLinks'
+import { TimeZones } from './collections/TimeZones'
 import { Pages } from './collections/Pages'
 import { Permissions } from './collections/Permissions'
 import { Posts } from './collections/Posts'
@@ -23,7 +27,25 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    meta: {
+      icons: [
+        {
+          rel: 'icon',
+          type: 'image/png',
+          url: '/ctg-icon.png',
+        },
+        {
+          rel: 'icon',
+          type: 'image/x-icon',
+          url: '/ctg-icon.ico',
+        },
+      ],
+    },
     components: {
+      graphics: {
+        Icon: '@/components/AdminGraphics/Icon',
+        Logo: '@/components/AdminGraphics/Logo',
+      },
       // The `BeforeLogin` component renders a message that you see while logging into your admin panel.
       // Feel free to delete this at any time. Simply remove the line below.
       beforeLogin: ['@/components/BeforeLogin'],
@@ -65,7 +87,20 @@ export default buildConfig({
       url: process.env.DATABASE_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Departments, Roles, Permissions, Users],
+  collections: [
+    Pages,
+    Posts,
+    Media,
+    Categories,
+    Departments,
+    QuickLinks,
+    TimeZones,
+    KnowledgeBase,
+    Events,
+    Roles,
+    Permissions,
+    Users,
+  ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins,

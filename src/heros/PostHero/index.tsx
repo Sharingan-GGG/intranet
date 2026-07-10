@@ -18,20 +18,30 @@ export const PostHero: React.FC<{
     <div className="relative -mt-[10.4rem] flex items-end">
       <div className="container z-10 relative lg:grid lg:grid-cols-[1fr_48rem_1fr] text-white pb-8">
         <div className="col-start-1 col-span-1 md:col-start-2 md:col-span-2">
-          <div className="uppercase text-sm mb-6">
+          <div className="flex flex-wrap gap-2 mb-6">
             {categories?.map((category, index) => {
               if (typeof category === 'object' && category !== null) {
                 const { title: categoryTitle } = category
 
                 const titleToUse = categoryTitle || 'Untitled category'
 
-                const isLast = index === categories.length - 1
-
                 return (
-                  <React.Fragment key={index}>
+                  <span
+                    key={index}
+                    style={{
+                      display: 'inline-block',
+                      fontSize: 10.5,
+                      fontWeight: 800,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: '#ffffff',
+                      background: 'rgb(45 87 211)',
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                    }}
+                  >
                     {titleToUse}
-                    {!isLast && <React.Fragment>, &nbsp;</React.Fragment>}
-                  </React.Fragment>
+                  </span>
                 )
               }
               return null

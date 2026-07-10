@@ -1,9 +1,17 @@
-import { HeaderClient } from './Component.client'
-import { getCachedGlobal } from '@/utilities/getGlobals'
+import { headers as getHeaders } from 'next/headers'
+import { getPayload } from 'payload'
+import configPromise from '@payload-config'
 import React from 'react'
 
-export async function Header() {
-  const headerData = await getCachedGlobal('header', 1)()
+import { HeaderClient } from './Component.client'
 
-  return <HeaderClient data={headerData} />
+export async function Header() {
+  const payload = await getPayload({ config: configPromise })
+  const { user } = await payload.auth({ headers: await getHeaders() })
+
+  return (
+    <HeaderClient
+      user={user ? { name: user.name ?? null, email: user.email, roles: user.roles ?? [] } : null}
+    />
+  )
 }

@@ -1,0 +1,149 @@
+/* Interaction styles for the intranet landing page (design option 1a).
+   Static values live inline on the components; :hover / :focus / scrollbar
+   behaviour that inline styles can't express is defined here. */
+
+.il-root {
+  font-family: 'Hanken Grotesk', var(--font-hanken), system-ui, sans-serif;
+}
+
+/* Header nav */
+.il-nav-link {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.il-nav-link:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Header search input */
+.il-search {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.il-search::placeholder {
+  color: rgba(255, 255, 255, 0.75);
+}
+.il-search:focus {
+  background: #fff;
+  color: #112e81;
+  border-color: #4382df;
+  box-shadow: 0 0 0 3px rgba(67, 130, 223, 0.35);
+}
+.il-search:focus::placeholder {
+  color: #8a94a6;
+}
+
+/* KB / feedback light inputs */
+.il-input {
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+.il-input:focus {
+  border-color: #4382df;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(67, 130, 223, 0.18);
+}
+
+/* Quick-link tiles */
+.il-tile {
+  transition: all 180ms ease;
+}
+.il-tile:hover {
+  border-color: #4382df !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(17, 46, 129, 0.1);
+}
+
+/* News / EDM cards */
+.il-card {
+  transition: all 180ms ease;
+}
+.il-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgba(17, 46, 129, 0.12);
+}
+
+/* Slider round buttons */
+.il-round {
+  transition: all 150ms ease;
+}
+.il-round:hover {
+  border-color: #4382df !important;
+  background: #eff5fc !important;
+}
+
+/* KB document rows */
+.il-doc-row {
+  transition: background-color 150ms ease;
+}
+.il-doc-row:hover {
+  background: #f4f8fc;
+}
+
+/* Primary CTA / feedback submit */
+.il-cta {
+  transition: all 160ms ease;
+}
+.il-cta-navy:hover {
+  background: #4647ae !important;
+}
+
+/* Footer links */
+.il-footer-link {
+  transition: color 150ms ease;
+}
+.il-footer-link:hover {
+  color: #fff !important;
+}
+
+/* Back to top */
+.il-back-top {
+  transition: background-color 150ms ease;
+}
+.il-back-top:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Landing layout grids — collapse on narrow viewports */
+.il-page {
+  background: #f4f7fa;
+  flex: 1;
+}
+.il-main {
+  max-width: 1376px;
+  margin: 0 auto;
+  padding: 28px 32px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.il-grid-hero {
+  display: grid;
+  grid-template-columns: 1fr 470px;
+  gap: 24px;
+  align-items: stretch;
+}
+.il-grid-kb {
+  display: grid;
+  grid-template-columns: 1fr 408px;
+  gap: 24px;
+  align-items: stretch;
+}
+@media (max-width: 1000px) {
+  .il-grid-hero,
+  .il-grid-kb {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .il-main {
+    padding: 20px 16px 8px;
+  }
+}
+
+/* Horizontal scroll tracks */
+.il-track {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.il-track::-webkit-scrollbar {
+  display: none;
+}

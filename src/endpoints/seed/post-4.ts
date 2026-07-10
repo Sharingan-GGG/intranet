@@ -1,0 +1,240 @@
+import { RequiredDataFromCollectionSlug } from 'payload'
+import type { User } from '@/payload-types'
+
+export const post4: (args: { author: User }) => RequiredDataFromCollectionSlug<'posts'> = ({
+  author,
+}) => {
+  return {
+    slug: 'july-client-newsletter',
+    _status: 'published',
+    authors: [author],
+    content: {
+      root: {
+        type: 'root',
+        children: [
+          {
+            type: 'heading',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'July Client Newsletter',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            tag: 'h2',
+            version: 1,
+          },
+          {
+            type: 'paragraph',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'Welcome to the July edition of the CTG Client Newsletter. This month, we bring you the latest updates on travel trends, exclusive deals, and insights to help you get the most out of your corporate travel program.',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            textFormat: 0,
+            version: 1,
+          },
+          {
+            type: 'heading',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'Featured: Winter Travel Outlook',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            tag: 'h2',
+            version: 1,
+          },
+          {
+            type: 'paragraph',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'As we head into winter, domestic travel is picking up pace. Airlines are increasing capacity on key regional routes, and hotel availability in mountain regions is strong. Our team has negotiated early-bird rates with select partners — book now to secure the best pricing for Q4 travel.',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            textFormat: 0,
+            version: 1,
+          },
+          {
+            type: 'heading',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'New Tools & Resources',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            tag: 'h2',
+            version: 1,
+          },
+          {
+            type: 'paragraph',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: "We've rolled out enhanced reporting in the client portal this month. You can now export travel spend by department, track sustainability metrics for your trips, and set up automated approvals for low-cost bookings. Log in to explore the new dashboard.",
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            textFormat: 0,
+            version: 1,
+          },
+          {
+            type: 'block',
+            fields: {
+              blockName: 'Reminder',
+              blockType: 'banner',
+              content: {
+                root: {
+                  type: 'root',
+                  children: [
+                    {
+                      type: 'paragraph',
+                      children: [
+                        {
+                          type: 'text',
+                          detail: 0,
+                          format: 0,
+                          mode: 'normal',
+                          style: '',
+                          text: 'Tip: Use our mobile app to book on the go and receive real-time flight alerts. Available on iOS and Android.',
+                          version: 1,
+                        },
+                      ],
+                      direction: 'ltr',
+                      format: '',
+                      indent: 0,
+                      textFormat: 0,
+                      version: 1,
+                    },
+                  ],
+                  direction: 'ltr',
+                  format: '',
+                  indent: 0,
+                  version: 1,
+                },
+              },
+              style: 'info',
+            },
+            format: '',
+            version: 2,
+          },
+          {
+            type: 'heading',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'Partner Spotlight: Accor Hotels',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            tag: 'h2',
+            version: 1,
+          },
+          {
+            type: 'paragraph',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: "This month we're shining the spotlight on our partnership with Accor Hotels, which now covers over 500 properties across APAC. CTG clients enjoy exclusive rates and complimentary room upgrades at participating locations. Mention your corporate rate code when booking to unlock these benefits.",
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            textFormat: 0,
+            version: 1,
+          },
+          {
+            type: 'paragraph',
+            children: [
+              {
+                type: 'text',
+                detail: 0,
+                format: 0,
+                mode: 'normal',
+                style: '',
+                text: 'Questions? Our support team is available Monday to Friday, 7am–6pm AEST. Reach out to your dedicated account manager or contact our helpdesk at clients@ctg.com.au.',
+                version: 1,
+              },
+            ],
+            direction: 'ltr',
+            format: '',
+            indent: 0,
+            textFormat: 0,
+            version: 1,
+          },
+        ],
+        direction: 'ltr',
+        format: '',
+        indent: 0,
+        version: 1,
+      },
+    },
+    meta: {
+      description: 'July client newsletter: Winter travel outlook, new tools, and partner updates from CTG.',
+      title: 'July Client Newsletter',
+    },
+    relatedPosts: [],
+    title: 'July Client Newsletter',
+  }
+}

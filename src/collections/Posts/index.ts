@@ -162,6 +162,15 @@ export const Posts: CollectionConfig<'posts'> = {
       ],
     },
     {
+      name: 'featured',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: 'Show this post in the homepage Featured spotlight.',
+      },
+    },
+    {
       name: 'publishedAt',
       type: 'date',
       admin: {
