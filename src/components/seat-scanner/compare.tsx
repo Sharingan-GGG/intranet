@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ArrowLeftRight, X } from "lucide-react"
+import { GitCompareArrows, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -76,7 +76,7 @@ export function CompareToggle({
         className
       )}
     >
-      <ArrowLeftRight className="size-3.5" />
+      <GitCompareArrows className="size-3.5" />
     </button>
   )
 }
@@ -107,7 +107,7 @@ export function CompareButton<T extends string | number>({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 gap-2">
-          <ArrowLeftRight className="size-3.5" />
+          <GitCompareArrows className="size-3.5" />
           <span className="font-bold tracking-[0.08em]">VS</span>
           {count > 0 && (
             <span className="inline-flex h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
@@ -131,7 +131,7 @@ export function CompareButton<T extends string | number>({
         </div>
         {count === 0 ? (
           <div className="px-3 py-6 text-center text-[13px] text-muted-foreground">
-            Tap the <ArrowLeftRight className="inline-block size-3 -translate-y-px" /> icon on a flight to add it for comparison.
+            Tap the <GitCompareArrows className="inline-block size-3 -translate-y-px" /> icon on a flight to add it for comparison.
           </div>
         ) : (
           <div>
