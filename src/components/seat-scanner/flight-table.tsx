@@ -331,7 +331,7 @@ function FlightGroup({
   if (direct) {
     const s = flight.segments[0]!
     return (
-      <TableRow className={cn(zebra && "bg-muted/60 dark:bg-muted/50")}>
+      <TableRow className={cn(zebra && "bg-muted dark:bg-muted/80")}>
         <TableCell className="px-3 py-3" style={{ width: 52 }}><ActionCell /></TableCell>
         <TableCell className="px-3 py-3">
           <div className="flex flex-col leading-tight">
@@ -350,7 +350,7 @@ function FlightGroup({
         <TableRow
           key={li}
           className={cn(
-            zebra && "bg-muted/60 dark:bg-muted/50",
+            zebra && "bg-muted dark:bg-muted/80",
             li < flight.segments.length - 1 && "[&>td]:border-b-0"
           )}
         >
