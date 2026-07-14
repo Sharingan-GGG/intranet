@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { addDays, format } from "date-fns"
 import { Home, Moon, Sun, Trash2 } from "lucide-react"
 import type { DateRange } from "react-day-picker"
@@ -21,6 +21,8 @@ export type StopsFilter = "direct" | "stopover" | "any" | "vs"
 
 interface FilterHeaderProps {
   flights: FlightRow[]
+  /** Unfiltered dataset — source for cascading filter options. */
+  allFlights?: FlightRow[]
   routes: string[]
   bookingCodes: string[]
   airlines: string[]
@@ -40,6 +42,7 @@ function parseDateString(s?: string): Date | undefined {
 
 export function FilterHeader({
   flights,
+  allFlights,
   routes,
   bookingCodes,
   airlines,
@@ -81,18 +84,54 @@ export function FilterHeader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRoutes, range?.from, range?.to, bookingClasses, airlineCodes, minSeats])
 
-  // Route-dependent option source for the booking-class picker.
+  // ── Cascading filter options ──
+  // Scope the full dataset by the selected date range, then by routes, so the
+  // Class / Airline pickers and the routes dropdown only offer what actually flies.
+  const pool = allFlights ?? flights
+  const dateFrom = range?.from ? format(range.from, "yyyy-MM-dd") : undefined
+  const dateTo   = range?.to   ? format(range.to,   "yyyy-MM-dd") : undefined
+
+  const flightsInRange = useMemo(
+    () => pool.filter((f) => (!dateFrom || f.date >= dateFrom) && (!dateTo || f.date <= dateTo)),
+    [pool, dateFrom, dateTo]
+  )
+
   const routeSet = new Set(selectedRoutes)
-  const flightsForRoutes = selectedRoutes.length === 0
-    ? flights
-    : flights.filter((f) =>
-        f.segments.some((s) => routeSet.has(`${s.originAirport}-${s.destinationAirport}`))
-      )
-  const classesInRoutes = selectedRoutes.length === 0
-    ? []
-    : [...new Set(flightsForRoutes.flatMap((f) =>
+  const scoped = useMemo(
+    () => selectedRoutes.length === 0
+      ? flightsInRange
+      : flightsInRange.filter((f) =>
+          routeSet.has(f.route) ||
+          f.segments.some((s) => routeSet.has(`${s.originAirport}-${s.destinationAirport}`))
+        ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [flightsInRange, selectedRoutes]
+  )
+
+  const classesInRoutes = useMemo(
+    () => [...new Set(scoped.flatMap((f) =>
         f.segments.flatMap((s) => s.bookingClasses.map((bc) => bc.code))
-      ))]
+      ))],
+    [scoped]
+  )
+
+  const airlinesInScope = useMemo(
+    () => [...new Set(scoped.flatMap((f) => f.segments.map((s) => s.airline)))].sort(),
+    [scoped]
+  )
+
+  // Route → airlines available within the selected date range (for the routes dropdown).
+  const routeAirlines = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    const sets = new Map<string, Set<string>>()
+    for (const f of flightsInRange) {
+      const set = sets.get(f.route) ?? new Set<string>()
+      for (const seg of f.segments) set.add(seg.airline)
+      sets.set(f.route, set)
+    }
+    for (const [route, set] of sets) map[route] = [...set].sort()
+    return map
+  }, [flightsInRange])
 
   // Build month×airlines side panel data from flights.
   const monthAirlines = (() => {
@@ -124,6 +163,7 @@ export function FilterHeader({
       <Field label="Routes:">
         <RouteMultiSelect
           routes={routes}
+          routeAirlines={routeAirlines}
           value={selectedRoutes}
           onChange={setSelectedRoutes}
           favorites={favorites}
@@ -146,7 +186,7 @@ export function FilterHeader({
 
       <Field label="Airline:">
         <AirlineSelect
-          airlinesInRoutes={airlines}
+          airlinesInRoutes={airlinesInScope.length ? airlinesInScope : airlines}
           value={airlineCodes}
           onChange={setAirlineCodes}
         />
@@ -159,7 +199,7 @@ export function FilterHeader({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="0">Any</SelectItem>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
               <SelectItem key={n} value={String(n)}>{n}+</SelectItem>
             ))}
           </SelectContent>

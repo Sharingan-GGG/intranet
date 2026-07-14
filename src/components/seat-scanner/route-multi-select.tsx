@@ -7,8 +7,12 @@ import { Search } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+import { AirlineMark } from "./airline-mark"
+
 interface RouteMultiSelectProps {
   routes: string[]
+  /** Route → airline codes available in the selected date range. */
+  routeAirlines?: Record<string, string[]>
   value: string[]
   onChange: (next: string[]) => void
   favorites: string[]
@@ -18,6 +22,7 @@ interface RouteMultiSelectProps {
 
 export function RouteMultiSelect({
   routes,
+  routeAirlines,
   value,
   onChange,
   favorites,
@@ -121,6 +126,7 @@ export function RouteMultiSelect({
               <div className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground">Favorites</div>
               {favList.map((r) => (
                 <RouteRow key={r} route={r} selected={value.includes(r)} favorite
+                  airlines={routeAirlines?.[r]}
                   onToggle={() => toggle(r)} onToggleFavorite={() => toggleFav(r)} />
               ))}
             </>
@@ -132,6 +138,7 @@ export function RouteMultiSelect({
               </div>
               {restList.map((r) => (
                 <RouteRow key={r} route={r} selected={value.includes(r)} favorite={false}
+                  airlines={routeAirlines?.[r]}
                   onToggle={() => toggle(r)} onToggleFavorite={() => toggleFav(r)} />
               ))}
             </>
@@ -147,11 +154,12 @@ export function RouteMultiSelect({
 }
 
 function RouteRow({
-  route, selected, favorite, onToggle, onToggleFavorite,
+  route, selected, favorite, airlines, onToggle, onToggleFavorite,
 }: {
   route: string
   selected: boolean
   favorite: boolean
+  airlines?: string[]
   onToggle: () => void
   onToggleFavorite: () => void
 }) {
@@ -179,6 +187,16 @@ function RouteRow({
         <span className="font-medium tabular-nums">{from}</span>
         <ArrowRight className="size-3 text-muted-foreground" />
         <span className="font-medium tabular-nums">{to}</span>
+        {airlines && airlines.length > 0 && (
+          <span className="ml-1.5 inline-flex items-center gap-1">
+            {airlines.slice(0, 5).map((a) => (
+              <AirlineMark key={a} code={a} size={15} />
+            ))}
+            {airlines.length > 5 && (
+              <span className="text-[10px] text-muted-foreground">+{airlines.length - 5}</span>
+            )}
+          </span>
+        )}
       </button>
       <button
         type="button"

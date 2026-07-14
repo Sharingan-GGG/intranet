@@ -2,12 +2,12 @@
 
 import { Fragment, useMemo, useState } from "react"
 import {
-  ChevronsUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight, ArrowLeftRight,
+  ChevronsUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight, GitCompareArrows,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import type { FlightFilters, FlightRow, FlightSegment } from "@/lib/seat-scanner/types"
@@ -100,6 +100,7 @@ export function FlightTable({
       <div className="sticky top-0 z-20 rounded-t-xl bg-card">
         <FilterHeader
           flights={flights}
+          allFlights={allFlights ?? flights}
           routes={availableRoutes}
           bookingCodes={availableBookingCodes}
           airlines={availableAirlines}
@@ -133,9 +134,8 @@ export function FlightTable({
       </div>
 
       {/* ── Scrollable table body ── */}
-      <div className="relative min-h-0 w-full flex-1 overflow-x-auto">
-        <div className="h-full overflow-y-auto">
-          <Table>
+      <div className="relative min-h-0 w-full flex-1 overflow-auto">
+        <table className="w-full caption-bottom text-sm">
             <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow>
                 {HEADERS.map((h, i) => (
@@ -191,8 +191,7 @@ export function FlightTable({
                 />
               ))}
             </TableBody>
-          </Table>
-        </div>
+        </table>
       </div>
 
       {/* ── Pagination ── */}
@@ -265,14 +264,14 @@ function StopsToggle({ value, onChange, vsCount }: {
   vsCount: number
 }) {
   const options: { value: StopsFilter; label: React.ReactNode }[] = [
+    { value: "any",      label: "Any" },
     { value: "direct",   label: "Direct" },
     { value: "stopover", label: "InDirect" },
-    { value: "any",      label: "Any" },
     {
       value: "vs",
       label: (
         <span className="inline-flex items-center gap-1">
-          <ArrowLeftRight className="size-3" />
+          <GitCompareArrows className="size-3" />
           VS
           {vsCount > 0 && (
             <span className="inline-flex h-[16px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
