@@ -14,5 +14,13 @@ export const redirects: NextConfig['redirects'] = async () => {
     source: '/:path((?!ie-incompatible.html$).*)', // all pages except the incompatibility page
   }
 
-  return [internetExplorerRedirect]
+  // The site login already creates a Payload session (Google SSO + /api/users/login),
+  // so the admin login screen is redundant — send it to the branded /login page.
+  const adminLoginRedirect = {
+    source: '/admin/login',
+    destination: '/login?redirect=/admin',
+    permanent: false,
+  }
+
+  return [internetExplorerRedirect, adminLoginRedirect]
 }

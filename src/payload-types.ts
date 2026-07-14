@@ -272,7 +272,7 @@ export interface Post {
    */
   featured?: boolean | null;
   publishedAt?: string | null;
-  authors?: (number | User)[] | null;
+  authors?: (string | User)[] | null;
   populatedAuthors?:
     | {
         id?: string | null;
@@ -436,8 +436,10 @@ export interface Category {
  * via the `definition` "users".
  */
 export interface User {
-  id: number;
+  id: string;
+  emailVerified?: string | null;
   name?: string | null;
+  image?: string | null;
   roles: ('admin' | 'editor' | 'user')[];
   /**
    * The department this user belongs to.
@@ -447,6 +449,14 @@ export interface User {
    * Business roles (from the Roles collection) assigned to this user.
    */
   assignedRoles?: (number | Role)[] | null;
+  accounts?:
+    | {
+        provider: string;
+        providerAccountId: string;
+        type: 'oidc' | 'oauth' | 'email' | 'webauthn';
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -456,13 +466,6 @@ export interface User {
   hash?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
   password?: string | null;
   collection: 'users';
 }
@@ -481,7 +484,7 @@ export interface Department {
   /**
    * Department head / manager.
    */
-  lead?: (number | null) | User;
+  lead?: (string | null) | User;
   /**
    * Parent department, for nested org structures.
    */
@@ -1638,7 +1641,7 @@ export interface PayloadLockedDocument {
       } | null)
     | ({
         relationTo: 'users';
-        value: number | User;
+        value: string | User;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1663,7 +1666,7 @@ export interface PayloadLockedDocument {
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -1676,7 +1679,7 @@ export interface PayloadPreference {
   id: number;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   key?: string | null;
   value?:
@@ -2078,10 +2081,21 @@ export interface PermissionsSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  id?: T;
+  emailVerified?: T;
   name?: T;
+  image?: T;
   roles?: T;
   department?: T;
   assignedRoles?: T;
+  accounts?:
+    | T
+    | {
+        provider?: T;
+        providerAccountId?: T;
+        type?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2091,13 +2105,6 @@ export interface UsersSelect<T extends boolean = true> {
   hash?: T;
   loginAttempts?: T;
   lockUntil?: T;
-  sessions?:
-    | T
-    | {
-        id?: T;
-        createdAt?: T;
-        expiresAt?: T;
-      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2506,7 +2513,7 @@ export interface TaskSchedulePublish {
           value: number | Post;
         } | null);
     global?: string | null;
-    user?: (number | null) | User;
+    user?: (string | null) | User;
   };
   output?: unknown;
 }

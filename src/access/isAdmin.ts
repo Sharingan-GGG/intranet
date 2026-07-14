@@ -10,6 +10,10 @@ export const isAdminFieldLevel: FieldAccess = ({ req: { user } }) => {
   return Boolean(user?.roles?.includes('admin'))
 }
 
+export const isAdminOrEditor: Access = ({ req: { user } }: AccessArgs<User>) => {
+  return Boolean(user?.roles?.some((r) => r === 'admin' || r === 'editor'))
+}
+
 export const isAdminOrSelf: Access = ({ req: { user } }: AccessArgs<User>) => {
   if (!user) return false
   if (user.roles?.includes('admin')) return true

@@ -45,6 +45,13 @@ const nextConfig: NextConfig = {
     return webpackConfig
   },
   reactStrictMode: true,
+  // Private intranet — tell search engines not to index anything.
+  headers: async () => [
+    {
+      source: '/:path*',
+      headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+    },
+  ],
   redirects,
   turbopack: {
     root: path.resolve(dirname),

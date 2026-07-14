@@ -6,15 +6,12 @@ import { GeistSans } from 'geist/font/sans'
 import { Hanken_Grotesk } from 'next/font/google'
 import React from 'react'
 
-import { SearchModal } from '@/components/intranet/SearchModal'
-import { Footer } from '@/Footer/Component'
-import { Header } from '@/Header/Component'
 import { Providers } from '@/providers'
 import { InitTheme } from '@/providers/Theme/InitTheme'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 
-import './globals.css'
-import './intranet.css'
+import '../(frontend)/globals.css'
+import '../(frontend)/intranet.css'
 import { getServerSideURL } from '@/utilities/getURL'
 
 const hanken = Hanken_Grotesk({
@@ -24,7 +21,7 @@ const hanken = Hanken_Grotesk({
   display: 'swap',
 })
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default function FullscreenLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       className={cn(GeistSans.variable, GeistMono.variable, hanken.variable)}
@@ -38,12 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link href="/ctg-icon.png" rel="apple-touch-icon" />
       </head>
       <body>
-        <Providers>
-          <Header />
-          <SearchModal />
-          {children}
-          <Footer />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
@@ -52,8 +44,4 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
   openGraph: mergeOpenGraph(),
-  twitter: {
-    card: 'summary_large_image',
-    creator: '@payloadcms',
-  },
 }

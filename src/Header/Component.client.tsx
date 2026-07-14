@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { LayoutDashboard } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import React, { useMemo, useState } from 'react'
 
@@ -187,6 +188,26 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
       </div>
 
       <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+        {Boolean(user?.roles?.some((r) => r === 'admin' || r === 'editor')) && (
+          <Link
+            href="/admin"
+            aria-label="Admin portal"
+            title="Admin portal"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: '#AACCD6',
+              color: '#112E81',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 'none',
+            }}
+          >
+            <LayoutDashboard size={17} strokeWidth={2.2} />
+          </Link>
+        )}
         <AccountMenu user={user} />
       </div>
     </header>

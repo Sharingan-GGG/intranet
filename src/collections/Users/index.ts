@@ -6,7 +6,9 @@ import { isAdmin, isAdminFieldLevel, isAdminOrSelf } from '../../access/isAdmin'
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
-    admin: authenticated,
+    // Only admins/editors may enter the /admin panel — "user" accounts are site-only
+    admin: ({ req: { user } }) =>
+      Boolean(user?.roles?.some((r) => r === 'admin' || r === 'editor')),
     create: isAdmin,
     delete: isAdmin,
     read: authenticated,

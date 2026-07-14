@@ -4,6 +4,8 @@ import { redirectsPlugin } from '@payloadcms/plugin-redirects'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { searchPlugin } from '@payloadcms/plugin-search'
 import { Plugin } from 'payload'
+import { authjsPlugin } from 'payload-authjs'
+import { authConfig } from '@/auth.config'
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
@@ -88,5 +90,10 @@ export const plugins: Plugin[] = [
         return [...defaultFields, ...searchFields]
       },
     },
+  }),
+  authjsPlugin({
+    authjsConfig: authConfig,
+    // Keep Payload's email/password login (superAdmin) alongside Google SSO
+    enableLocalStrategy: true,
   }),
 ]
