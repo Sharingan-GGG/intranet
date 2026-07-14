@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react"
 import {
-  ChevronsUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight, GitCompareArrows,
+  ChevronsUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import type { FlightFilters, FlightRow, FlightSegment } from "@/lib/seat-scanner/types"
 
 import { FlightCell } from "./airline-mark"
+import { VsIcon } from "./vs-icon"
 import { CompareToggle, useCompareSet } from "./compare"
 import { FilterHeader, type StopsFilter } from "./filter-header"
 
@@ -271,7 +272,7 @@ function StopsToggle({ value, onChange, vsCount }: {
       value: "vs",
       label: (
         <span className="inline-flex items-center gap-1">
-          <GitCompareArrows className="size-3" />
+          <VsIcon className="size-3" />
           VS
           {vsCount > 0 && (
             <span className="inline-flex h-[16px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
