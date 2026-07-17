@@ -14,7 +14,7 @@ const CardLoopMark = () => (
 )
 
 export const NewsSlider: React.FC<{ items: NewsCard[] }> = ({ items }) => (
-  <CardSlider id="news" title="Latest CTG news" step={680}>
+  <CardSlider id="news" title="Latest CTG News" step={680}>
     {items.map((n, i) => (
       <a
         key={i}

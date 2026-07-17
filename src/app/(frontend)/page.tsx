@@ -5,9 +5,11 @@ import configPromise from '@payload-config'
 import React from 'react'
 
 import {
+  getEdmCategories,
   getEdms,
   getEventGroups,
   getFeaturedNews,
+  getKbCategories,
   getKbDocs,
   getNews,
   getOffices,
@@ -27,27 +29,28 @@ export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const payload = await getPayload({ config: configPromise })
-  const [{ user }, quickLinks, offices, kbDocs, eventGroups, news, edms, featured] =
+  const [{ user }, quickLinks, offices, kbDocs, kbCategories, eventGroups, news, edms, edmCategories, featured] =
     await Promise.all([
       payload.auth({ headers: await getHeaders() }),
       getQuickLinks(),
       getOffices(),
       getKbDocs(),
+      getKbCategories(),
       getEventGroups(),
       getNews(),
       getEdms(),
+      getEdmCategories(),
       getFeaturedNews(),
     ])
 
   const firstName = user?.name?.trim().split(/\s+/)[0]
-  const eventCount = eventGroups.reduce((n, g) => n + g.items.length, 0)
 
   return (
     <div className="il-root il-page">
       <main className="il-main">
         {/* Greeting + featured spotlight + quick links */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <GreetingBar userName={firstName} eventCount={eventCount} />
+          <GreetingBar userName={firstName} />
           <div className="il-grid-hero">
             <FeaturedSpotlight items={featured} />
             <QuickLinks links={quickLinks} />
@@ -59,15 +62,15 @@ export default async function HomePage() {
 
         {/* Knowledge base + upcoming events */}
         <div className="il-grid-kb">
-          <KnowledgeBase documents={kbDocs} />
+          <KnowledgeBase documents={kbDocs} categories={kbCategories} />
           <Events groups={eventGroups} />
         </div>
 
         {/* Sliders */}
         <NewsSlider items={news} />
-        <EDMSlider items={edms} />
+        <EDMSlider items={edms} categories={edmCategories} />
 
-        {/* Feedback */}
+        {/* Org chart + feedback */}
         <Feedback />
       </main>
     </div>
