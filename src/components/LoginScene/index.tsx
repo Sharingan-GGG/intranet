@@ -1,7 +1,6 @@
 'use client'
 
 import { MoonIcon, SunIcon } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import React, { useCallback, useEffect, useState } from 'react'
 
@@ -29,10 +28,6 @@ const DAY = {
   arrowColor: 'rgba(80,55,30,0.50)',
   toggleBg: 'rgba(255,255,255,0.70)',
   toggleColor: 'rgb(80,60,40)',
-  inputBg: 'rgba(255,255,255,0.55)',
-  inputBorder: 'rgba(255,255,255,0.85)',
-  inputText: 'rgb(42,31,21)',
-  inputPlaceholder: 'rgba(80,60,40,0.45)',
   vignette: 'radial-gradient(rgba(0,0,0,0) 50%, rgba(70,50,30,0.18) 100%)',
   bloom: 'radial-gradient(circle at 51% 49%, rgba(255,236,200,0.65) 0%, rgba(255,220,170,0.28) 30%, transparent 60%)',
 }
@@ -53,10 +48,6 @@ const NIGHT = {
   arrowColor: 'rgba(216,196,255,0.60)',
   toggleBg: 'rgba(255,255,255,0.12)',
   toggleColor: 'rgba(200,185,255,0.85)',
-  inputBg: 'rgba(255,255,255,0.08)',
-  inputBorder: 'rgba(255,255,255,0.20)',
-  inputText: 'rgba(240,228,255,0.92)',
-  inputPlaceholder: 'rgba(200,185,230,0.45)',
   vignette: 'radial-gradient(rgba(0,0,0,0) 40%, rgba(10,5,30,0.45) 100%)',
   bloom: 'radial-gradient(circle at 50% 40%, rgba(140,100,255,0.22) 0%, transparent 55%)',
 }
@@ -98,18 +89,14 @@ interface Props {
 }
 
 export function LoginScene({ error, redirect, cormorantClass }: Props) {
-  const router = useRouter()
   const [isNight, setIsNight] = useState(false)
   const [loading, setLoading] = useState(false)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
 
   const theme = isNight ? NIGHT : DAY
   const callbackUrl = redirect && redirect.startsWith('/') ? redirect : '/'
-  const errorMessage = formError ?? (error ? (AUTH_ERRORS[error] ?? AUTH_ERRORS.Default) : null)
+  const errorMessage = error ? (AUTH_ERRORS[error] ?? AUTH_ERRORS.Default) : null
 
   useEffect(() => {
     setMounted(true)
@@ -126,39 +113,8 @@ export function LoginScene({ error, redirect, cormorantClass }: Props) {
     await signIn('google', { callbackUrl })
   }
 
-  async function handlePasswordLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setFormError(null)
-    setLoading(true)
-    try {
-      const res = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      })
-      if (!res.ok) {
-        setFormError('Invalid email or password.')
-        setLoading(false)
-        return
-      }
-      router.push(callbackUrl)
-      router.refresh()
-    } catch {
-      setFormError('Could not sign in. Please try again.')
-      setLoading(false)
-    }
-  }
-
   const px = offset.x
   const py = offset.y
-
-  const inputStyle: React.CSSProperties = {
-    background: theme.inputBg,
-    borderColor: theme.inputBorder,
-    color: theme.inputText,
-    transition: 'background 2s, border-color 2s, color 2s',
-  }
 
   return (
     <div
@@ -193,7 +149,6 @@ export function LoginScene({ error, redirect, cormorantClass }: Props) {
         .login-fade-up:nth-child(3) { animation-delay:0.38s; }
         .login-fade-up:nth-child(4) { animation-delay:0.5s; }
         .login-fade-up:nth-child(5) { animation-delay:0.6s; }
-        .login-scene-input::placeholder { color: var(--login-placeholder); }
       `}</style>
 
       {/* Sky */}
@@ -494,82 +449,6 @@ export function LoginScene({ error, redirect, cormorantClass }: Props) {
             <path d="m13 5 7 7-7 7" />
           </svg>
         </button>
-
-        {/* Divider */}
-        <div className="login-fade-up mt-6 flex w-full max-w-xs items-center gap-3">
-          <span
-            className="h-px flex-1"
-            style={{ background: theme.inputBorder, transition: 'background 2s' }}
-          />
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.22em',
-              color: theme.sublabel,
-              transition: 'color 2s',
-            }}
-          >
-            or
-          </span>
-          <span
-            className="h-px flex-1"
-            style={{ background: theme.inputBorder, transition: 'background 2s' }}
-          />
-        </div>
-
-        {/* Email / password login */}
-        <form
-          onSubmit={handlePasswordLogin}
-          className="login-fade-up mt-6 flex w-full max-w-xs flex-col gap-3"
-          style={{ ['--login-placeholder' as string]: theme.inputPlaceholder }}
-        >
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="login-scene-input w-full rounded-xl border px-4 py-2.5 text-sm backdrop-blur-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            style={inputStyle}
-          />
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="login-scene-input w-full rounded-xl border px-4 py-2.5 text-sm backdrop-blur-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            style={inputStyle}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl border px-4 py-2.5 backdrop-blur-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:translate-y-px disabled:opacity-70"
-            style={{
-              background: theme.btnBg,
-              borderColor: theme.btnBorder,
-              boxShadow: theme.btnShadow,
-              transition: 'background 2s, border-color 2s, box-shadow 2s, transform 0.1s',
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.22em',
-                color: theme.sublabel,
-                transition: 'color 2s',
-              }}
-            >
-              Sign in
-            </span>
-          </button>
-        </form>
 
         {/* Error */}
         {errorMessage && (

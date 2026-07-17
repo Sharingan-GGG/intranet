@@ -32,33 +32,100 @@ export const Events: CollectionConfig = {
     },
     {
       name: 'category',
-      type: 'select',
+      type: 'relationship',
+      relationTo: 'categories',
       required: true,
-      options: [
-        { label: 'People', value: 'People' },
-        { label: 'Training', value: 'Training' },
-        { label: 'Company', value: 'Company' },
-        { label: 'Social', value: 'Social' },
+      // Only sub-categories that sit under the parent "Events" category.
+      filterOptions: () => ({
+        'parent.slug': { equals: 'events' },
+      }),
+      admin: {
+        description: 'A sub-category of the Events parent category.',
+      },
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'date',
+          type: 'date',
+          required: true,
+          label: 'Event date',
+          admin: {
+            date: {
+              pickerAppearance: 'dayOnly',
+              displayFormat: 'd MMM yyyy',
+            },
+            width: '50%',
+            description: 'The day the event takes place.',
+          },
+        },
+        {
+          name: 'time',
+          type: 'date',
+          admin: {
+            date: {
+              pickerAppearance: 'timeOnly',
+              displayFormat: 'h:mm a',
+              timeIntervals: 15,
+            },
+            width: '50%',
+            description: 'Start time. Leave blank for all-day events.',
+          },
+        },
       ],
     },
     {
-      name: 'date',
-      type: 'date',
-      required: true,
+      name: 'repeat',
+      type: 'select',
+      defaultValue: 'none',
+      options: [
+        { label: 'Does not repeat', value: 'none' },
+        { label: 'Weekly', value: 'weekly' },
+        { label: 'Fortnightly', value: 'fortnightly' },
+        { label: 'Monthly', value: 'monthly' },
+        { label: 'Every 3 months', value: 'quarterly' },
+        { label: 'Bi-annually', value: 'biannually' },
+        { label: 'Annually', value: 'annually' },
+        { label: 'Custom', value: 'custom' },
+      ],
       admin: {
-        date: {
-          pickerAppearance: 'dayOnly',
-          displayFormat: 'd MMM yyyy',
-        },
-        position: 'sidebar',
+        description: 'How often this event repeats.',
       },
     },
     {
-      name: 'time',
-      type: 'text',
+      type: 'row',
       admin: {
-        description: 'e.g. "2:00–3:00 PM" or "All day".',
+        condition: (data) => data?.repeat === 'custom',
       },
+      fields: [
+        {
+          name: 'repeatEvery',
+          type: 'number',
+          label: 'Repeat every',
+          min: 1,
+          defaultValue: 1,
+          admin: {
+            width: '50%',
+            description: 'e.g. 2 = every 2 weeks/months…',
+          },
+        },
+        {
+          name: 'repeatFrequency',
+          type: 'select',
+          label: 'Frequency',
+          defaultValue: 'weeks',
+          options: [
+            { label: 'Days', value: 'days' },
+            { label: 'Weeks', value: 'weeks' },
+            { label: 'Months', value: 'months' },
+            { label: 'Years', value: 'years' },
+          ],
+          admin: {
+            width: '50%',
+          },
+        },
+      ],
     },
     {
       name: 'location',

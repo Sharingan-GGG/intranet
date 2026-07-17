@@ -2,9 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { LinksModal } from '@/components/home/KnowledgeBase'
+import type { KbLink } from '@/lib/home'
+
 type Scope = 'events' | 'news' | 'kb'
 
-type Result = { title: string; sub: string; href: string }
+type Result = { title: string; sub: string; href: string; sortKey?: number; links?: KbLink[] }
 
 const mediaUrl = (file: unknown): string | null => {
   const f = file as { url?: string } | null
@@ -12,6 +15,42 @@ const mediaUrl = (file: unknown): string | null => {
 }
 
 const dateFmt = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+
+/** Next occurrence of an event on/after today — mirrors the recurrence expansion in lib/homeData. */
+const nextOccurrence = (d: any): Date | null => {
+  if (!d.date) return null
+  const date = new Date(d.date)
+  if (Number.isNaN(date.getTime())) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const stepMap: Record<string, { every: number; unit: string }> = {
+    weekly: { every: 1, unit: 'weeks' },
+    fortnightly: { every: 2, unit: 'weeks' },
+    monthly: { every: 1, unit: 'months' },
+    quarterly: { every: 3, unit: 'months' },
+    biannually: { every: 6, unit: 'months' },
+    annually: { every: 1, unit: 'years' },
+  }
+  const step =
+    d.repeat === 'custom'
+      ? { every: Math.max(1, d.repeatEvery ?? 1), unit: d.repeatFrequency ?? 'weeks' }
+      : stepMap[d.repeat]
+  if (!step) return date // non-repeating: the stored date is the only occurrence
+
+  for (let i = 0; date < today && i < 500; i++) {
+    if (step.unit === 'days') date.setDate(date.getDate() + step.every)
+    else if (step.unit === 'weeks') date.setDate(date.getDate() + step.every * 7)
+    else if (step.unit === 'months') date.setMonth(date.getMonth() + step.every)
+    else if (step.unit === 'years') date.setFullYear(date.getFullYear() + step.every)
+    else break
+  }
+  return date
+}
+
+const localDateKey = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 const SCOPES: Record<
   Scope,
@@ -22,11 +61,15 @@ const SCOPES: Record<
     shortcut: 'E',
     endpoint: (q) =>
       `/api/events?where[or][0][title][like]=${q}&where[or][1][description][like]=${q}&limit=8&depth=0&sort=date`,
-    map: (d) => ({
-      title: d.title,
-      sub: [d.location, d.date ? dateFmt.format(new Date(d.date)) : null].filter(Boolean).join(' · ') || 'Event',
-      href: d.date ? `/calendar?date=${String(d.date).slice(0, 10)}` : '/calendar',
-    }),
+    map: (d) => {
+      const next = nextOccurrence(d)
+      return {
+        title: d.title,
+        sub: [d.location, next ? dateFmt.format(next) : null].filter(Boolean).join(' · ') || 'Event',
+        href: next ? `/calendar?date=${localDateKey(next)}` : '/calendar',
+        sortKey: next?.getTime(),
+      }
+    },
   },
   news: {
     label: 'News',
@@ -40,11 +83,19 @@ const SCOPES: Record<
     shortcut: 'K',
     endpoint: (q) =>
       `/api/knowledge-base?where[or][0][title][like]=${q}&where[or][1][description][like]=${q}&limit=8&depth=1`,
-    map: (d) => ({
-      title: d.title,
-      sub: d.category ?? 'Document',
-      href: mediaUrl(d.file) ?? d.link ?? '#',
-    }),
+    map: (d) => {
+      const absolute = (url: string): string => (/^https?:\/\//i.test(url) ? url : `https://${url}`)
+      const links: KbLink[] = (d.links ?? []).map((l: any) => ({
+        label: l.label ?? null,
+        url: absolute(l.url),
+      }))
+      return {
+        title: d.title,
+        sub: (typeof d.category === 'object' ? d.category?.title : d.category) ?? 'Document',
+        href: mediaUrl(d.file) ?? links[0]?.url ?? '#',
+        links,
+      }
+    },
   },
 }
 
@@ -57,6 +108,8 @@ export const SearchModal: React.FC = () => {
   const [results, setResults] = useState<Result[]>([])
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(false)
+  // A KB result with multiple links opens a link-picker pop-up instead of navigating.
+  const [linksResult, setLinksResult] = useState<Result | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const openWith = useCallback((s: Scope) => {
@@ -112,7 +165,10 @@ export const SearchModal: React.FC = () => {
           setResults([])
         } else {
           const data = await res.json()
-          setResults((data.docs ?? []).map(SCOPES[scope].map))
+          const mapped: Result[] = (data.docs ?? []).map(SCOPES[scope].map)
+          // Soonest next occurrence first (events); other scopes have no sortKey and keep API order.
+          mapped.sort((a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0))
+          setResults(mapped)
         }
         setActive(0)
       } catch {
@@ -127,9 +183,13 @@ export const SearchModal: React.FC = () => {
     }
   }, [open, scope, query])
 
-  const go = useCallback((href: string) => {
+  const go = useCallback((r: Result) => {
+    if ((r.links?.length ?? 0) > 1) {
+      setLinksResult(r)
+      return
+    }
     setOpen(false)
-    if (href && href !== '#') window.location.assign(href)
+    if (r.href && r.href !== '#') window.location.assign(r.href)
   }, [])
 
   const onInputKey = (e: React.KeyboardEvent) => {
@@ -142,7 +202,7 @@ export const SearchModal: React.FC = () => {
       setActive((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter' && results[active]) {
       e.preventDefault()
-      go(results[active].href)
+      go(results[active])
     } else if (e.key === 'Tab') {
       // Cycle scope with Tab for quick switching.
       e.preventDefault()
@@ -246,7 +306,7 @@ export const SearchModal: React.FC = () => {
               key={i}
               type="button"
               onMouseEnter={() => setActive(i)}
-              onClick={() => go(r.href)}
+              onClick={() => go(r)}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -262,11 +322,16 @@ export const SearchModal: React.FC = () => {
               }}
             >
               <span style={{ fontSize: 14.5, fontWeight: 600, color: '#1B2233' }}>{r.title}</span>
-              <span style={{ fontSize: 12, color: '#8A94A6' }}>{r.sub}</span>
+              <span style={{ fontSize: 12, color: '#8A94A6' }}>
+                {r.sub}
+                {(r.links?.length ?? 0) > 1 && ` · ${r.links!.length} links`}
+              </span>
             </button>
           ))}
         </div>
       </div>
+
+      {linksResult && <LinksModal doc={linksResult} onClose={() => setLinksResult(null)} />}
     </div>
   )
 }

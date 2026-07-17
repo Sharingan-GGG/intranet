@@ -14,7 +14,12 @@ export type QuickLink = {
   icon: string
 }
 
-export type DocExt = 'PDF' | 'XLS' | 'DOC'
+export type DocExt = 'PDF' | 'XLS' | 'DOC' | 'Folder'
+
+export type KbLink = {
+  label?: string | null
+  url: string
+}
 
 export type KbDoc = {
   title: string
@@ -23,9 +28,12 @@ export type KbDoc = {
   category: string
   updated: string
   href: string
+  /** External links; when there is more than one, the UI opens a pop-up listing them. */
+  links?: KbLink[]
 }
 
-export type EventTag = 'People' | 'Training' | 'Company' | 'Social'
+/** Event category title — sub-categories of the "Events" parent category in the CMS. */
+export type EventTag = string
 
 export type EventItem = {
   title: string
@@ -72,9 +80,11 @@ export type NewsCard = {
 }
 
 export type EdmCard = {
+  /** Sub-category title — also drives the tab filter in the Latest EDMs section. */
   kicker: string
   title: string
   sent: string
+  description?: string | null
   img: string
   /** CMS hero image URL, used as a background image when present. */
   imageUrl?: string | null
@@ -92,15 +102,20 @@ export const EXT_STYLE: Record<DocExt, [string, string]> = {
   PDF: ['#FBEAEA', '#B4443C'],
   XLS: ['#E8F3EC', '#1F8A5B'],
   DOC: ['#EAF1FB', '#2E66B8'],
+  Folder: ['#FDF3E3', '#B07B24'],
 }
 
 /** Event category tag tints: [background, foreground]. */
-export const TAG_STYLE: Record<EventTag, [string, string]> = {
+export const TAG_STYLE: Record<string, [string, string]> = {
   People: ['#EEEDF8', '#4647AE'],
   Training: ['#E8F2FB', '#2E66B8'],
   Company: ['#EAF1FB', '#112E81'],
   Social: ['#E8F3EC', '#1F8A5B'],
 }
+
+/** Tint for an event tag, with a neutral fallback for categories without a defined colour. */
+export const tagStyle = (tag: EventTag): [string, string] =>
+  TAG_STYLE[tag] ?? ['#EEF1F6', '#5A6478']
 
 /** Search-result type badge tints: [foreground, background]. */
 export const SEARCH_TINT: Record<'News' | 'Doc' | 'Event', [string, string]> = {

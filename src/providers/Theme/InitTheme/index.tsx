@@ -1,12 +1,13 @@
-import Script from 'next/script'
 import React from 'react'
 
 import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types'
 
 export const InitTheme: React.FC = () => {
   return (
-    // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
-    <Script
+    // A plain script tag (not next/script) so it ships in the initial server HTML only —
+    // next/script is a client component and re-rendering it triggers React's
+    // "script tags are never executed on the client" warning.
+    <script
       dangerouslySetInnerHTML={{
         __html: `
   (function () {
@@ -44,7 +45,6 @@ export const InitTheme: React.FC = () => {
   `,
       }}
       id="theme-script"
-      strategy="beforeInteractive"
     />
   )
 }

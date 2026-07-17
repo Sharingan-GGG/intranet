@@ -10,6 +10,8 @@ export const authConfig: NextAuthConfig = {
   },
   providers: [
     Google({
+      // Safe: signIn callback below requires a verified email on our Workspace domain
+      allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
           // Hint Google to only show accounts on our Workspace domain

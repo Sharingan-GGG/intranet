@@ -29,15 +29,16 @@ export const KnowledgeBase: CollectionConfig = {
     },
     {
       name: 'category',
-      type: 'select',
+      type: 'relationship',
+      relationTo: 'categories',
       required: true,
-      options: [
-        { label: 'Policies', value: 'Policies' },
-        { label: 'Finance', value: 'Finance' },
-        { label: 'Operations', value: 'Operations' },
-        { label: 'Marketing', value: 'Marketing' },
-        { label: 'People', value: 'People' },
-      ],
+      // Only sub-categories that sit under the parent "Knowledge Base" category.
+      filterOptions: () => ({
+        'parent.slug': { equals: 'knowledge-base' },
+      }),
+      admin: {
+        description: 'A sub-category of the Knowledge Base parent category.',
+      },
     },
     {
       name: 'description',
@@ -55,6 +56,7 @@ export const KnowledgeBase: CollectionConfig = {
         { label: 'PDF', value: 'PDF' },
         { label: 'XLS', value: 'XLS' },
         { label: 'DOC', value: 'DOC' },
+        { label: 'Folder', value: 'Folder' },
       ],
       admin: {
         description: 'Drives the file-type badge in the list.',
@@ -69,12 +71,32 @@ export const KnowledgeBase: CollectionConfig = {
       },
     },
     {
-      name: 'link',
-      type: 'text',
+      name: 'links',
+      type: 'array',
+      labels: {
+        singular: 'Link',
+        plural: 'Links',
+      },
       admin: {
-        description: 'External URL, used when no file is uploaded.',
+        description:
+          'External URLs, used when no file is uploaded. With multiple links, the intranet shows a pop-up listing them.',
         condition: (data) => !data?.file,
       },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          admin: {
+            description: 'Shown in the pop-up. Falls back to the URL if left blank.',
+          },
+        },
+        {
+          name: 'url',
+          type: 'text',
+          required: true,
+          label: 'URL',
+        },
+      ],
     },
   ],
   timestamps: true,
