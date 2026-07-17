@@ -39,6 +39,7 @@ export const FeaturedSpotlight: React.FC<{ items: NewsCard[] }> = ({ items }) =>
 
   return (
     <div
+      className="il-featured-spotlight"
       onMouseEnter={() => (paused.current = true)}
       onMouseLeave={() => (paused.current = false)}
       style={{

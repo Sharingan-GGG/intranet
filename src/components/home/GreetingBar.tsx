@@ -16,7 +16,6 @@ const chip: React.CSSProperties = {
 
 type Props = {
   userName?: string
-  eventCount?: number
 }
 
 /** WMO weather codes → short labels (Open-Meteo `weather_code`). */
@@ -63,7 +62,7 @@ async function cityFromCoords(lat: number, lon: number): Promise<string | null> 
   }
 }
 
-export const GreetingBar: React.FC<Props> = ({ userName, eventCount = 0 }) => {
+export const GreetingBar: React.FC<Props> = ({ userName }) => {
   const [greeting, setGreeting] = useState('Good morning')
   const [dateLine, setDateLine] = useState('')
   const [weatherLine, setWeatherLine] = useState<string | null>(null)
@@ -105,6 +104,7 @@ export const GreetingBar: React.FC<Props> = ({ userName, eventCount = 0 }) => {
 
   return (
     <div
+      className="il-greeting"
       style={{
         background: '#fff',
         border: '1px solid #E3EBF1',
@@ -135,9 +135,6 @@ export const GreetingBar: React.FC<Props> = ({ userName, eventCount = 0 }) => {
           {weatherLine}
         </span>
       )}
-      <span style={chip}>
-        {eventCount}&nbsp;upcoming event{eventCount === 1 ? '' : 's'}
-      </span>
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 13, color: '#5A6478', fontWeight: 600 }} suppressHydrationWarning>
         {dateLine}

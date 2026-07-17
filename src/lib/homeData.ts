@@ -96,6 +96,18 @@ const dayMonthYear = new Intl.DateTimeFormat('en-AU', {
   year: 'numeric',
 })
 
+/** Map a post to the news-card view type used by the homepage and /posts. */
+export const postToNewsCard = (d: Post, i: number): NewsCard => ({
+  kicker: categoryKicker(d, 'News'),
+  title: d.title,
+  excerpt: postExcerpt(d),
+  date: d.publishedAt ? dayMonthYear.format(new Date(d.publishedAt)) : '',
+  img: gradient(i),
+  imageUrl: mediaUrl(d.heroImage),
+  href: `/posts/${d.slug}`,
+  featured: Boolean(d.featured),
+})
+
 /** Latest CTG news — posts in the `News` category. */
 export async function getNews(): Promise<NewsCard[]> {
   const payload = await getPayload({ config: configPromise })
@@ -111,41 +123,46 @@ export async function getNews(): Promise<NewsCard[]> {
   })
   if (docs.length === 0) return NEWS
 
-  return docs.map((d, i) => ({
-    kicker: categoryKicker(d, 'News'),
-    title: d.title,
-    excerpt: postExcerpt(d),
-    date: d.publishedAt ? dayMonthYear.format(new Date(d.publishedAt)) : '',
-    img: gradient(i),
-    imageUrl: mediaUrl(d.heroImage),
-    href: `/posts/${d.slug}`,
-    featured: Boolean(d.featured),
-  }))
+  return docs.map(postToNewsCard)
 }
 
-/** Latest EDMs — posts in the `EDMs` category. */
+/** All sub-categories of the parent `EDMs` category — the tabs in the Latest EDMs section. */
+export async function getEdmCategories(): Promise<string[]> {
+  const payload = await getPayload({ config: configPromise })
+  const { docs } = await payload.find({
+    collection: 'categories',
+    where: { 'parent.slug': { equals: 'edms' } },
+    sort: 'order',
+    limit: 50,
+    depth: 0,
+  })
+  return docs.map((d) => d.title)
+}
+
+/** Latest EDMs — docs in the `edms` collection; kicker is the EDM sub-category. */
 export async function getEdms(): Promise<EdmCard[]> {
   const payload = await getPayload({ config: configPromise })
-  const catId = await categoryIdBySlug(payload, 'edms')
-  if (catId === null) return EDMS
 
   const { docs } = await payload.find({
-    collection: 'posts',
-    where: { categories: { in: [catId] } },
-    sort: '-publishedAt',
-    limit: 12,
+    collection: 'edms',
+    sort: '-createdAt',
+    limit: 24,
     depth: 1,
   })
   if (docs.length === 0) return EDMS
 
-  return docs.map((d, i) => ({
-    kicker: categoryKicker(d, 'EDMs'),
-    title: d.title,
-    sent: d.publishedAt ? dayMonthYear.format(new Date(d.publishedAt)) : '',
-    img: gradient(i),
-    imageUrl: mediaUrl(d.heroImage),
-    href: `/posts/${d.slug}`,
-  }))
+  return docs.map((d, i) => {
+    const category = typeof d.category === 'object' && d.category ? d.category.title : 'EDMs'
+    return {
+      kicker: category,
+      title: d.title,
+      sent: dayMonthYear.format(new Date(d.createdAt)),
+      description: d.description ?? null,
+      img: gradient(i),
+      imageUrl: mediaUrl(d.image),
+      href: d.url,
+    }
+  })
 }
 
 /** Featured spotlight — posts with the `featured` checkbox ticked, newest first. */
@@ -203,6 +220,19 @@ export async function getOffices(): Promise<OfficeZone[]> {
   return docs.map((d) => ({ city: d.label, tz: d.timezone }))
 }
 
+/** All sub-categories of the parent `Knowledge Base` category — the tabs in the KB section. */
+export async function getKbCategories(): Promise<string[]> {
+  const payload = await getPayload({ config: configPromise })
+  const { docs } = await payload.find({
+    collection: 'categories',
+    where: { 'parent.slug': { equals: 'knowledge-base' } },
+    sort: 'order',
+    limit: 50,
+    depth: 0,
+  })
+  return docs.map((d) => d.title)
+}
+
 export async function getKbDocs(): Promise<KbDoc[]> {
   const payload = await getPayload({ config: configPromise })
   const { docs } = await payload.find({
@@ -216,14 +246,96 @@ export async function getKbDocs(): Promise<KbDoc[]> {
 
   const dayMonth = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' })
 
-  return docs.map((d) => ({
-    title: d.title,
-    description: d.description ?? undefined,
-    ext: d.fileType as DocExt,
-    category: d.category,
-    updated: dayMonth.format(new Date(d.updatedAt)),
-    href: mediaUrl(d.file) ?? d.link ?? '#',
-  }))
+  // Older records were saved without a protocol, which the browser treats as a relative path.
+  const absolute = (url: string): string => (/^https?:\/\//i.test(url) ? url : `https://${url}`)
+
+  return docs.map((d) => {
+    const links = (d.links ?? []).map((l) => ({ label: l.label ?? null, url: absolute(l.url) }))
+    return {
+      title: d.title,
+      description: d.description ?? undefined,
+      ext: d.fileType as DocExt,
+      category: typeof d.category === 'object' && d.category ? d.category.title : String(d.category),
+      updated: dayMonth.format(new Date(d.updatedAt)),
+      href: mediaUrl(d.file) ?? links[0]?.url ?? '#',
+      links,
+    }
+  })
+}
+
+/** Event `time` is stored as an ISO datetime (time-only picker); older records may hold free text. */
+const formatEventTime = (time: string | null | undefined): string => {
+  if (!time) return 'All day'
+  const parsed = new Date(time)
+  if (Number.isNaN(parsed.getTime())) return time
+  return new Intl.DateTimeFormat('en-AU', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Australia/Adelaide',
+  }).format(parsed)
+}
+
+type EventDoc = {
+  date: string
+  repeat?: string | null
+  repeatEvery?: number | null
+  repeatFrequency?: string | null
+}
+
+/** Title of an event's populated category relationship, used as its display tag. */
+const eventTag = (category: number | Category): EventTag =>
+  typeof category === 'object' && category !== null ? category.title : String(category)
+
+/** Occurrence dates for an event, expanded out to `horizon`. Non-repeating events yield just their own date. */
+const expandOccurrences = (doc: EventDoc, horizon: Date): string[] => {
+  const start = new Date(doc.date)
+  const repeat = doc.repeat ?? 'none'
+  if (repeat === 'none' || Number.isNaN(start.getTime())) return [doc.date]
+
+  const stepMap: Record<string, { every: number; unit: string }> = {
+    weekly: { every: 1, unit: 'weeks' },
+    fortnightly: { every: 2, unit: 'weeks' },
+    monthly: { every: 1, unit: 'months' },
+    quarterly: { every: 3, unit: 'months' },
+    biannually: { every: 6, unit: 'months' },
+    annually: { every: 1, unit: 'years' },
+  }
+  const step =
+    repeat === 'custom'
+      ? { every: Math.max(1, doc.repeatEvery ?? 1), unit: doc.repeatFrequency ?? 'weeks' }
+      : stepMap[repeat]
+  if (!step) return [doc.date]
+
+  const dates: string[] = []
+  const cursor = new Date(start)
+  for (let i = 0; cursor <= horizon && i < 200; i++) {
+    dates.push(cursor.toISOString())
+    switch (step.unit) {
+      case 'days':
+        cursor.setDate(cursor.getDate() + step.every)
+        break
+      case 'weeks':
+        cursor.setDate(cursor.getDate() + step.every * 7)
+        break
+      case 'months':
+        cursor.setMonth(cursor.getMonth() + step.every)
+        break
+      case 'years':
+        cursor.setFullYear(cursor.getFullYear() + step.every)
+        break
+      default:
+        return dates
+    }
+  }
+  return dates
+}
+
+/** Repeating events expand up to a year ahead. */
+const recurrenceHorizon = (): Date => {
+  const h = new Date()
+  h.setFullYear(h.getFullYear() + 1)
+  return h
 }
 
 export async function getEventGroups(): Promise<EventGroup[]> {
@@ -232,24 +344,38 @@ export async function getEventGroups(): Promise<EventGroup[]> {
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
 
+  // Recurring events may have a start date in the past but still produce upcoming occurrences.
   const { docs } = await payload.find({
     collection: 'events',
-    where: { date: { greater_than_equal: startOfToday.toISOString() } },
+    where: {
+      or: [
+        { date: { greater_than_equal: startOfToday.toISOString() } },
+        { and: [{ repeat: { exists: true } }, { repeat: { not_equals: 'none' } }] },
+      ],
+    },
     sort: 'date',
-    limit: 50,
+    limit: 200,
+    pagination: false,
   })
 
   if (docs.length === 0) return EVENT_GROUPS
 
+  const horizon = recurrenceHorizon()
+  const occurrences = docs
+    .flatMap((d) => expandOccurrences(d, horizon).map((dateISO) => ({ doc: d, dateISO })))
+    .filter((o) => new Date(o.dateISO) >= startOfToday)
+    .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
+    .slice(0, 50)
+
   const groups: EventGroup[] = []
-  for (const d of docs) {
-    const date = new Date(d.date)
+  for (const { doc: d, dateISO } of occurrences) {
+    const date = new Date(dateISO)
     const day = String(date.getDate())
     const mon = new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(date)
     const item = {
       title: d.title,
-      tag: d.category as EventTag,
-      time: d.time ?? 'All day',
+      tag: eventTag(d.category),
+      time: formatEventTime(d.time),
       loc: d.location ?? '—',
       slug: d.slug ?? undefined,
     }
@@ -258,7 +384,7 @@ export async function getEventGroups(): Promise<EventGroup[]> {
     if (last && last.day === day && last.mon === mon) {
       last.items.push(item)
     } else {
-      groups.push({ day, mon, items: [item], dateISO: d.date })
+      groups.push({ day, mon, items: [item], dateISO })
     }
   }
   return groups
@@ -275,13 +401,18 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
     pagination: false,
   })
 
-  return docs.map((d) => ({
-    title: d.title,
-    tag: d.category as EventTag,
-    time: d.time ?? 'All day',
-    loc: d.location ?? '—',
-    description: d.description ?? null,
-    dateISO: d.date,
-    slug: d.slug ?? undefined,
-  }))
+  const horizon = recurrenceHorizon()
+  return docs
+    .flatMap((d) =>
+      expandOccurrences(d, horizon).map((dateISO) => ({
+        title: d.title,
+        tag: eventTag(d.category),
+        time: formatEventTime(d.time),
+        loc: d.location ?? '—',
+        description: d.description ?? null,
+        dateISO,
+        slug: d.slug ?? undefined,
+      })),
+    )
+    .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
 }

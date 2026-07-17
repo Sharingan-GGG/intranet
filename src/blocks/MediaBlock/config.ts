@@ -9,6 +9,7 @@ export const MediaBlock: Block = {
       type: 'upload',
       relationTo: 'media',
       required: true,
+      hasMany: true,
     },
   ],
 }

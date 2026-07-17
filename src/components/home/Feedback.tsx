@@ -50,7 +50,11 @@ const ctaStyle: React.CSSProperties = {
 }
 
 export const Feedback: React.FC = () => (
-  <div id="support" style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 14px', scrollMarginTop: 82 }}>
+  <div
+    id="support"
+    className="il-support"
+    style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 14px', scrollMarginTop: 82 }}
+  >
     <div
       style={{
         width: 1000,

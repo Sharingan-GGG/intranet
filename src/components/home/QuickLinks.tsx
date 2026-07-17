@@ -2,8 +2,12 @@ import React from 'react'
 
 import type { QuickLink } from '@/lib/home'
 
-export const QuickLinks: React.FC<{ links: QuickLink[] }> = ({ links }) => (
+export const QuickLinks: React.FC<{ links: QuickLink[]; heading?: string }> = ({
+  links,
+  heading = 'Quickest links',
+}) => (
   <div
+    className="il-quick-links"
     style={{
       background: '#fff',
       border: '1px solid #E3EBF1',
@@ -13,7 +17,7 @@ export const QuickLinks: React.FC<{ links: QuickLink[] }> = ({ links }) => (
     }}
   >
     <h2 style={{ margin: '0 0 15px', fontSize: 16, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>
-      Quickest links
+      {heading}
     </h2>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 11 }}>
       {links.map((q) => (

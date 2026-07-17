@@ -1,33 +1,35 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, Menu, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 import { SEARCH_POOL, SEARCH_TINT } from '@/lib/home'
 import { AccountMenu, type AccountUser } from '@/components/intranet/AccountMenu'
 
-const NAV = [
-  { label: 'Home', href: '/' },
-  { label: 'News', href: '/posts' },
-  { label: 'Calendar', href: '/calendar' },
-  { label: 'Knowledge Base', href: '/#knowledge-base' },
-  { label: 'Support', href: '/#support' },
-]
+export type HeaderNavItem = { label: string; href: string; newTab?: boolean }
 
 const isActive = (pathname: string, href: string) =>
   href === '/' ? pathname === '/' : !href.includes('#') && pathname.startsWith(href)
 
 interface HeaderClientProps {
+  /** Nav items from the Header global. */
+  navItems?: HeaderNavItem[]
   /** Signed-in user, or null when not authenticated. */
   user?: AccountUser | null
 }
 
-export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
+export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user = null }) => {
   const pathname = usePathname()
   const [q, setQ] = useState('')
   const [focused, setFocused] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Close the mobile menu whenever navigation happens.
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
 
   const query = q.trim().toLowerCase()
   const results = useMemo(
@@ -59,13 +61,18 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
         </div>
       </Link>
 
-      <nav style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, flex: '0 1 auto', maxWidth: '100%' }}>
-        {NAV.map((item) => {
+      <nav
+        className="il-nav-desktop"
+        style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, flex: '0 1 auto', maxWidth: '100%' }}
+      >
+        {navItems.map((item, i) => {
           const active = isActive(pathname, item.href)
           return (
             <Link
-              key={item.label}
+              key={`${item.href}-${i}`}
               href={item.href}
+              target={item.newTab ? '_blank' : undefined}
+              rel={item.newTab ? 'noopener noreferrer' : undefined}
               className="il-nav-link"
               style={{
                 color: active ? '#fff' : 'rgba(255,255,255,0.72)',
@@ -82,7 +89,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
         })}
       </nav>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
+      <div className="il-search-wrap" style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
         <div style={{ position: 'relative', width: '100%', maxWidth: 340, minWidth: 150 }}>
           <svg
             width="15"
@@ -187,7 +194,16 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
         </div>
       </div>
 
-      <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="il-header-actions" style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button
+          type="button"
+          className="il-burger"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X size={19} strokeWidth={2.2} /> : <Menu size={19} strokeWidth={2.2} />}
+        </button>
         {Boolean(user?.roles?.some((r) => r === 'admin' || r === 'editor')) && (
           <Link
             href="/admin"
@@ -210,6 +226,32 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ user = null }) => {
         )}
         <AccountMenu user={user} />
       </div>
+
+      {/* Mobile nav panel (shown by .il-mobile-menu.open below 900px) */}
+      <nav className={`il-mobile-menu${menuOpen ? ' open' : ''}`} aria-label="Mobile navigation">
+        {navItems.map((item) => {
+          const active = isActive(pathname, item.href)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              target={item.newTab ? '_blank' : undefined}
+              rel={item.newTab ? 'noopener noreferrer' : undefined}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                color: active ? '#fff' : 'rgba(255,255,255,0.78)',
+                fontSize: 15,
+                fontWeight: active ? 700 : 500,
+                padding: '11px 12px',
+                borderRadius: 10,
+                background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+              }}
+            >
+              {item.label}
+            </Link>
+          )
+        })}
+      </nav>
     </header>
   )
 }

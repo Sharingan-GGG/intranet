@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { TAG_STYLE, type EventGroup } from '@/lib/home'
+import { tagStyle, type EventGroup } from '@/lib/home'
 
 const MAX_ITEMS = 6
 
@@ -17,11 +17,15 @@ const topItems = (groups: EventGroup[]): EventGroup[] => {
   return visible
 }
 
-export const Events: React.FC<{ groups: EventGroup[] }> = ({ groups: allGroups }) => {
+export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
+  groups: allGroups,
+  heading = 'Upcoming events',
+}) => {
   const groups = topItems(allGroups)
   return (
   <div
     id="calendar"
+    className="il-events"
     style={{
       background: '#fff',
       border: '1px solid #E3EBF1',
@@ -32,7 +36,7 @@ export const Events: React.FC<{ groups: EventGroup[] }> = ({ groups: allGroups }
     }}
   >
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>Upcoming events</h2>
+      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{heading}</h2>
       <a href="/calendar" style={{ fontSize: 13, fontWeight: 700, color: '#4382DF' }}>
         View all
       </a>
@@ -78,7 +82,7 @@ export const Events: React.FC<{ groups: EventGroup[] }> = ({ groups: allGroups }
             </a>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 2 }}>
               {g.items.map((ev, i) => {
-                const [tagBg, tagFg] = TAG_STYLE[ev.tag]
+                const [tagBg, tagFg] = tagStyle(ev.tag)
                 return (
                   <div key={i} style={{ borderBottom: '1px solid #EEF3F8', paddingBottom: 9 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

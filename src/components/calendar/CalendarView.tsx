@@ -3,10 +3,9 @@
 import { useSearchParams } from 'next/navigation'
 import React, { useMemo, useState } from 'react'
 
-import { TAG_STYLE, type CalendarEvent, type EventTag } from '@/lib/home'
+import { tagStyle, type CalendarEvent, type EventTag } from '@/lib/home'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const TAGS = Object.keys(TAG_STYLE) as EventTag[]
 
 const dateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -71,6 +70,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
   })
 
   // Category tab filter. Empty set = show all; otherwise only the active tags.
+  const tags = useMemo(() => Array.from(new Set(events.map((e) => e.tag))).sort(), [events])
   const [activeTags, setActiveTags] = useState<Set<EventTag>>(new Set())
   const toggleTag = (tag: EventTag) =>
     setActiveTags((prev) => {
@@ -105,6 +105,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
 
   return (
     <div
+      className="il-calendar"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -113,7 +114,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
       }}
     >
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="il-calendar-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em', margin: 0 }}>
           {monthLabel}
         </h1>
@@ -135,9 +136,9 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
             Today
           </button>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {TAGS.map((tag) => {
-            const [bg, fg] = TAG_STYLE[tag]
+        <div className="il-tabs" style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+          {tags.map((tag) => {
+            const [bg, fg] = tagStyle(tag)
             const on = isTagOn(tag)
             const picked = activeTags.has(tag)
             return (
@@ -194,9 +195,12 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
 
       {/* Calendar grid + selected-day panel */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'stretch', flex: 1, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div
+          className="il-cal-scroll"
+          style={{ flex: '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}
+        >
           {/* Weekday header */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+          <div className="il-cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
             {WEEKDAYS.map((d) => (
               <div
                 key={d}
@@ -216,6 +220,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
 
           {/* Month grid */}
           <div
+            className="il-cal-grid"
             style={{
               flex: 1,
               display: 'grid',
@@ -280,7 +285,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
                     {dayEvents.map((ev, i) => {
-                      const [bg, fg] = TAG_STYLE[ev.tag]
+                      const [bg, fg] = tagStyle(ev.tag)
                       return (
                         <div
                           key={i}
@@ -345,7 +350,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
               </div>
             )}
             {selectedEvents.map((ev, i) => {
-              const [bg, fg] = TAG_STYLE[ev.tag]
+              const [bg, fg] = tagStyle(ev.tag)
               return (
                 <div
                   key={i}

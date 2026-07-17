@@ -8,6 +8,15 @@ import { CallToAction } from '../../blocks/CallToAction/config'
 import { Content } from '../../blocks/Content/config'
 import { FormBlock } from '../../blocks/Form/config'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
+import { GreetingBar } from '../../blocks/home/GreetingBar/config'
+import { FeaturedSpotlight } from '../../blocks/home/FeaturedSpotlight/config'
+import { QuickLinks } from '../../blocks/home/QuickLinks/config'
+import { TimeZones } from '../../blocks/home/TimeZones/config'
+import { KnowledgeBase } from '../../blocks/home/KnowledgeBase/config'
+import { EventsBlock } from '../../blocks/home/Events/config'
+import { NewsSlider } from '../../blocks/home/NewsSlider/config'
+import { EdmSlider } from '../../blocks/home/EDMSlider/config'
+import { Feedback } from '../../blocks/home/Feedback/config'
 import { hero } from '@/heros/config'
 import { slugField } from 'payload'
 import { populatePublishedAt } from '../../hooks/populatePublishedAt'
@@ -73,7 +82,22 @@ export const Pages: CollectionConfig<'pages'> = {
             {
               name: 'layout',
               type: 'blocks',
-              blocks: [CallToAction, Content, MediaBlock, Archive, FormBlock],
+              blocks: [
+                CallToAction,
+                Content,
+                MediaBlock,
+                Archive,
+                FormBlock,
+                GreetingBar,
+                FeaturedSpotlight,
+                QuickLinks,
+                TimeZones,
+                KnowledgeBase,
+                EventsBlock,
+                NewsSlider,
+                EdmSlider,
+                Feedback,
+              ],
               required: true,
               admin: {
                 initCollapsed: true,

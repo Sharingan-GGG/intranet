@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 
 import { Categories } from './collections/Categories'
 import { Departments } from './collections/Departments'
+import { EDMs } from './collections/EDMs'
 import { Events } from './collections/Events'
 import { KnowledgeBase } from './collections/KnowledgeBase'
 import { Media } from './collections/Media'
@@ -42,6 +43,8 @@ export default buildConfig({
       ],
     },
     components: {
+      // Rendered in the admin header beside the account avatar.
+      actions: ['@/components/AdminViewWebsite'],
       graphics: {
         Icon: '@/components/AdminGraphics/Icon',
         Logo: '@/components/AdminGraphics/Logo',
@@ -97,6 +100,7 @@ export default buildConfig({
     TimeZones,
     KnowledgeBase,
     Events,
+    EDMs,
     Roles,
     Permissions,
     Users,

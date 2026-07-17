@@ -36,6 +36,7 @@ export const TimeZones: React.FC<{ offices: OfficeZone[] }> = ({ offices }) => {
   return (
     <div
       id="offices"
+      className="il-offices"
       style={{
         background: 'linear-gradient(120deg,#112E81,#4647AE 70%,#4382DF)',
         borderRadius: 20,
@@ -47,8 +48,8 @@ export const TimeZones: React.FC<{ offices: OfficeZone[] }> = ({ offices }) => {
       }}
     >
       <div style={{ flex: 'none', width: 150 }}>
-        <h2 style={{ margin: 0, color: '#fff', fontSize: 16, fontWeight: 800, lineHeight: 1.25 }}>Time in our offices</h2>
-        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12.5, marginTop: 4 }}>Live · updates every second</div>
+        <h2 style={{ margin: 0, color: '#fff', fontSize: 16, fontWeight: 800, lineHeight: 1.25 }}>CTG Offices</h2>
+        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12.5, marginTop: 4 }}>Live Local Times</div>
       </div>
       <div
         style={{

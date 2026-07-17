@@ -127,6 +127,11 @@
   gap: 24px;
   align-items: stretch;
 }
+/* Let grid children shrink below their content width (scrollable tab rows etc.) */
+.il-grid-hero > *,
+.il-grid-kb > * {
+  min-width: 0;
+}
 @media (max-width: 1000px) {
   .il-grid-hero,
   .il-grid-kb {
@@ -139,12 +144,93 @@
   }
 }
 
-/* Header wraps into rows on narrow viewports instead of overflowing */
+/* Mobile header: burger menu replaces the inline nav */
+.il-burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  flex: none;
+}
+.il-mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #112e81;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 32px rgba(17, 46, 129, 0.28);
+  flex-direction: column;
+  padding: 8px 12px 14px;
+  gap: 2px;
+  z-index: 39;
+}
 @media (max-width: 900px) {
   .il-header {
     flex-wrap: wrap;
-    gap: 8px 16px !important;
+    gap: 8px 12px !important;
     padding: 10px 16px !important;
+  }
+  .il-nav-desktop {
+    display: none !important;
+  }
+  .il-burger {
+    display: flex;
+  }
+  .il-mobile-menu.open {
+    display: flex;
+  }
+  /* Row 1: logo + actions (burger, admin, account); row 2: full-width search */
+  .il-header-actions {
+    margin-left: auto;
+  }
+  .il-search-wrap {
+    order: 3;
+    flex: 1 1 100% !important;
+  }
+  .il-search-wrap > div {
+    max-width: none !important;
+  }
+}
+
+/* Tab pill rows: horizontal scroll instead of wrapping on phones */
+@media (max-width: 640px) {
+  .il-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+  .il-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .il-tabs > * {
+    flex: none !important;
+    white-space: nowrap;
+  }
+  /* Knowledge-base document list collapses to one column */
+  .il-kb-docs {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Calendar month grid scrolls sideways on phones instead of crushing */
+@media (max-width: 700px) {
+  .il-cal-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .il-cal-grid {
+    min-width: 560px;
   }
 }
 

@@ -4,74 +4,40 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import React from 'react'
 
-import {
-  getEdmCategories,
-  getEdms,
-  getEventGroups,
-  getFeaturedNews,
-  getKbCategories,
-  getKbDocs,
-  getNews,
-  getOffices,
-  getQuickLinks,
-} from '@/lib/homeData'
-import { GreetingBar } from '@/components/home/GreetingBar'
-import { FeaturedSpotlight } from '@/components/home/FeaturedSpotlight'
-import { QuickLinks } from '@/components/home/QuickLinks'
-import { TimeZones } from '@/components/home/TimeZones'
-import { KnowledgeBase } from '@/components/home/KnowledgeBase'
-import { Events } from '@/components/home/Events'
-import { NewsSlider } from '@/components/home/NewsSlider'
-import { EDMSlider } from '@/components/home/EDMSlider'
-import { Feedback } from '@/components/home/Feedback'
+import type { Page } from '@/payload-types'
+
+import { RenderHomeBlocks } from '@/blocks/home/RenderHomeBlocks'
+import { HardcodedHome } from '@/components/home/HardcodedHome'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const payload = await getPayload({ config: configPromise })
-  const [{ user }, quickLinks, offices, kbDocs, kbCategories, eventGroups, news, edms, edmCategories, featured] =
-    await Promise.all([
-      payload.auth({ headers: await getHeaders() }),
-      getQuickLinks(),
-      getOffices(),
-      getKbDocs(),
-      getKbCategories(),
-      getEventGroups(),
-      getNews(),
-      getEdms(),
-      getEdmCategories(),
-      getFeaturedNews(),
-    ])
-
+  const { user } = await payload.auth({ headers: await getHeaders() })
   const firstName = user?.name?.trim().split(/\s+/)[0]
+
+  let layout: Page['layout'] | undefined
+  try {
+    const result = await payload.find({
+      collection: 'pages',
+      where: { slug: { equals: 'home' } },
+      limit: 1,
+      pagination: false,
+      depth: 1,
+    })
+    layout = result.docs[0]?.layout
+  } catch (err) {
+    payload.logger.error({ err }, 'Failed to fetch the home page doc; falling back to hardcoded home')
+  }
 
   return (
     <div className="il-root il-page">
       <main className="il-main">
-        {/* Greeting + featured spotlight + quick links */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <GreetingBar userName={firstName} />
-          <div className="il-grid-hero">
-            <FeaturedSpotlight items={featured} />
-            <QuickLinks links={quickLinks} />
-          </div>
-        </div>
-
-        {/* Live office clocks */}
-        <TimeZones offices={offices} />
-
-        {/* Knowledge base + upcoming events */}
-        <div className="il-grid-kb">
-          <KnowledgeBase documents={kbDocs} categories={kbCategories} />
-          <Events groups={eventGroups} />
-        </div>
-
-        {/* Sliders */}
-        <NewsSlider items={news} />
-        <EDMSlider items={edms} categories={edmCategories} />
-
-        {/* Org chart + feedback */}
-        <Feedback />
+        {layout?.length ? (
+          <RenderHomeBlocks blocks={layout} userName={firstName} />
+        ) : (
+          <HardcodedHome userName={firstName} />
+        )}
       </main>
     </div>
   )

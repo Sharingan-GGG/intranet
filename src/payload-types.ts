@@ -76,6 +76,7 @@ export interface Config {
     'time-zones': TimeZone;
     'knowledge-base': KnowledgeBase;
     events: Event;
+    edms: Edm;
     roles: Role;
     permissions: Permission;
     users: User;
@@ -105,6 +106,7 @@ export interface Config {
     'time-zones': TimeZonesSelect<false> | TimeZonesSelect<true>;
     'knowledge-base': KnowledgeBaseSelect<false> | KnowledgeBaseSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
+    edms: EdmsSelect<false> | EdmsSelect<true>;
     roles: RolesSelect<false> | RolesSelect<true>;
     permissions: PermissionsSelect<false> | PermissionsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -215,7 +217,22 @@ export interface Page {
       | null;
     media?: (number | null) | Media;
   };
-  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock)[];
+  layout: (
+    | CallToActionBlock
+    | ContentBlock
+    | MediaBlock
+    | ArchiveBlock
+    | FormBlock
+    | GreetingBarBlock
+    | FeaturedSpotlightBlock
+    | QuickLinksBlock
+    | TimeZonesBlock
+    | KnowledgeBaseBlock
+    | EventsBlock
+    | NewsSliderBlock
+    | EdmSliderBlock
+    | FeedbackBlock
+  )[];
   meta?: {
     title?: string | null;
     /**
@@ -415,11 +432,18 @@ export interface Category {
   id: number;
   title: string;
   /**
+   * Optional parent category, e.g. sub-categories of EDMs.
+   */
+  parent?: (number | null) | Category;
+  /**
+   * Display order among categories sharing the same parent (1 comes first). Parent categories default to 1.
+   */
+  order?: number | null;
+  /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
   generateSlug?: boolean | null;
   slug: string;
-  parent?: (number | null) | Category;
   breadcrumbs?:
     | {
         doc?: (number | null) | Category;
@@ -642,7 +666,7 @@ export interface ContentBlock {
  * via the `definition` "MediaBlock".
  */
 export interface MediaBlock {
-  media: number | Media;
+  media: (number | Media)[];
   id?: string | null;
   blockName?: string | null;
   blockType: 'mediaBlock';
@@ -880,6 +904,104 @@ export interface Form {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GreetingBarBlock".
+ */
+export interface GreetingBarBlock {
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'greetingBar';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedSpotlightBlock".
+ */
+export interface FeaturedSpotlightBlock {
+  /**
+   * Maximum number of featured news items to show.
+   */
+  limit?: number | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'featuredSpotlight';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "QuickLinksBlock".
+ */
+export interface QuickLinksBlock {
+  heading?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'quickLinks';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TimeZonesBlock".
+ */
+export interface TimeZonesBlock {
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'timeZones';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "KnowledgeBaseBlock".
+ */
+export interface KnowledgeBaseBlock {
+  heading?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'knowledgeBase';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "EventsBlock".
+ */
+export interface EventsBlock {
+  heading?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'eventsBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NewsSliderBlock".
+ */
+export interface NewsSliderBlock {
+  heading?: string | null;
+  /**
+   * Maximum number of news cards to show.
+   */
+  limit?: number | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'newsSlider';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "EdmSliderBlock".
+ */
+export interface EdmSliderBlock {
+  heading?: string | null;
+  /**
+   * Maximum number of EDM cards to show.
+   */
+  limit?: number | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'edmSlider';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeedbackBlock".
+ */
+export interface FeedbackBlock {
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'feedback';
 }
 /**
  * Shortcut buttons shown on the intranet home page.
@@ -1358,7 +1480,10 @@ export interface TimeZone {
 export interface KnowledgeBase {
   id: number;
   title: string;
-  category: 'Policies' | 'Finance' | 'Operations' | 'Marketing' | 'People';
+  /**
+   * A sub-category of the Knowledge Base parent category.
+   */
+  category: number | Category;
   /**
    * Short summary — also matched by the intranet search.
    */
@@ -1366,15 +1491,24 @@ export interface KnowledgeBase {
   /**
    * Drives the file-type badge in the list.
    */
-  fileType: 'PDF' | 'XLS' | 'DOC';
+  fileType: 'PDF' | 'XLS' | 'DOC' | 'Folder';
   /**
    * Upload the document, or leave empty and set an external link below.
    */
   file?: (number | null) | Media;
   /**
-   * External URL, used when no file is uploaded.
+   * External URLs, used when no file is uploaded. With multiple links, the intranet shows a pop-up listing them.
    */
-  link?: string | null;
+  links?:
+    | {
+        /**
+         * Shown in the pop-up. Falls back to the URL if left blank.
+         */
+        label?: string | null;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1387,12 +1521,27 @@ export interface KnowledgeBase {
 export interface Event {
   id: number;
   title: string;
-  category: 'People' | 'Training' | 'Company' | 'Social';
+  /**
+   * A sub-category of the Events parent category.
+   */
+  category: number | Category;
+  /**
+   * The day the event takes place.
+   */
   date: string;
   /**
-   * e.g. "2:00–3:00 PM" or "All day".
+   * Start time. Leave blank for all-day events.
    */
   time?: string | null;
+  /**
+   * How often this event repeats.
+   */
+  repeat?: ('none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'biannually' | 'annually' | 'custom') | null;
+  /**
+   * e.g. 2 = every 2 weeks/months…
+   */
+  repeatEvery?: number | null;
+  repeatFrequency?: ('days' | 'weeks' | 'months' | 'years') | null;
   /**
    * e.g. "Adelaide HQ, Boardroom" or "Online · Teams".
    */
@@ -1402,6 +1551,28 @@ export interface Event {
    * URL for the event detail page. Auto-generated from the title if left blank.
    */
   slug?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Marketing EDMs shown in the "Latest EDMs" section on the home page.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "edms".
+ */
+export interface Edm {
+  id: number;
+  title: string;
+  /**
+   * A sub-category of the EDMs parent category.
+   */
+  category: number | Category;
+  image?: (number | null) | Media;
+  description?: string | null;
+  /**
+   * Link to the hosted EDM.
+   */
+  url: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -1632,6 +1803,10 @@ export interface PayloadLockedDocument {
         value: number | Event;
       } | null)
     | ({
+        relationTo: 'edms';
+        value: number | Edm;
+      } | null)
+    | ({
         relationTo: 'roles';
         value: number | Role;
       } | null)
@@ -1741,6 +1916,15 @@ export interface PagesSelect<T extends boolean = true> {
         mediaBlock?: T | MediaBlockSelect<T>;
         archive?: T | ArchiveBlockSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
+        greetingBar?: T | GreetingBarBlockSelect<T>;
+        featuredSpotlight?: T | FeaturedSpotlightBlockSelect<T>;
+        quickLinks?: T | QuickLinksBlockSelect<T>;
+        timeZones?: T | TimeZonesBlockSelect<T>;
+        knowledgeBase?: T | KnowledgeBaseBlockSelect<T>;
+        eventsBlock?: T | EventsBlockSelect<T>;
+        newsSlider?: T | NewsSliderBlockSelect<T>;
+        edmSlider?: T | EdmSliderBlockSelect<T>;
+        feedback?: T | FeedbackBlockSelect<T>;
       };
   meta?:
     | T
@@ -1837,6 +2021,86 @@ export interface FormBlockSelect<T extends boolean = true> {
   form?: T;
   enableIntro?: T;
   introContent?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GreetingBarBlock_select".
+ */
+export interface GreetingBarBlockSelect<T extends boolean = true> {
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedSpotlightBlock_select".
+ */
+export interface FeaturedSpotlightBlockSelect<T extends boolean = true> {
+  limit?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "QuickLinksBlock_select".
+ */
+export interface QuickLinksBlockSelect<T extends boolean = true> {
+  heading?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TimeZonesBlock_select".
+ */
+export interface TimeZonesBlockSelect<T extends boolean = true> {
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "KnowledgeBaseBlock_select".
+ */
+export interface KnowledgeBaseBlockSelect<T extends boolean = true> {
+  heading?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "EventsBlock_select".
+ */
+export interface EventsBlockSelect<T extends boolean = true> {
+  heading?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NewsSliderBlock_select".
+ */
+export interface NewsSliderBlockSelect<T extends boolean = true> {
+  heading?: T;
+  limit?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "EdmSliderBlock_select".
+ */
+export interface EdmSliderBlockSelect<T extends boolean = true> {
+  heading?: T;
+  limit?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeedbackBlock_select".
+ */
+export interface FeedbackBlockSelect<T extends boolean = true> {
   id?: T;
   blockName?: T;
 }
@@ -1972,9 +2236,10 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface CategoriesSelect<T extends boolean = true> {
   title?: T;
+  parent?: T;
+  order?: T;
   generateSlug?: T;
   slug?: T;
-  parent?: T;
   breadcrumbs?:
     | T
     | {
@@ -2032,7 +2297,13 @@ export interface KnowledgeBaseSelect<T extends boolean = true> {
   description?: T;
   fileType?: T;
   file?: T;
-  link?: T;
+  links?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2045,9 +2316,25 @@ export interface EventsSelect<T extends boolean = true> {
   category?: T;
   date?: T;
   time?: T;
+  repeat?: T;
+  repeatEvery?: T;
+  repeatFrequency?: T;
   location?: T;
   description?: T;
   slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "edms_select".
+ */
+export interface EdmsSelect<T extends boolean = true> {
+  title?: T;
+  category?: T;
+  image?: T;
+  description?: T;
+  url?: T;
   updatedAt?: T;
   createdAt?: T;
 }

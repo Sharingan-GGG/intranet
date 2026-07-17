@@ -36,17 +36,20 @@ type Props = {
   id: string
   title: string
   step?: number
+  /** Extra header content (e.g. filter tabs) rendered between the title and the arrows. */
+  headerExtra?: React.ReactNode
   children: React.ReactNode
 }
 
-export const CardSlider: React.FC<Props> = ({ id, title, step = 680, children }) => {
+export const CardSlider: React.FC<Props> = ({ id, title, step = 680, headerExtra, children }) => {
   const track = useRef<HTMLDivElement>(null)
   const scroll = (dx: number) => track.current?.scrollBy({ left: dx, behavior: 'smooth' })
 
   return (
-    <div id={id} style={{ scrollMarginTop: 82 }}>
+    <div id={id} className={`il-slider il-slider-${id}`} style={{ scrollMarginTop: 82 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{title}</h2>
+        {headerExtra}
         <div style={{ display: 'flex', gap: 8 }}>
           <RoundBtn dir="prev" onClick={() => scroll(-step)} />
           <RoundBtn dir="next" onClick={() => scroll(step)} />

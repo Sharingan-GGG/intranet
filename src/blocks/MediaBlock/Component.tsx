@@ -29,8 +29,7 @@ export const MediaBlock: React.FC<Props> = (props) => {
     disableInnerContainer,
   } = props
 
-  let caption
-  if (media && typeof media === 'object') caption = media.caption
+  const items = Array.isArray(media) ? media : media ? [media] : []
 
   return (
     <div
@@ -42,26 +41,38 @@ export const MediaBlock: React.FC<Props> = (props) => {
         className,
       )}
     >
-      {(media || staticImage) && (
+      {items.length === 0 && staticImage && (
         <Media
           imgClassName={cn('border border-border rounded-[0.8rem]', imgClassName)}
-          resource={media}
           src={staticImage}
         />
       )}
-      {caption && (
-        <div
-          className={cn(
-            'mt-6',
-            {
-              container: !disableInnerContainer,
-            },
-            captionClassName,
-          )}
-        >
-          <RichText data={caption} enableGutter={false} />
-        </div>
-      )}
+      <div className={cn({ 'grid grid-cols-1 gap-4 md:grid-cols-2': items.length > 1 })}>
+        {items.map((item, i) => {
+          const caption = item && typeof item === 'object' ? item.caption : undefined
+          return (
+            <figure key={typeof item === 'object' ? item.id : i} className="m-0">
+              <Media
+                imgClassName={cn('border border-border rounded-[0.8rem]', imgClassName)}
+                resource={item}
+              />
+              {caption && (
+                <div
+                  className={cn(
+                    'mt-6',
+                    {
+                      container: !disableInnerContainer,
+                    },
+                    captionClassName,
+                  )}
+                >
+                  <RichText data={caption} enableGutter={false} />
+                </div>
+              )}
+            </figure>
+          )
+        })}
+      </div>
     </div>
   )
 }
