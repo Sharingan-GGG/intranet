@@ -127,6 +127,9 @@ export const Posts: CollectionConfig<'posts'> = {
         {
           name: 'meta',
           label: 'SEO',
+          admin: {
+            condition: () => false,
+          },
           fields: [
             OverviewField({
               titlePath: 'meta.title',
