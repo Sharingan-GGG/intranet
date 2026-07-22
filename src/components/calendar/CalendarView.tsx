@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import React, { useMemo, useState } from 'react'
 
 import { tagStyle, type CalendarEvent, type EventTag } from '@/lib/home'
+import { LocalTime } from '@/components/shared/LocalTime'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -310,7 +311,9 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                           >
                             {ev.title}
                           </div>
-                          <div style={{ fontSize: 10.5, fontWeight: 600, opacity: 0.85 }}>{ev.time}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 600, opacity: 0.85 }}>
+                            <LocalTime iso={ev.timeISO} fallback={ev.time} />
+                          </div>
                         </div>
                       )
                     })}
@@ -382,7 +385,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                     {ev.title}
                   </span>
                   <span style={{ fontSize: 12.5, color: '#5A6478' }}>
-                    {ev.time} · {ev.loc}
+                    <LocalTime iso={ev.timeISO} fallback={ev.time} /> · {ev.loc}
                   </span>
                   {ev.description && (
                     <span style={{ fontSize: 13, color: '#3A4658', lineHeight: 1.55, marginTop: 2, whiteSpace: 'pre-wrap' }}>

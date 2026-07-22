@@ -376,6 +376,7 @@ export async function getEventGroups(): Promise<EventGroup[]> {
       title: d.title,
       tag: eventTag(d.category),
       time: formatEventTime(d.time),
+      timeISO: d.time ?? null,
       loc: d.location ?? '—',
       slug: d.slug ?? undefined,
     }
@@ -408,6 +409,7 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
         title: d.title,
         tag: eventTag(d.category),
         time: formatEventTime(d.time),
+        timeISO: d.time ?? null,
         loc: d.location ?? '—',
         description: d.description ?? null,
         dateISO,

@@ -38,7 +38,10 @@ export type EventTag = string
 export type EventItem = {
   title: string
   tag: EventTag
+  /** Adelaide-formatted fallback, e.g. for the pre-hydration render. */
   time: string
+  /** Raw start instant; the UI reformats this into the viewer's local timezone once mounted. */
+  timeISO?: string | null
   loc: string
   /** Slug linking to the event's detail page, when sourced from the CMS. */
   slug?: string
@@ -56,7 +59,10 @@ export type EventGroup = {
 export type CalendarEvent = {
   title: string
   tag: EventTag
+  /** Adelaide-formatted fallback, e.g. for the pre-hydration render. */
   time: string
+  /** Raw start instant; the UI reformats this into the viewer's local timezone once mounted. */
+  timeISO?: string | null
   loc: string
   description: string | null
   /** ISO date string, e.g. "2026-07-17T00:00:00.000Z". */

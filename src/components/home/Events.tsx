@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { tagStyle, type EventGroup } from '@/lib/home'
+import { LocalTime } from '@/components/shared/LocalTime'
 
 const MAX_ITEMS = 6
 
@@ -108,7 +109,7 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                       </span>
                     </div>
                     <div style={{ fontSize: 12.5, color: '#5A6478', marginTop: 3 }}>
-                      {ev.time} · {ev.loc}
+                      <LocalTime iso={ev.timeISO} fallback={ev.time} /> · {ev.loc}
                     </div>
                   </div>
                 )
