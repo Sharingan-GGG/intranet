@@ -2,6 +2,60 @@
    Static values live inline on the components; :hover / :focus / scrollbar
    behaviour that inline styles can't express is defined here. */
 
+/* ---------------------------------------------------------------------------
+   Color-scheme tokens. The intranet UI references these --il-* variables
+   (inline styles + the rules below) instead of hardcoded brand hexes, so the
+   header scheme toggle can recolor everything by swapping the values.
+   Switched via a `data-scheme` attribute on <html> (see SchemeProvider +
+   InitTheme). Scheme 1 "Current" is the default and reproduces the original
+   palette exactly, so a missing/unknown attribute renders unchanged.
+   Independent of the light/dark `data-theme` used by the Payload admin. */
+:root,
+[data-scheme='default'] {
+  --il-brand: #112e81;
+  --il-brand-hover: #4647ae;
+  --il-accent: #4382df;
+  --il-secondary: #4647ae;
+  --il-highlight: #dce7f5;
+  --il-text: #1b2233;
+  --il-text-body: #5a6478;
+  --il-text-muted: #8a94a6;
+  --il-border: #e3ebf1;
+  --il-page-bg: #f4f7fa;
+  --il-surface: #ffffff;
+  --il-on-brand: #ffffff;
+}
+
+[data-scheme='ocean'] {
+  --il-brand: #406093;
+  --il-brand-hover: #34506f;
+  --il-accent: #4c8ce4;
+  --il-secondary: #91d06c;
+  --il-highlight: #fff799;
+  --il-text: #16202e;
+  --il-text-body: #2e3d4f;
+  --il-text-muted: #7c8ba0;
+  --il-border: #d5e1ef;
+  --il-page-bg: #f2f6fb;
+  --il-surface: #ffffff;
+  --il-on-brand: #ffffff;
+}
+
+[data-scheme='midnight'] {
+  --il-brand: #101010;
+  --il-brand-hover: #2a2a2a;
+  --il-accent: #fbbc13;
+  --il-secondary: #fbbc13;
+  --il-highlight: #f7e9c0;
+  --il-text: #101010;
+  --il-text-body: #3a3a3a;
+  --il-text-muted: #8a8a8a;
+  --il-border: #e5e2d6;
+  --il-page-bg: #faf7ee;
+  --il-surface: #ffffff;
+  --il-on-brand: #ffffff;
+}
+
 .il-root {
   font-family: 'Hanken Grotesk', var(--font-hanken), system-ui, sans-serif;
 }
@@ -24,12 +78,12 @@
 }
 .il-search:focus {
   background: #fff;
-  color: #112e81;
-  border-color: #4382df;
-  box-shadow: 0 0 0 3px rgba(67, 130, 223, 0.35);
+  color: var(--il-brand);
+  border-color: var(--il-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--il-accent) 35%, transparent);
 }
 .il-search:focus::placeholder {
-  color: #8a94a6;
+  color: var(--il-text-muted);
 }
 
 /* KB / feedback light inputs */
@@ -37,9 +91,9 @@
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 .il-input:focus {
-  border-color: #4382df;
+  border-color: var(--il-accent);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(67, 130, 223, 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--il-accent) 18%, transparent);
 }
 
 /* Quick-link tiles */
@@ -47,7 +101,7 @@
   transition: all 180ms ease;
 }
 .il-tile:hover {
-  border-color: #4382df !important;
+  border-color: var(--il-accent) !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 18px rgba(17, 46, 129, 0.1);
 }
@@ -66,8 +120,8 @@
   transition: all 150ms ease;
 }
 .il-round:hover {
-  border-color: #4382df !important;
-  background: #eff5fc !important;
+  border-color: var(--il-accent) !important;
+  background: color-mix(in srgb, var(--il-accent) 12%, #fff) !important;
 }
 
 /* KB document rows */
@@ -83,7 +137,7 @@
   transition: all 160ms ease;
 }
 .il-cta-navy:hover {
-  background: #4647ae !important;
+  background: var(--il-brand-hover) !important;
 }
 
 /* Footer links */
@@ -104,7 +158,7 @@
 
 /* Landing layout grids — collapse on narrow viewports */
 .il-page {
-  background: #f4f7fa;
+  background: var(--il-page-bg);
   flex: 1;
 }
 .il-main {
@@ -164,7 +218,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: #112e81;
+  background: var(--il-brand);
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 18px 32px rgba(17, 46, 129, 0.28);
   flex-direction: column;

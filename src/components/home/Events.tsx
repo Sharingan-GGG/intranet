@@ -29,7 +29,7 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
     className="il-events"
     style={{
       background: '#fff',
-      border: '1px solid #E3EBF1',
+      border: '1px solid var(--il-border)',
       borderRadius: 20,
       padding: 24,
       boxShadow: '0 1px 2px rgba(17,46,129,0.04)',
@@ -37,14 +37,14 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
     }}
   >
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{heading}</h2>
-      <a href="/calendar" style={{ fontSize: 13, fontWeight: 700, color: '#4382DF' }}>
+      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }}>{heading}</h2>
+      <a href="/calendar" style={{ fontSize: 13, fontWeight: 700, color: 'var(--il-accent)' }}>
         View all
       </a>
     </div>
 
     {groups.length === 0 ? (
-      <div style={{ padding: 24, textAlign: 'center', fontSize: 13.5, color: '#5A6478' }}>No upcoming events.</div>
+      <div style={{ padding: 24, textAlign: 'center', fontSize: 13.5, color: 'var(--il-text-body)' }}>No upcoming events.</div>
     ) : (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {groups.map((g) => (
@@ -58,7 +58,7 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                 height: 52,
                 borderRadius: 12,
                 background: '#EFF4FB',
-                border: '1px solid #DCE7F5',
+                border: '1px solid var(--il-border)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -67,14 +67,14 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                 cursor: 'pointer',
               }}
             >
-              <span style={{ fontSize: 18, fontWeight: 800, color: '#112E81', lineHeight: 1 }}>{g.day}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--il-brand)', lineHeight: 1 }}>{g.day}</span>
               <span
                 style={{
                   fontSize: 10.5,
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  color: '#4647AE',
+                  color: 'var(--il-brand-hover)',
                   marginTop: 2,
                 }}
               >
@@ -89,7 +89,7 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <a
                         href={g.dateISO ? `/calendar?date=${g.dateISO.slice(0, 10)}` : '/calendar'}
-                        style={{ fontSize: 14, fontWeight: 700, color: '#1B2233', textDecoration: 'none' }}
+                        style={{ fontSize: 14, fontWeight: 700, color: 'var(--il-text)', textDecoration: 'none' }}
                       >
                         {ev.title}
                       </a>
@@ -108,7 +108,7 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                         {ev.tag}
                       </span>
                     </div>
-                    <div style={{ fontSize: 12.5, color: '#5A6478', marginTop: 3 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--il-text-body)', marginTop: 3 }}>
                       <LocalTime iso={ev.timeISO} fallback={ev.time} /> · {ev.loc}
                     </div>
                   </div>

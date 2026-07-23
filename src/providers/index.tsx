@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { HeaderThemeProvider } from './HeaderTheme'
+import { SchemeProvider } from './Scheme'
 import { ThemeProvider } from './Theme'
 
 export const Providers: React.FC<{
@@ -8,7 +9,9 @@ export const Providers: React.FC<{
 }> = ({ children }) => {
   return (
     <ThemeProvider>
-      <HeaderThemeProvider>{children}</HeaderThemeProvider>
+      <SchemeProvider>
+        <HeaderThemeProvider>{children}</HeaderThemeProvider>
+      </SchemeProvider>
     </ThemeProvider>
   )
 }

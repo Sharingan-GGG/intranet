@@ -38,7 +38,7 @@ export const TimeZones: React.FC<{ offices: OfficeZone[] }> = ({ offices }) => {
       id="offices"
       className="il-offices"
       style={{
-        background: 'linear-gradient(120deg,#112E81,#4647AE 70%,#4382DF)',
+        background: 'linear-gradient(120deg,var(--il-brand),var(--il-brand-hover) 70%,var(--il-accent))',
         borderRadius: 20,
         padding: '22px 30px',
         display: 'flex',

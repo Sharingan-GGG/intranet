@@ -10,13 +10,13 @@ export const QuickLinks: React.FC<{ links: QuickLink[]; heading?: string }> = ({
     className="il-quick-links"
     style={{
       background: '#fff',
-      border: '1px solid #E3EBF1',
+      border: '1px solid var(--il-border)',
       borderRadius: 20,
       padding: '22px 24px 24px',
       boxShadow: '0 1px 2px rgba(17,46,129,0.04)',
     }}
   >
-    <h2 style={{ margin: '0 0 15px', fontSize: 16, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>
+    <h2 style={{ margin: '0 0 15px', fontSize: 16, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }}>
       {heading}
     </h2>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 11 }}>
@@ -33,7 +33,7 @@ export const QuickLinks: React.FC<{ links: QuickLink[]; heading?: string }> = ({
             alignItems: 'center',
             gap: 9,
             padding: '15px 8px 13px',
-            border: '1px solid #E3EBF1',
+            border: '1px solid var(--il-border)',
             borderRadius: 14,
             background: '#fff',
           }}
@@ -44,7 +44,7 @@ export const QuickLinks: React.FC<{ links: QuickLink[]; heading?: string }> = ({
               height: 38,
               borderRadius: 11,
               background: '#F2F6FA',
-              border: '1px solid #E3EBF1',
+              border: '1px solid var(--il-border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -53,7 +53,7 @@ export const QuickLinks: React.FC<{ links: QuickLink[]; heading?: string }> = ({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={q.icon} alt="" width={22} height={22} style={{ borderRadius: 5, objectFit: 'contain' }} />
           </span>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1B2233', textAlign: 'center', lineHeight: 1.2 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--il-text)', textAlign: 'center', lineHeight: 1.2 }}>
             {q.label}
           </span>
         </a>

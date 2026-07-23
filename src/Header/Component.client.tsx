@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 
 import { SEARCH_POOL, SEARCH_TINT } from '@/lib/home'
 import { AccountMenu, type AccountUser } from '@/components/intranet/AccountMenu'
+import { SchemeToggle } from '@/components/intranet/SchemeToggle'
 
 export type HeaderNavItem = { label: string; href: string; newTab?: boolean }
 
@@ -42,7 +43,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
     <header
       className="il-root il-header"
       style={{
-        background: '#112E81',
+        background: 'var(--il-brand)',
         display: 'flex',
         alignItems: 'center',
         gap: 28,
@@ -132,10 +133,10 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                 top: 46,
                 left: 0,
                 right: 0,
-                background: '#fff',
+                background: 'var(--il-surface)',
                 borderRadius: 14,
                 boxShadow: '0 16px 40px rgba(17,46,129,0.22)',
-                border: '1px solid #E3EBF1',
+                border: '1px solid var(--il-border)',
                 overflow: 'hidden',
                 padding: 6,
               }}
@@ -174,7 +175,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                     <span
                       style={{
                         fontSize: 13.5,
-                        color: '#1B2233',
+                        color: 'var(--il-text)',
                         fontWeight: 500,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -187,7 +188,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                 )
               })}
               {results.length === 0 && (
-                <div style={{ padding: 12, fontSize: 13, color: '#5A6478' }}>No matches for “{q.trim()}”</div>
+                <div style={{ padding: 12, fontSize: 13, color: 'var(--il-text-body)' }}>No matches for “{q.trim()}”</div>
               )}
             </div>
           )}
@@ -224,6 +225,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
             <LayoutDashboard size={17} strokeWidth={2.2} />
           </Link>
         )}
+        <SchemeToggle />
         <AccountMenu user={user} />
       </div>
 

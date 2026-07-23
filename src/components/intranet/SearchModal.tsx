@@ -282,7 +282,7 @@ export const SearchModal: React.FC = () => {
               border: 'none',
               outline: 'none',
               fontSize: 17,
-              color: '#1B2233',
+              color: 'var(--il-text)',
               background: 'transparent',
             }}
           />
@@ -290,14 +290,14 @@ export const SearchModal: React.FC = () => {
 
         {/* Results */}
         <div style={{ maxHeight: '48vh', overflowY: 'auto', padding: 8 }}>
-          {loading && <div style={{ padding: '14px 12px', color: '#8A94A6', fontSize: 13 }}>Searching…</div>}
+          {loading && <div style={{ padding: '14px 12px', color: 'var(--il-text-muted)', fontSize: 13 }}>Searching…</div>}
           {!loading && query.trim() && results.length === 0 && (
-            <div style={{ padding: '14px 12px', color: '#8A94A6', fontSize: 13 }}>
+            <div style={{ padding: '14px 12px', color: 'var(--il-text-muted)', fontSize: 13 }}>
               No {SCOPES[scope].label} results for “{query.trim()}”.
             </div>
           )}
           {!loading && !query.trim() && (
-            <div style={{ padding: '14px 12px', color: '#8A94A6', fontSize: 13 }}>
+            <div style={{ padding: '14px 12px', color: 'var(--il-text-muted)', fontSize: 13 }}>
               Type to search {SCOPES[scope].label}. Use Tab to switch, ↑↓ to navigate, Enter to open.
             </div>
           )}
@@ -321,8 +321,8 @@ export const SearchModal: React.FC = () => {
                 background: i === active ? '#EEF2F9' : 'transparent',
               }}
             >
-              <span style={{ fontSize: 14.5, fontWeight: 600, color: '#1B2233' }}>{r.title}</span>
-              <span style={{ fontSize: 12, color: '#8A94A6' }}>
+              <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--il-text)' }}>{r.title}</span>
+              <span style={{ fontSize: 12, color: 'var(--il-text-muted)' }}>
                 {r.sub}
                 {(r.links?.length ?? 0) > 1 && ` · ${r.links!.length} links`}
               </span>

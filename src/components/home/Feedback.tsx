@@ -10,7 +10,7 @@ const cardStyle: React.CSSProperties = {
   flex: '1 1 300px',
   maxWidth: 620,
   background: '#fff',
-  border: '1px solid #E3EBF1',
+  border: '1px solid var(--il-border)',
   borderRadius: 20,
   padding: '30px 34px',
   boxShadow: '0 1px 2px rgba(17,46,129,0.04)',
@@ -24,20 +24,20 @@ const headingStyle: React.CSSProperties = {
   margin: 0,
   fontSize: 20,
   fontWeight: 800,
-  color: '#112E81',
+  color: 'var(--il-brand)',
   letterSpacing: '-0.01em',
 }
 
 const subStyle: React.CSSProperties = {
   fontSize: 13.5,
-  color: '#5A6478',
+  color: 'var(--il-text-body)',
   marginTop: 5,
 }
 
 const ctaStyle: React.CSSProperties = {
   display: 'inline-block',
   marginTop: 'auto',
-  background: '#112E81',
+  background: 'var(--il-brand)',
   color: '#fff',
   border: 'none',
   borderRadius: 999,
@@ -81,7 +81,7 @@ export const Feedback: React.FC = () => (
 
       <div style={cardStyle}>
         <h2 style={headingStyle}>Provide Feedback</h2>
-        <div style={subStyle}>Spotted something broken, or have an idea for the intranet? Tell us.</div>
+        <div style={subStyle}>Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.</div>
         <a
           href={FEEDBACK_FORM_URL}
           target="_blank"

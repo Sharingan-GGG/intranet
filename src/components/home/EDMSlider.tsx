@@ -16,9 +16,9 @@ const CardLoopMark = () => (
 )
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
-  border: active ? '1px solid rgb(45 87 211)' : '1px solid #DCE7F5',
+  border: active ? '1px solid rgb(45 87 211)' : '1px solid var(--il-border)',
   background: active ? 'rgb(45 87 211)' : '#fff',
-  color: active ? '#fff' : '#112E81',
+  color: active ? '#fff' : 'var(--il-brand)',
   fontSize: 12.5,
   fontWeight: 700,
   padding: '6px 14px',
@@ -61,7 +61,7 @@ export const EDMSlider: React.FC<{ items: EdmCard[]; categories?: string[]; head
   return (
     <CardSlider id="edms" title={heading} step={540} headerExtra={tabBar}>
       {visible.length === 0 && (
-        <div style={{ padding: '28px 4px', fontSize: 13.5, color: '#8A94A6' }}>
+        <div style={{ padding: '28px 4px', fontSize: 13.5, color: 'var(--il-text-muted)' }}>
           No EDMs in this category yet.
         </div>
       )}
@@ -76,7 +76,7 @@ export const EDMSlider: React.FC<{ items: EdmCard[]; categories?: string[]; head
               flex: 'none',
               width: 322,
               background: '#fff',
-              border: '1px solid #E3EBF1',
+              border: '1px solid var(--il-border)',
               borderRadius: 18,
               overflow: 'hidden',
               cursor: 'pointer',
@@ -110,14 +110,14 @@ export const EDMSlider: React.FC<{ items: EdmCard[]; categories?: string[]; head
               >
                 {e.kicker}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1B2233', lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--il-text)', lineHeight: 1.3, letterSpacing: '-0.01em' }}>
                 {e.title}
               </div>
               {e.description && (
                 <div
                   style={{
                     fontSize: 12.5,
-                    color: '#5A6478',
+                    color: 'var(--il-text-body)',
                     marginTop: 7,
                     lineHeight: 1.45,
                     display: '-webkit-box',
@@ -129,7 +129,6 @@ export const EDMSlider: React.FC<{ items: EdmCard[]; categories?: string[]; head
                   {e.description}
                 </div>
               )}
-              <div style={{ fontSize: 12, color: '#8A94A6', marginTop: 10 }}>Sent {e.sent}</div>
             </div>
           </a>
         ))}

@@ -68,7 +68,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
           height: 36,
           borderRadius: '50%',
           background: '#AACCD6',
-          color: '#112E81',
+          color: 'var(--il-brand)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -94,7 +94,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
             background: '#fff',
             borderRadius: 14,
             boxShadow: '0 16px 40px rgba(17,46,129,0.22)',
-            border: '1px solid #E3EBF1',
+            border: '1px solid var(--il-border)',
             overflow: 'hidden',
             zIndex: 50,
           }}
@@ -107,7 +107,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                 flex: 'none',
                 borderRadius: '50%',
                 background: '#AACCD6',
-                color: '#112E81',
+                color: 'var(--il-brand)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -122,7 +122,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                 style={{
                   fontSize: 14,
                   fontWeight: 700,
-                  color: '#1B2233',
+                  color: 'var(--il-text)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -134,7 +134,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                 <div
                   style={{
                     fontSize: 12,
-                    color: '#5A6478',
+                    color: 'var(--il-text-body)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -155,7 +155,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                   fontWeight: 700,
                   letterSpacing: '0.06em',
                   textTransform: 'uppercase',
-                  color: '#112E81',
+                  color: 'var(--il-brand)',
                   background: '#EFF5FC',
                   border: '1px solid #D6E4F7',
                   padding: '3px 9px',
@@ -214,7 +214,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                   padding: '12px 16px',
                   fontSize: 13.5,
                   fontWeight: 600,
-                  color: '#112E81',
+                  color: 'var(--il-brand)',
                 }}
               >
                 Sign in

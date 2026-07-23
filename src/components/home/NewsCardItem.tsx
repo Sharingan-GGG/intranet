@@ -21,7 +21,7 @@ export const NewsCardItem: React.FC<{ card: NewsCard; width?: number | string }>
       flex: 'none',
       width,
       background: '#fff',
-      border: '1px solid #E3EBF1',
+      border: '1px solid var(--il-border)',
       borderRadius: 18,
       overflow: 'hidden',
       cursor: 'pointer',
@@ -56,11 +56,11 @@ export const NewsCardItem: React.FC<{ card: NewsCard; width?: number | string }>
       >
         {n.kicker}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#1B2233', lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--il-text)', lineHeight: 1.3, letterSpacing: '-0.01em' }}>
         {n.title}
       </div>
-      <div style={{ fontSize: 13, color: '#5A6478', lineHeight: 1.5, marginTop: 6 }}>{n.excerpt}</div>
-      <div style={{ fontSize: 12, color: '#8A94A6', marginTop: 10 }}>{n.date}</div>
+      <div style={{ fontSize: 13, color: 'var(--il-text-body)', lineHeight: 1.5, marginTop: 6 }}>{n.excerpt}</div>
+      <div style={{ fontSize: 12, color: 'var(--il-text-muted)', marginTop: 10 }}>{n.date}</div>
     </div>
   </a>
 )

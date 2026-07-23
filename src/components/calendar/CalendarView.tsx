@@ -47,9 +47,9 @@ const navBtn: React.CSSProperties = {
   width: 34,
   height: 34,
   borderRadius: 10,
-  border: '1px solid #DCE7F5',
+  border: '1px solid var(--il-border)',
   background: '#fff',
-  color: '#112E81',
+  color: 'var(--il-brand)',
   fontSize: 16,
   fontWeight: 700,
   cursor: 'pointer',
@@ -116,7 +116,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
     >
       {/* Toolbar */}
       <div className="il-calendar-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em', margin: 0 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em', margin: 0 }}>
           {monthLabel}
         </h1>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -159,7 +159,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                   background: bg,
                   padding: '3px 10px',
                   borderRadius: 999,
-                  border: picked ? `1.5px solid ${fg}` : '1.5px solid transparent',
+                  border: picked ? `1px solid ${fg}` : '1px solid var(--il-border)',
                   cursor: 'pointer',
                   opacity: on ? 1 : 0.4,
                   transition: 'opacity 150ms ease, border-color 150ms ease',
@@ -180,11 +180,11 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',
                 fontFamily: 'inherit',
-                color: '#5A6478',
+                color: 'var(--il-text-body)',
                 background: 'transparent',
                 padding: '3px 10px',
                 borderRadius: 999,
-                border: '1.5px solid #DCE7F5',
+                border: '1px solid var(--il-border)',
                 cursor: 'pointer',
               }}
             >
@@ -210,7 +210,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                   fontWeight: 700,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  color: '#5A6478',
+                  color: 'var(--il-text-body)',
                   textAlign: 'center',
                 }}
               >
@@ -255,7 +255,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                       ? '2px solid #2D57D3'
                       : isToday
                         ? '1.5px solid #9CC0F0'
-                        : '1px solid #E3EBF1',
+                        : '1px solid var(--il-border)',
                     borderRadius: 14,
                     padding: 8,
                     display: 'flex',
@@ -275,8 +275,8 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                       fontSize: 13,
                       fontWeight: 800,
                       lineHeight: 1,
-                      color: isToday ? '#fff' : inMonth ? '#112E81' : '#A5B0C2',
-                      background: isToday ? '#4382DF' : 'transparent',
+                      color: isToday ? '#fff' : inMonth ? 'var(--il-brand)' : '#A5B0C2',
+                      background: isToday ? 'var(--il-accent)' : 'transparent',
                       borderRadius: 999,
                       padding: isToday ? '4px 8px' : '4px 0',
                       alignSelf: 'flex-start',
@@ -330,17 +330,17 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
             flex: '0 0 320px',
             maxWidth: '100%',
             background: '#fff',
-            border: '1px solid #E3EBF1',
+            border: '1px solid var(--il-border)',
             borderRadius: 16,
             padding: 20,
             boxShadow: '0 1px 2px rgba(17,46,129,0.04)',
             alignSelf: 'flex-start',
           }}
         >
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }}>
             {selectedDate ? fullDateFmt.format(selectedDate) : 'Select a date'}
           </div>
-          <div style={{ fontSize: 12.5, color: '#5A6478', marginTop: 3 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--il-text-body)', marginTop: 3 }}>
             {selectedDate
               ? `${selectedEvents.length} event${selectedEvents.length === 1 ? '' : 's'}`
               : 'Click any day to see its events.'}
@@ -348,7 +348,7 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
 
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {selectedDate && selectedEvents.length === 0 && (
-              <div style={{ fontSize: 13.5, color: '#8A94A6', padding: '8px 0' }}>
+              <div style={{ fontSize: 13.5, color: 'var(--il-text-muted)', padding: '8px 0' }}>
                 No events scheduled for this day.
               </div>
             )}
@@ -381,10 +381,10 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                   >
                     {ev.tag}
                   </span>
-                  <span style={{ fontSize: 14.5, fontWeight: 700, color: '#1B2233', lineHeight: 1.3 }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--il-text)', lineHeight: 1.3 }}>
                     {ev.title}
                   </span>
-                  <span style={{ fontSize: 12.5, color: '#5A6478' }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--il-text-body)' }}>
                     <LocalTime iso={ev.timeISO} fallback={ev.time} /> · {ev.loc}
                   </span>
                   {ev.description && (

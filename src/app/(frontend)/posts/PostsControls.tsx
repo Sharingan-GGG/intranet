@@ -14,9 +14,9 @@ const SORT_OPTIONS: { value: PostsSort; label: string }[] = [
 
 const pillStyle = (active: boolean): React.CSSProperties => ({
   border: '1px solid',
-  borderColor: active ? '#112E81' : '#E3EBF1',
-  background: active ? '#112E81' : '#fff',
-  color: active ? '#fff' : '#1B2233',
+  borderColor: active ? 'var(--il-brand)' : 'var(--il-border)',
+  background: active ? 'var(--il-brand)' : '#fff',
+  color: active ? '#fff' : 'var(--il-text)',
   fontSize: 13,
   fontWeight: 600,
   padding: '7px 14px',
@@ -69,18 +69,18 @@ export const PostsControls: React.FC<{
           </button>
         ))}
       </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#5A6478' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--il-text-body)' }}>
         Sort
         <select
           value={activeSort}
           onChange={(e) => navigate(activeCategory, e.target.value as PostsSort)}
           style={{
-            border: '1px solid #E3EBF1',
+            border: '1px solid var(--il-border)',
             borderRadius: 10,
             padding: '7px 10px',
             fontSize: 13,
             fontWeight: 600,
-            color: '#1B2233',
+            color: 'var(--il-text)',
             background: '#fff',
             cursor: 'pointer',
           }}

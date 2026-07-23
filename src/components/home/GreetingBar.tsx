@@ -11,7 +11,7 @@ const chip: React.CSSProperties = {
   padding: '6px 13px',
   fontSize: 12.5,
   fontWeight: 600,
-  color: '#112E81',
+  color: 'var(--il-brand)',
 }
 
 type Props = {
@@ -107,7 +107,7 @@ export const GreetingBar: React.FC<Props> = ({ userName }) => {
       className="il-greeting"
       style={{
         background: '#fff',
-        border: '1px solid #E3EBF1',
+        border: '1px solid var(--il-border)',
         borderRadius: 16,
         padding: '16px 24px',
         display: 'flex',
@@ -117,7 +117,7 @@ export const GreetingBar: React.FC<Props> = ({ userName }) => {
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ fontSize: 21, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }} suppressHydrationWarning>
+      <div style={{ fontSize: 21, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }} suppressHydrationWarning>
         {greeting}
         {userName ? `, ${userName}` : ''}
       </div>
@@ -136,7 +136,7 @@ export const GreetingBar: React.FC<Props> = ({ userName }) => {
         </span>
       )}
       <div style={{ flex: 1 }} />
-      <div style={{ fontSize: 13, color: '#5A6478', fontWeight: 600 }} suppressHydrationWarning>
+      <div style={{ fontSize: 13, color: 'var(--il-text-body)', fontWeight: 600 }} suppressHydrationWarning>
         {dateLine}
       </div>
     </div>

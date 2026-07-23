@@ -3,10 +3,15 @@ import React from 'react'
 import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types'
 
 export const InitTheme: React.FC = () => {
+  // React 19 warns about any <script> in a component's render output, even one
+  // that only ever renders server-side. Returning null on the client keeps the
+  // script out of client reconciliation entirely — it still ships in the
+  // server HTML and executes before hydration.
+  if (typeof window !== 'undefined') {
+    return null
+  }
+
   return (
-    // A plain script tag (not next/script) so it ships in the initial server HTML only —
-    // next/script is a client component and re-rendering it triggers React's
-    // "script tags are never executed on the client" warning.
     <script
       dangerouslySetInnerHTML={{
         __html: `
@@ -41,6 +46,17 @@ export const InitTheme: React.FC = () => {
     }
 
     document.documentElement.setAttribute('data-theme', themeToSet)
+
+    // Color scheme (il-scheme) — independent of light/dark data-theme above.
+    // Default 'ocean' applies when no valid stored preference exists.
+    function schemeIsValid(scheme) {
+      return scheme === 'default' || scheme === 'ocean' || scheme === 'midnight'
+    }
+    var schemePreference = window.localStorage.getItem('il-scheme')
+    document.documentElement.setAttribute(
+      'data-scheme',
+      schemeIsValid(schemePreference) ? schemePreference : 'ocean',
+    )
   })();
   `,
       }}

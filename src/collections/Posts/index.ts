@@ -191,6 +191,12 @@ export const Posts: CollectionConfig<'posts'> = {
       admin: {
         position: 'sidebar',
       },
+      // Only offer subcategories of "News" (categories whose parent is the News category).
+      filterOptions: () => ({
+        'parent.slug': {
+          equals: 'news',
+        },
+      }),
       hasMany: true,
       relationTo: 'categories',
     },

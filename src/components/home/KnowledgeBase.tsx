@@ -43,7 +43,7 @@ export const LinksModal: React.FC<{ doc: { title: string; links?: KbLink[] }; on
       style={{
         background: '#fff',
         borderRadius: 18,
-        border: '1px solid #E3EBF1',
+        border: '1px solid var(--il-border)',
         boxShadow: '0 18px 50px rgba(17,46,129,0.22)',
         width: '100%',
         maxWidth: 420,
@@ -51,7 +51,7 @@ export const LinksModal: React.FC<{ doc: { title: string; links?: KbLink[] }; on
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }}>
           {doc.title}
         </h3>
         <button
@@ -61,7 +61,7 @@ export const LinksModal: React.FC<{ doc: { title: string; links?: KbLink[] }; on
           style={{
             border: 'none',
             background: 'transparent',
-            color: '#5A6478',
+            color: 'var(--il-text-body)',
             fontSize: 20,
             lineHeight: 1,
             cursor: 'pointer',
@@ -93,7 +93,7 @@ export const LinksModal: React.FC<{ doc: { title: string; links?: KbLink[] }; on
                 alignItems: 'center',
                 padding: '9px 10px',
                 borderRadius: 10,
-                border: '1px solid #E3EBF1',
+                border: '1px solid var(--il-border)',
               }}
             >
               <span
@@ -116,7 +116,7 @@ export const LinksModal: React.FC<{ doc: { title: string; links?: KbLink[] }; on
                     display: 'block',
                     fontSize: 13.5,
                     fontWeight: 600,
-                    color: '#1B2233',
+                    color: 'var(--il-text)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -125,7 +125,7 @@ export const LinksModal: React.FC<{ doc: { title: string; links?: KbLink[] }; on
                   {l.label || host}
                 </span>
                 {l.label && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: '#8A94A6', marginTop: 1 }}>{host}</span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--il-text-muted)', marginTop: 1 }}>{host}</span>
                 )}
               </span>
             </a>
@@ -167,7 +167,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
       className="il-knowledge-base"
       style={{
         background: '#fff',
-        border: '1px solid #E3EBF1',
+        border: '1px solid var(--il-border)',
         borderRadius: 20,
         padding: 24,
         boxShadow: '0 1px 2px rgba(17,46,129,0.04)',
@@ -175,11 +175,11 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 15 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{heading}</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }}>{heading}</h2>
         <div style={{ position: 'relative', width: '100%', maxWidth: 250, minWidth: 160 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ position: 'absolute', left: 12, top: 10 }}>
-            <circle cx="11" cy="11" r="7" stroke="#5A6478" strokeWidth="2" />
-            <path d="m20 20-3.5-3.5" stroke="#5A6478" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="11" cy="11" r="7" stroke="var(--il-text-body)" strokeWidth="2" />
+            <path d="m20 20-3.5-3.5" stroke="var(--il-text-body)" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <input
             value={q}
@@ -193,8 +193,8 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
               height: 34,
               borderRadius: 17,
               border: '1px solid #DDE6EE',
-              background: '#F4F7FA',
-              color: '#1B2233',
+              background: 'var(--il-page-bg)',
+              color: 'var(--il-text)',
               fontSize: 13,
               fontFamily: 'inherit',
               padding: '0 14px 0 33px',
@@ -213,9 +213,9 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
               type="button"
               onClick={() => setCat(name)}
               style={{
-                border: `1px solid ${active ? '#112E81' : '#DDE6EE'}`,
-                background: active ? '#112E81' : '#fff',
-                color: active ? '#fff' : '#5A6478',
+                border: `1px solid ${active ? 'var(--il-brand)' : 'var(--il-border)'}`,
+                background: active ? 'var(--il-brand)' : '#fff',
+                color: active ? '#fff' : 'var(--il-text-body)',
                 fontSize: 12.5,
                 fontWeight: 600,
                 fontFamily: 'inherit',
@@ -298,7 +298,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
                     display: 'block',
                     fontSize: 14,
                     fontWeight: 600,
-                    color: '#1B2233',
+                    color: 'var(--il-text)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -306,13 +306,13 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
                 >
                   {d.title}
                 </span>
-                <span style={{ display: 'block', fontSize: 12, color: '#5A6478', marginTop: 2 }}>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--il-text-body)', marginTop: 2 }}>
                   {d.category} · Updated {d.updated}
                   {multiLink && ` · ${d.links!.length} links`}
                 </span>
               </span>
               {multiLink && (
-                <span style={{ color: '#8A94A6', display: 'flex' }} aria-label={`${d.links!.length} links`}>
+                <span style={{ color: 'var(--il-text-muted)', display: 'flex' }} aria-label={`${d.links!.length} links`}>
                   <LinkIcon />
                 </span>
               )}
@@ -320,7 +320,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
           )
         })}
         {docs.length === 0 && (
-          <div style={{ gridColumn: '1/-1', padding: 28, textAlign: 'center', fontSize: 13.5, color: '#5A6478' }}>
+          <div style={{ gridColumn: '1/-1', padding: 28, textAlign: 'center', fontSize: 13.5, color: 'var(--il-text-body)' }}>
             No documents match your search.
           </div>
         )}

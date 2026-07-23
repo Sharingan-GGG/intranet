@@ -23,7 +23,7 @@ const RoundBtn: React.FC<{ dir: 'prev' | 'next'; onClick: () => void }> = ({ dir
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
       <path
         d={dir === 'prev' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}
-        stroke="#112E81"
+        stroke="var(--il-brand)"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -48,7 +48,7 @@ export const CardSlider: React.FC<Props> = ({ id, title, step = 680, headerExtra
   return (
     <div id={id} className={`il-slider il-slider-${id}`} style={{ scrollMarginTop: 82 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#112E81', letterSpacing: '-0.01em' }}>{title}</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em' }}>{title}</h2>
         {headerExtra}
         <div style={{ display: 'flex', gap: 8 }}>
           <RoundBtn dir="prev" onClick={() => scroll(-step)} />

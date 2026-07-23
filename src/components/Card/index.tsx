@@ -42,7 +42,7 @@ export const Card: React.FC<{
           <div
             aria-hidden
             className="flex aspect-[16/9] w-full items-center justify-center"
-            style={{ background: 'linear-gradient(120deg,#112E81,#4647AE 70%,#4382DF)' }}
+            style={{ background: 'linear-gradient(120deg,var(--il-brand),var(--il-brand-hover) 70%,var(--il-accent))' }}
           >
             <svg width="56" height="34" viewBox="0 0 56 34" fill="none" style={{ opacity: 0.35 }}>
               <circle cx="17" cy="17" r="13" stroke="#fff" strokeWidth="5" />

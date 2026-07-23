@@ -48,7 +48,7 @@ export const FeaturedSpotlight: React.FC<{ items: NewsCard[] }> = ({ items }) =>
         overflow: 'hidden',
         background: item.imageUrl
           ? `linear-gradient(to top, rgba(9,20,55,0.9) 0%, rgba(9,20,55,0.45) 38%, rgba(9,20,55,0.08) 72%, rgba(9,20,55,0) 100%), url("${item.imageUrl}") center / cover no-repeat`
-          : 'linear-gradient(128deg,#112E81,#4647AE 55%,#4382DF)',
+          : 'linear-gradient(128deg,var(--il-brand),var(--il-brand-hover) 55%,var(--il-accent))',
         minHeight: 330,
         display: 'flex',
         flexDirection: 'column',
@@ -94,7 +94,7 @@ export const FeaturedSpotlight: React.FC<{ items: NewsCard[] }> = ({ items }) =>
             href={item.href ?? '/#news'}
             style={{
               background: '#fff',
-              color: '#112E81',
+              color: 'var(--il-brand)',
               fontSize: 13.5,
               fontWeight: 700,
               padding: '10px 22px',
