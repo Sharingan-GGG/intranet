@@ -205,7 +205,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
         >
           {menuOpen ? <X size={19} strokeWidth={2.2} /> : <Menu size={19} strokeWidth={2.2} />}
         </button>
-        {Boolean(user?.roles?.some((r) => r === 'admin' || r === 'editor')) && (
+        {Boolean(user?.roles?.some((r) => r === 'super-admin' || r === 'admin' || r === 'editor')) && (
           <Link
             href="/admin"
             aria-label="Admin portal"

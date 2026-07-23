@@ -43,9 +43,10 @@ export const AdminBar: React.FC<{
   const router = useRouter()
 
   const onAuthChange = React.useCallback((user: PayloadMeUser) => {
-    // Only admins/editors get the admin bar — plain "user" accounts never see it.
+    // Only super-admins/admins/editors get the admin bar — plain "user" accounts never see it.
     const roles = (user as { roles?: string[] } | null)?.roles
-    const privileged = Array.isArray(roles) && roles.some((r) => r === 'admin' || r === 'editor')
+    const privileged =
+      Array.isArray(roles) && roles.some((r) => r === 'super-admin' || r === 'admin' || r === 'editor')
     setShow(Boolean(user?.id) && privileged)
   }, [])
 
