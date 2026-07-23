@@ -20,7 +20,7 @@ export async function Footer() {
   const navItems = data?.navItems ?? []
 
   return (
-    <footer className="il-root il-footer" style={{ background: '#112E81', marginTop: 50, padding: '44px 32px 26px' }}>
+    <footer className="il-root il-footer" style={{ background: 'var(--il-brand)', marginTop: 50, padding: '44px 32px 26px' }}>
       <div
         style={{
           maxWidth: 1312,

@@ -34,12 +34,12 @@ const mediaUrl = (media?: Media | number | null): string | null =>
 
 /** Gradient placeholders standing in for post images (posts carry no media). */
 const GRADIENTS = [
-  'linear-gradient(135deg,#112E81,#4382DF)',
-  'linear-gradient(135deg,#4647AE,#AACCD6)',
-  'linear-gradient(135deg,#2E66B8,#4647AE)',
-  'linear-gradient(135deg,#112E81,#4647AE)',
-  'linear-gradient(135deg,#4382DF,#AACCD6)',
-  'linear-gradient(135deg,#4647AE,#112E81)',
+  'linear-gradient(135deg,var(--il-brand),var(--il-accent))',
+  'linear-gradient(135deg,var(--il-brand-hover),var(--il-accent))',
+  'linear-gradient(135deg,var(--il-accent),var(--il-brand-hover))',
+  'linear-gradient(135deg,var(--il-brand),var(--il-brand-hover))',
+  'linear-gradient(135deg,var(--il-accent),var(--il-brand))',
+  'linear-gradient(135deg,var(--il-brand-hover),var(--il-brand))',
 ]
 const gradient = (i: number): string => GRADIENTS[i % GRADIENTS.length]
 
