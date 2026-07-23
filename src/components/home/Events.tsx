@@ -110,6 +110,12 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--il-text-body)', marginTop: 3 }}>
                       <LocalTime iso={ev.timeISO} fallback={ev.time} /> · {ev.loc}
+                      {ev.endLabel && (
+                        <>
+                          {' · until '}
+                          <span style={{ fontWeight: 700 }}>{ev.endLabel}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 )

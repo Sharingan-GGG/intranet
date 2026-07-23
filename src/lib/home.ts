@@ -43,6 +43,8 @@ export type EventItem = {
   /** Raw start instant; the UI reformats this into the viewer's local timezone once mounted. */
   timeISO?: string | null
   loc: string
+  /** Formatted end date (e.g. "9 Aug") for multi-day events; absent for single-day. */
+  endLabel?: string
   /** Slug linking to the event's detail page, when sourced from the CMS. */
   slug?: string
 }

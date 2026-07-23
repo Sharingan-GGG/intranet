@@ -278,6 +278,8 @@ const formatEventTime = (time: string | null | undefined): string => {
 
 type EventDoc = {
   date: string
+  endDate?: string | null
+  isMultiDay?: boolean | null
   repeat?: string | null
   repeatEvery?: number | null
   repeatFrequency?: string | null
@@ -287,8 +289,20 @@ type EventDoc = {
 const eventTag = (category: number | Category): EventTag =>
   typeof category === 'object' && category !== null ? category.title : String(category)
 
-/** Occurrence dates for an event, expanded out to `horizon`. Non-repeating events yield just their own date. */
-const expandOccurrences = (doc: EventDoc, horizon: Date): string[] => {
+/** Extra whole days a multi-day event spans beyond its start (0 = single day). Capped at a year. */
+const spanDays = (doc: EventDoc): number => {
+  if (!doc.isMultiDay || !doc.endDate) return 0
+  const start = new Date(doc.date)
+  const end = new Date(doc.endDate)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+  const diff = Math.round((end.getTime() - start.getTime()) / 86_400_000)
+  return diff > 0 ? Math.min(diff, 365) : 0
+}
+
+/** Start date of each occurrence (repeat expansion), NOT including any multi-day span. */
+const occurrenceStarts = (doc: EventDoc, horizon: Date): string[] => {
   const start = new Date(doc.date)
   const repeat = doc.repeat ?? 'none'
   if (repeat === 'none' || Number.isNaN(start.getTime())) return [doc.date]
@@ -331,6 +345,31 @@ const expandOccurrences = (doc: EventDoc, horizon: Date): string[] => {
   return dates
 }
 
+/**
+ * Every calendar day an event touches: each occurrence start (from repeat
+ * expansion) expanded across its multi-day span. A single, non-repeating event
+ * yields just its own date; a 3-day event yields three consecutive days.
+ */
+const expandOccurrences = (doc: EventDoc, horizon: Date): string[] => {
+  const span = spanDays(doc)
+  if (span === 0) return occurrenceStarts(doc, horizon)
+
+  const out: string[] = []
+  for (const startISO of occurrenceStarts(doc, horizon)) {
+    const base = new Date(startISO)
+    if (Number.isNaN(base.getTime())) {
+      out.push(startISO)
+      continue
+    }
+    for (let d = 0; d <= span; d++) {
+      const day = new Date(base)
+      day.setDate(day.getDate() + d)
+      out.push(day.toISOString())
+    }
+  }
+  return out
+}
+
 /** Repeating events expand up to a year ahead. */
 const recurrenceHorizon = (): Date => {
   const h = new Date()
@@ -361,23 +400,36 @@ export async function getEventGroups(): Promise<EventGroup[]> {
   if (docs.length === 0) return EVENT_GROUPS
 
   const horizon = recurrenceHorizon()
+  // Homepage upcoming list shows a multi-day event once (on its start day), so
+  // use occurrence starts rather than the full per-day span (which the calendar uses).
   const occurrences = docs
-    .flatMap((d) => expandOccurrences(d, horizon).map((dateISO) => ({ doc: d, dateISO })))
+    .flatMap((d) => occurrenceStarts(d, horizon).map((dateISO) => ({ doc: d, dateISO })))
     .filter((o) => new Date(o.dateISO) >= startOfToday)
     .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
     .slice(0, 50)
+
+  const dayMonth = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' })
 
   const groups: EventGroup[] = []
   for (const { doc: d, dateISO } of occurrences) {
     const date = new Date(dateISO)
     const day = String(date.getDate())
     const mon = new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(date)
+    // Multi-day events show their end date ("until 9 Aug") alongside the start.
+    const span = spanDays(d)
+    let endLabel: string | undefined
+    if (span > 0) {
+      const end = new Date(date)
+      end.setDate(end.getDate() + span)
+      endLabel = dayMonth.format(end)
+    }
     const item = {
       title: d.title,
       tag: eventTag(d.category),
       time: formatEventTime(d.time),
       timeISO: d.time ?? null,
       loc: d.location ?? '—',
+      endLabel,
       slug: d.slug ?? undefined,
     }
 

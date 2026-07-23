@@ -76,6 +76,44 @@ export const Events: CollectionConfig = {
       ],
     },
     {
+      name: 'isMultiDay',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Multi-day event',
+      admin: {
+        description: 'Toggle on for an event that spans several days (start date → end date).',
+      },
+    },
+    {
+      name: 'endDate',
+      type: 'date',
+      label: 'End date',
+      admin: {
+        condition: (_, siblingData) => Boolean(siblingData?.isMultiDay),
+        date: {
+          pickerAppearance: 'dayOnly',
+          displayFormat: 'd MMM yyyy',
+        },
+        width: '50%',
+        description: 'The last day of the event (inclusive).',
+        components: {
+          // Greys out dates before the start date in the picker.
+          Field: '@/components/admin/EventEndDateField#EventEndDateField',
+        },
+      },
+      validate: (
+        value: unknown,
+        { siblingData }: { siblingData: { isMultiDay?: boolean | null; date?: string | null } },
+      ) => {
+        if (!siblingData?.isMultiDay) return true
+        if (!value) return 'Please set an end date for a multi-day event.'
+        if (siblingData.date && new Date(value as string) < new Date(siblingData.date)) {
+          return 'End date must be on or after the start date.'
+        }
+        return true
+      },
+    },
+    {
       name: 'repeat',
       type: 'select',
       defaultValue: 'none',

@@ -1534,6 +1534,14 @@ export interface Event {
    */
   time?: string | null;
   /**
+   * Toggle on for an event that spans several days (start date → end date).
+   */
+  isMultiDay?: boolean | null;
+  /**
+   * The last day of the event (inclusive).
+   */
+  endDate?: string | null;
+  /**
    * How often this event repeats.
    */
   repeat?: ('none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'biannually' | 'annually' | 'custom') | null;
@@ -2303,6 +2311,8 @@ export interface EventsSelect<T extends boolean = true> {
   category?: T;
   date?: T;
   time?: T;
+  isMultiDay?: T;
+  endDate?: T;
   repeat?: T;
   repeatEvery?: T;
   repeatFrequency?: T;
