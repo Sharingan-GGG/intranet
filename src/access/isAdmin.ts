@@ -6,6 +6,10 @@ export const isAdmin: Access = ({ req: { user } }: AccessArgs<User>) => {
   return Boolean(user?.roles?.includes('admin'))
 }
 
+export const isSuperAdmin: Access = ({ req: { user } }: AccessArgs<User>) => {
+  return Boolean(user?.roles?.includes('super-admin'))
+}
+
 export const isAdminFieldLevel: FieldAccess = ({ req: { user } }) => {
   return Boolean(user?.roles?.includes('admin'))
 }

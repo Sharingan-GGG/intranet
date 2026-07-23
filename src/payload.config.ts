@@ -95,12 +95,14 @@ export default buildConfig({
     Posts,
     Media,
     Categories,
-    Departments,
+    // Intranet group listed before the Organization group so it appears
+    // first among the named nav groups (right after the core Collections).
     QuickLinks,
     TimeZones,
     KnowledgeBase,
     Events,
     EDMs,
+    Departments,
     Roles,
     Permissions,
     Users,

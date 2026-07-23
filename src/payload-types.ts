@@ -71,12 +71,12 @@ export interface Config {
     posts: Post;
     media: Media;
     categories: Category;
-    departments: Department;
     'quick-links': QuickLink;
     'time-zones': TimeZone;
     'knowledge-base': KnowledgeBase;
     events: Event;
     edms: Edm;
+    departments: Department;
     roles: Role;
     permissions: Permission;
     users: User;
@@ -101,12 +101,12 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
-    departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
     'quick-links': QuickLinksSelect<false> | QuickLinksSelect<true>;
     'time-zones': TimeZonesSelect<false> | TimeZonesSelect<true>;
     'knowledge-base': KnowledgeBaseSelect<false> | KnowledgeBaseSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     edms: EdmsSelect<false> | EdmsSelect<true>;
+    departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
     roles: RolesSelect<false> | RolesSelect<true>;
     permissions: PermissionsSelect<false> | PermissionsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -464,7 +464,7 @@ export interface User {
   emailVerified?: string | null;
   name?: string | null;
   image?: string | null;
-  roles: ('admin' | 'editor' | 'user')[];
+  roles: ('super-admin' | 'admin' | 'editor' | 'user')[];
   /**
    * The department this user belongs to.
    */
@@ -1783,10 +1783,6 @@ export interface PayloadLockedDocument {
         value: number | Category;
       } | null)
     | ({
-        relationTo: 'departments';
-        value: number | Department;
-      } | null)
-    | ({
         relationTo: 'quick-links';
         value: number | QuickLink;
       } | null)
@@ -1805,6 +1801,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'edms';
         value: number | Edm;
+      } | null)
+    | ({
+        relationTo: 'departments';
+        value: number | Department;
       } | null)
     | ({
         relationTo: 'roles';
@@ -2253,19 +2253,6 @@ export interface CategoriesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "departments_select".
- */
-export interface DepartmentsSelect<T extends boolean = true> {
-  name?: T;
-  code?: T;
-  description?: T;
-  lead?: T;
-  parent?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "quick-links_select".
  */
 export interface QuickLinksSelect<T extends boolean = true> {
@@ -2335,6 +2322,19 @@ export interface EdmsSelect<T extends boolean = true> {
   image?: T;
   description?: T;
   url?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "departments_select".
+ */
+export interface DepartmentsSelect<T extends boolean = true> {
+  name?: T;
+  code?: T;
+  description?: T;
+  lead?: T;
+  parent?: T;
   updatedAt?: T;
   createdAt?: T;
 }

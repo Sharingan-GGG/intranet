@@ -29,6 +29,10 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['pages', 'posts'],
     overrides: {
+      admin: {
+        // Hide the Redirects collection from the admin nav.
+        hidden: true,
+      },
       // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
@@ -60,7 +64,17 @@ export const plugins: Plugin[] = [
     fields: {
       payment: false,
     },
+    // Hide the Form Submissions collection from the admin nav.
+    formSubmissionOverrides: {
+      admin: {
+        hidden: true,
+      },
+    },
     formOverrides: {
+      // Hide the Forms collection from the admin nav.
+      admin: {
+        hidden: true,
+      },
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
           if ('name' in field && field.name === 'confirmationMessage') {

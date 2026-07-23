@@ -6,9 +6,9 @@ import { isAdmin, isAdminFieldLevel, isAdminOrSelf } from '../../access/isAdmin'
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
-    // Only admins/editors may enter the /admin panel — "user" accounts are site-only
+    // Only super-admins/admins/editors may enter the /admin panel — "user" accounts are site-only
     admin: ({ req: { user } }) =>
-      Boolean(user?.roles?.some((r) => r === 'admin' || r === 'editor')),
+      Boolean(user?.roles?.some((r) => r === 'super-admin' || r === 'admin' || r === 'editor')),
     create: isAdmin,
     delete: isAdmin,
     read: authenticated,
@@ -31,6 +31,7 @@ export const Users: CollectionConfig = {
       required: true,
       defaultValue: ['user'],
       options: [
+        { label: 'Super Admin', value: 'super-admin' },
         { label: 'Admin', value: 'admin' },
         { label: 'Editor', value: 'editor' },
         { label: 'User', value: 'user' },
