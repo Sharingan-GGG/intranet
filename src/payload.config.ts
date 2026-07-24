@@ -29,6 +29,7 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     meta: {
+      titleSuffix: '- Intranet',
       icons: [
         {
           rel: 'icon',
