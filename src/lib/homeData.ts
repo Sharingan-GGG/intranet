@@ -109,15 +109,31 @@ export const postToNewsCard = (d: Post, i: number): NewsCard => ({
   featured: Boolean(d.featured),
 })
 
-/** Latest CTG news — posts in the `News` category. */
+/** The `News` parent category id plus all of its sub-category ids. */
+async function newsCategoryIds(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+): Promise<number[]> {
+  const parentId = await categoryIdBySlug(payload, 'news')
+  if (parentId === null) return []
+
+  const { docs } = await payload.find({
+    collection: 'categories',
+    where: { 'parent.slug': { equals: 'news' } },
+    limit: 50,
+    depth: 0,
+  })
+  return [parentId, ...docs.map((d) => d.id as number)]
+}
+
+/** Latest CTG news — posts in the `News` category or any of its sub-categories. */
 export async function getNews(): Promise<NewsCard[]> {
   const payload = await getPayload({ config: configPromise })
-  const catId = await categoryIdBySlug(payload, 'news')
-  if (catId === null) return NEWS
+  const catIds = await newsCategoryIds(payload)
+  if (catIds.length === 0) return NEWS
 
   const { docs } = await payload.find({
     collection: 'posts',
-    where: { categories: { in: [catId] } },
+    where: { categories: { in: catIds } },
     sort: '-publishedAt',
     limit: 12,
     depth: 1,
