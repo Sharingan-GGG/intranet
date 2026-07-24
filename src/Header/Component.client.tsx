@@ -43,7 +43,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
     <header
       className="il-root il-header"
       style={{
-        background: 'var(--il-brand)',
+        background: 'var(--il-grad-footer)',
         display: 'flex',
         alignItems: 'center',
         gap: 28,
@@ -214,12 +214,13 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
               width: 36,
               height: 36,
               borderRadius: '50%',
-              background: '#AACCD6',
-              color: '#112E81',
+              background: 'var(--il-accent)',
+              color: 'var(--il-on-accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flex: 'none',
+              boxShadow: 'var(--il-action-pop)',
             }}
           >
             <LayoutDashboard size={17} strokeWidth={2.2} />

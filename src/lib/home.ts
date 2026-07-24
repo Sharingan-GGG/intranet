@@ -196,13 +196,14 @@ export const EVENT_GROUPS: EventGroup[] = [
   },
 ]
 
+// Thumbnail placeholders use the scheme's signature band gradient (navy → blue → green in Ocean).
 const IMGS = [
-  'linear-gradient(135deg,var(--il-brand),var(--il-accent))',
-  'linear-gradient(135deg,var(--il-brand-hover),var(--il-accent))',
-  'linear-gradient(135deg,var(--il-accent),var(--il-brand-hover))',
-  'linear-gradient(135deg,var(--il-brand),var(--il-brand-hover))',
-  'linear-gradient(135deg,var(--il-accent),var(--il-brand))',
-  'linear-gradient(135deg,var(--il-brand-hover),var(--il-brand))',
+  'var(--il-grad-band)',
+  'var(--il-grad-band)',
+  'var(--il-grad-band)',
+  'var(--il-grad-band)',
+  'var(--il-grad-band)',
+  'var(--il-grad-band)',
 ]
 
 export const NEWS: NewsCard[] = [

@@ -24,6 +24,17 @@
   --il-page-bg: #f4f7fa;
   --il-surface: #ffffff;
   --il-on-brand: #ffffff;
+  --il-on-accent: #ffffff;
+  --il-action-pop: none;
+  --il-grad-band: linear-gradient(120deg, #112e81, #4647ae 70%, #4382df);
+  --il-grad-footer: #112e81;
+  --il-grad-hero: linear-gradient(
+    to top,
+    rgba(9, 20, 55, 0.9) 0%,
+    rgba(9, 20, 55, 0.45) 38%,
+    rgba(9, 20, 55, 0.08) 72%,
+    rgba(9, 20, 55, 0) 100%
+  );
 }
 
 [data-scheme='ocean'] {
@@ -32,13 +43,24 @@
   --il-accent: #4c8ce4;
   --il-secondary: #91d06c;
   --il-highlight: #fff799;
-  --il-text: #16202e;
-  --il-text-body: #2e3d4f;
+  --il-text: #2a3c57;
+  --il-text-body: #2a3c57;
   --il-text-muted: #7c8ba0;
-  --il-border: #d5e1ef;
-  --il-page-bg: #f2f6fb;
+  --il-border: #dfe8f4;
+  --il-page-bg: #f6f9fd;
   --il-surface: #ffffff;
   --il-on-brand: #ffffff;
+  --il-on-accent: #ffffff;
+  /* Ocean: lift the accent header buttons off the blue gradient with a white ring + soft shadow. */
+  --il-action-pop: 0 0 0 1.5px #fff9, 0 3px 10px #1c305612;
+  --il-grad-band: linear-gradient(120deg, #406093, #4c8ce4 60%, #91d06c);
+  --il-grad-footer: linear-gradient(120deg, #406093, #4c8ce4);
+  --il-grad-hero: linear-gradient(
+    to top,
+    rgba(28, 48, 86, 0.85) 0%,
+    rgba(64, 96, 147, 0.35) 55%,
+    rgba(76, 140, 228, 0.12) 100%
+  );
 }
 
 [data-scheme='midnight'] {
@@ -54,6 +76,16 @@
   --il-page-bg: #faf7ee;
   --il-surface: #ffffff;
   --il-on-brand: #ffffff;
+  --il-on-accent: #101010;
+  --il-action-pop: none;
+  --il-grad-band: linear-gradient(120deg, #101010, #2a2a2a 60%, #fbbc13);
+  --il-grad-footer: linear-gradient(120deg, #101010, #2a2a2a);
+  --il-grad-hero: linear-gradient(
+    to top,
+    rgba(16, 16, 16, 0.9) 0%,
+    rgba(16, 16, 16, 0.4) 55%,
+    rgba(16, 16, 16, 0.1) 100%
+  );
 }
 
 .il-root {

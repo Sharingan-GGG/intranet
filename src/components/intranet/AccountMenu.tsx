@@ -67,8 +67,8 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
           width: 36,
           height: 36,
           borderRadius: '50%',
-          background: '#AACCD6',
-          color: 'var(--il-brand)',
+          background: 'var(--il-accent)',
+          color: 'var(--il-on-accent)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -78,6 +78,7 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
           padding: 0,
           cursor: 'pointer',
           fontFamily: 'inherit',
+          boxShadow: 'var(--il-action-pop)',
         }}
       >
         {firstNameLetter(user)}
@@ -106,8 +107,8 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                 height: 40,
                 flex: 'none',
                 borderRadius: '50%',
-                background: '#AACCD6',
-                color: 'var(--il-brand)',
+                background: 'var(--il-accent)',
+                color: 'var(--il-on-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

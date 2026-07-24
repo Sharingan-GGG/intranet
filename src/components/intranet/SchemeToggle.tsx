@@ -51,6 +51,7 @@ export const SchemeToggle: React.FC = () => {
           padding: 0,
           cursor: 'pointer',
           flex: 'none',
+          boxShadow: 'var(--il-action-pop)',
         }}
       >
         <Palette size={17} strokeWidth={2.2} />

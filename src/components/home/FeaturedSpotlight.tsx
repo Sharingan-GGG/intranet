@@ -47,8 +47,8 @@ export const FeaturedSpotlight: React.FC<{ items: NewsCard[] }> = ({ items }) =>
         borderRadius: 20,
         overflow: 'hidden',
         background: item.imageUrl
-          ? `linear-gradient(to top, rgba(9,20,55,0.9) 0%, rgba(9,20,55,0.45) 38%, rgba(9,20,55,0.08) 72%, rgba(9,20,55,0) 100%), url("${item.imageUrl}") center / cover no-repeat`
-          : 'linear-gradient(128deg,var(--il-brand),var(--il-brand-hover) 55%,var(--il-accent))',
+          ? `var(--il-grad-hero), url("${item.imageUrl}") center / cover no-repeat`
+          : 'var(--il-grad-band)',
         minHeight: 330,
         display: 'flex',
         flexDirection: 'column',
