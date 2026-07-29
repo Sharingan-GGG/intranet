@@ -16,13 +16,14 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; redirect?: string }>
+  searchParams: Promise<{ error?: string; existing?: string; redirect?: string }>
 }) {
   const params = await searchParams
 
   return (
     <LoginScene
       error={params.error}
+      existing={params.existing}
       redirect={params.redirect}
       cormorantClass={cormorant.className}
     />

@@ -1,7 +1,8 @@
 import type { NextAuthConfig } from 'next-auth'
 import Google from 'next-auth/providers/google'
 
-const ALLOWED_DOMAIN = 'complextravel.com.au'
+// Google Workspace domains allowed to sign in via SSO. Both are treated equally.
+export const ALLOWED_DOMAINS = ['complextravel.com.au', 'roundabouttravel.com.au']
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -10,12 +11,13 @@ export const authConfig: NextAuthConfig = {
   },
   providers: [
     Google({
-      // Safe: signIn callback below requires a verified email on our Workspace domain
+      // Safe: signIn callback below requires a verified email on an allowed Workspace domain
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
-          // Hint Google to only show accounts on our Workspace domain
-          hd: ALLOWED_DOMAIN,
+          // No `hd` hint — it accepts only a single domain and would hide the
+          // other Workspace's accounts from the chooser. The allow-list is
+          // enforced server-side in the signIn callback below instead.
           prompt: 'select_account',
         },
       },
@@ -23,8 +25,9 @@ export const authConfig: NextAuthConfig = {
   ],
   callbacks: {
     signIn: ({ profile }) => {
-      // `hd` above is only a UI hint — enforce the domain server-side
-      return profile?.hd === ALLOWED_DOMAIN && profile?.email_verified === true
+      // Enforce the domain allow-list server-side (the chooser is not trusted).
+      const hd = typeof profile?.hd === 'string' ? profile.hd.toLowerCase() : ''
+      return ALLOWED_DOMAINS.includes(hd) && profile?.email_verified === true
     },
   },
 }

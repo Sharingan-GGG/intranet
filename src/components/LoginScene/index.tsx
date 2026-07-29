@@ -74,7 +74,8 @@ const NEAR_CLOUDS = [
 
 // Auth.js error codes (?error=...) mapped to friendly messages
 const AUTH_ERRORS: Record<string, string> = {
-  AccessDenied: 'Please use your @complextravel.com.au Google account.',
+  AccessDenied:
+    'Please use your @complextravel.com.au or @roundabouttravel.com.au Google account.',
   OAuthAccountNotLinked: 'This email is already linked to a different sign-in method.',
   Configuration: 'Sign-in is misconfigured. Please contact IT.',
   Default: 'Authentication failed. Please try again.',
@@ -84,11 +85,12 @@ const T = 'transition-all duration-[2000ms] ease-in-out'
 
 interface Props {
   error?: string
+  existing?: string
   redirect?: string
   cormorantClass: string
 }
 
-export function LoginScene({ error, redirect, cormorantClass }: Props) {
+export function LoginScene({ error, existing, redirect, cormorantClass }: Props) {
   const [isNight, setIsNight] = useState(false)
   const [loading, setLoading] = useState(false)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -96,7 +98,12 @@ export function LoginScene({ error, redirect, cormorantClass }: Props) {
 
   const theme = isNight ? NIGHT : DAY
   const callbackUrl = redirect && redirect.startsWith('/') ? redirect : '/'
-  const errorMessage = error ? (AUTH_ERRORS[error] ?? AUTH_ERRORS.Default) : null
+  const errorMessage =
+    error === 'DuplicateAccount'
+      ? `An account already exists as ${existing ?? 'another domain'}. Please sign in with that account instead.`
+      : error
+        ? (AUTH_ERRORS[error] ?? AUTH_ERRORS.Default)
+        : null
 
   useEffect(() => {
     setMounted(true)
@@ -460,7 +467,8 @@ export function LoginScene({ error, redirect, cormorantClass }: Props) {
         {/* Hint */}
         <p className="login-fade-up mt-6 text-xs" style={{ color: '#b3b3b3' }}>
           Use your{' '}
-          <span className="underline underline-offset-2">@complextravel.com.au</span> account
+          <span className="underline underline-offset-2">@complextravel.com.au</span> or{' '}
+          <span className="underline underline-offset-2">@roundabouttravel.com.au</span> account
         </p>
       </div>
 
