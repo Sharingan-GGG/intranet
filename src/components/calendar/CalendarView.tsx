@@ -116,9 +116,6 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
     >
       {/* Toolbar */}
       <div className="il-calendar-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em', margin: 0 }}>
-          {monthLabel}
-        </h1>
         <div style={{ display: 'flex', gap: 6 }}>
           <button aria-label="Previous month" onClick={() => shiftMonth(-1)} style={navBtn}>
             ‹
@@ -126,17 +123,10 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
           <button aria-label="Next month" onClick={() => shiftMonth(1)} style={navBtn}>
             ›
           </button>
-          <button
-            onClick={() => {
-              const now = new Date()
-              setMonth(new Date(now.getFullYear(), now.getMonth(), 1))
-              setSelected(dateKey(now))
-            }}
-            style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 13 }}
-          >
-            Today
-          </button>
         </div>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--il-brand)', letterSpacing: '-0.01em', margin: 0 }}>
+          {monthLabel}
+        </h1>
         <div className="il-tabs" style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
           {tags.map((tag) => {
             const [bg, fg] = tagStyle(tag)
