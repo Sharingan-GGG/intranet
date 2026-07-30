@@ -1,0 +1,749 @@
+"use client"
+
+// Pre-Departure Scanner — main dashboard (toolbar, sidebar, dual/single pane, detail panel)
+
+import * as React from "react"
+import type { ScannerPnr, ScannerSettings, PnrCounts } from "./pnr-scanner-types"
+import { SAMPLE_PNRS, DEFAULT_SETTINGS, LIST_COLUMNS } from "./pnr-scanner-data"
+import { ScannerIcon, statusMeta } from "./pnr-scanner-ui"
+import { PnrScannerList } from "./pnr-scanner-list"
+import { PnrScannerDetailPanel } from "./pnr-scanner-detail"
+import { PnrScannerSettingsDrawer } from "./pnr-scanner-settings"
+import { PnrScannerHealthDrawer } from "./pnr-scanner-health"
+
+// ─── Settings hook ────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = "psd_settings_v2"
+
+const FS_SCALE: Record<ScannerSettings["fontSize"], number> = {
+  sm: 0.875,
+  md: 1,
+  lg: 1.075,
+  xl: 1.18,
+}
+
+function useSettings(): [ScannerSettings, (patch: Partial<ScannerSettings>) => void] {
+  const [s, setS] = React.useState<ScannerSettings>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+      }
+    } catch {}
+    return DEFAULT_SETTINGS
+  })
+
+  React.useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) } catch {}
+  }, [s])
+
+  const set = React.useCallback(
+    (patch: Partial<ScannerSettings>) => setS((prev) => ({ ...prev, ...patch })),
+    []
+  )
+  return [s, set]
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
+
+export function PnrScannerDashboard() {
+  const [settings, setSettings] = useSettings()
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "exception" | "pending" | "complete">("all")
+  const [search, setSearch]             = React.useState("")
+  const [selected, setSelected]         = React.useState<Set<string>>(() => new Set())
+  const [focusedId, setFocusedId]       = React.useState<string>("QPIKWQ")
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [healthOpen, setHealthOpen]     = React.useState(false)
+  const [sidebarOpen, setSidebarOpen]   = React.useState(true)
+  const [pnrs, setPnrs]                 = React.useState<ScannerPnr[]>(SAMPLE_PNRS)
+  const [detailOpen, setDetailOpen]     = React.useState(true)
+
+  // counts
+  const counts = React.useMemo<PnrCounts>(() => ({
+    all:       pnrs.length,
+    exception: pnrs.filter((p) => p.status === "exception").length,
+    pending:   pnrs.filter((p) => p.status === "pending").length,
+    complete:  pnrs.filter((p) => p.status === "complete").length,
+  }), [pnrs])
+
+  // single-column filtered list
+  const filtered = React.useMemo(() => {
+    let list = pnrs
+    if (statusFilter !== "all") list = list.filter((p) => p.status === statusFilter)
+    if (settings.scope === "mine") list = list.filter((p) => p.consultantInitials === "HG")
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter(
+        (p) =>
+          p.id.toLowerCase().includes(q) ||
+          p.clientPrimary.toLowerCase().includes(q) ||
+          p.consultant.toLowerCase().includes(q) ||
+          (p.reason || "").toLowerCase().includes(q)
+      )
+    }
+    const order: Record<string, number> = { exception: 0, pending: 1, complete: 2 }
+    return [...list].sort(
+      (a, b) => (order[a.status] - order[b.status]) || (a.daysOut - b.daysOut)
+    )
+  }, [pnrs, statusFilter, search, settings.scope])
+
+  // dual-column helpers
+  const filterBy = React.useCallback(
+    (status: ScannerPnr["status"]) => {
+      let list = pnrs.filter((p) => p.status === status)
+      if (settings.scope === "mine") list = list.filter((p) => p.consultantInitials === "HG")
+      if (search.trim()) {
+        const q = search.trim().toLowerCase()
+        list = list.filter(
+          (p) =>
+            p.id.toLowerCase().includes(q) ||
+            p.clientPrimary.toLowerCase().includes(q) ||
+            p.consultant.toLowerCase().includes(q)
+        )
+      }
+      return [...list].sort((a, b) => a.daysOut - b.daysOut)
+    },
+    [pnrs, settings.scope, search]
+  )
+
+  const exceptionList = React.useMemo(() => filterBy("exception"), [filterBy])
+  const pendingList   = React.useMemo(() => filterBy("pending"),   [filterBy])
+  const completeList  = React.useMemo(() => filterBy("complete"),  [filterBy])
+
+  const focused = pnrs.find((p) => p.id === focusedId) || filtered[0] || null
+
+  // Actions
+  function moveSelectedToComplete() {
+    const targets = selected.size > 0 ? selected : focusedId ? new Set([focusedId]) : new Set<string>()
+    setPnrs((prev) =>
+      prev.map((p) =>
+        targets.has(p.id) ? { ...p, status: "complete", workflow: "complete", docState: "done" } : p
+      )
+    )
+    setSelected(new Set())
+  }
+
+  function deleteSelected() {
+    const targets = selected.size > 0 ? selected : focusedId ? new Set([focusedId]) : new Set<string>()
+    setPnrs((prev) => prev.filter((p) => !targets.has(p.id)))
+    setSelected(new Set())
+  }
+
+  function rowApprove(id: string) {
+    setPnrs((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "complete", docState: "done" } : p))
+    )
+  }
+
+  function rowResync(id: string) {
+    // stub — would call backend
+  }
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        document.querySelector<HTMLInputElement>('input[placeholder^="Search"]')?.focus()
+        return
+      }
+      if (e.key === "j" || e.key === "k") {
+        const idx = filtered.findIndex((p) => p.id === focusedId)
+        const next = e.key === "j" ? Math.min(filtered.length - 1, idx + 1) : Math.max(0, idx - 1)
+        if (filtered[next]) setFocusedId(filtered[next].id)
+      }
+      if (e.key === "1") setStatusFilter("exception")
+      if (e.key === "2") setStatusFilter("pending")
+      if (e.key === "3") setStatusFilter("complete")
+      if (e.key === "0") setStatusFilter("all")
+      if (e.key === "," && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setSettingsOpen(true) }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [filtered, focusedId])
+
+  const fsScale = FS_SCALE[settings.fontSize]
+  const dual    = settings.layout === "dual"
+
+  return (
+    <div
+      className="h-full w-full bg-zinc-950 text-zinc-100 flex font-sans overflow-hidden"
+      style={{ fontSize: `${14 * fsScale}px` }}
+      suppressHydrationWarning
+    >
+      {/* Sidebar */}
+      {sidebarOpen && <ScannerSidebar counts={counts} />}
+
+      {/* Main area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Toolbar */}
+        <ScannerToolbar
+          counts={counts}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          search={search}
+          setSearch={setSearch}
+          onSettings={() => setSettingsOpen(true)}
+          onQueueHealth={() => setHealthOpen(true)}
+          onSidebar={() => setSidebarOpen((s) => !s)}
+          selectedCount={selected.size}
+          onMove={moveSelectedToComplete}
+          onDelete={deleteSelected}
+          onScan={() => {}}
+          layout={settings.layout}
+          onLayoutToggle={(v) => setSettings({ layout: v })}
+        />
+
+        {/* Content */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 flex overflow-hidden">
+            {dual ? (
+              <DualPane
+                exceptionList={exceptionList}
+                pendingList={pendingList}
+                completeList={completeList}
+                settings={settings}
+                setSettings={setSettings}
+                selected={selected}
+                setSelected={setSelected}
+                focusedId={focused?.id}
+                setFocusedId={setFocusedId}
+                rowApprove={rowApprove}
+                rowResync={rowResync}
+              />
+            ) : (
+              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                <ListSubHeader statusFilter={statusFilter} count={filtered.length} />
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <PnrScannerList
+                    pnrs={filtered}
+                    columns={settings.listColumns}
+                    selected={selected}
+                    setSelected={setSelected}
+                    density={settings.density}
+                    focusedId={focused?.id}
+                    setFocusedId={setFocusedId}
+                    settings={settings}
+                    showStatusBadge={statusFilter === "all"}
+                    onRowApprove={rowApprove}
+                    onRowResync={rowResync}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Detail panel */}
+          {detailOpen && (
+            <div className="h-[44%] min-h-[280px] flex-shrink-0">
+              <PnrScannerDetailPanel
+                pnr={focused}
+                flightColumns={settings.flightColumns}
+                density={settings.density}
+                settings={settings}
+                onClose={() => setDetailOpen(false)}
+              />
+            </div>
+          )}
+          {!detailOpen && focused && (
+            <div className="h-9 border-t border-zinc-800/80 bg-zinc-950/40 px-4 flex items-center text-[12px] text-zinc-400 flex-shrink-0">
+              <span className="font-mono font-semibold text-zinc-100">{focused.id}</span>
+              <span className="text-zinc-600 mx-2">·</span>
+              <span>{focused.clientPrimary}</span>
+              <button
+                onClick={() => setDetailOpen(true)}
+                className="ml-auto h-6 px-2 rounded text-[11px] border border-zinc-800 text-zinc-300 hover:border-zinc-700"
+              >
+                Open detail
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Drawers */}
+      <PnrScannerSettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        setSettings={setSettings}
+      />
+      <PnrScannerHealthDrawer
+        open={healthOpen}
+        onClose={() => setHealthOpen(false)}
+        counts={counts}
+        pnrs={pnrs}
+      />
+    </div>
+  )
+}
+
+// ─── Toolbar ──────────────────────────────────────────────────────────────────
+
+function ScannerToolbar({
+  counts,
+  statusFilter,
+  setStatusFilter,
+  search,
+  setSearch,
+  onSettings,
+  onQueueHealth,
+  onSidebar,
+  selectedCount,
+  onMove,
+  onDelete,
+  onScan,
+  layout,
+  onLayoutToggle,
+}: {
+  counts: PnrCounts
+  statusFilter: string
+  setStatusFilter: (v: "all" | "exception" | "pending" | "complete") => void
+  search: string
+  setSearch: (v: string) => void
+  onSettings: () => void
+  onQueueHealth: () => void
+  onSidebar: () => void
+  selectedCount: number
+  onMove: () => void
+  onDelete: () => void
+  onScan: () => void
+  layout: ScannerSettings["layout"]
+  onLayoutToggle: (v: ScannerSettings["layout"]) => void
+}) {
+  return (
+    <div className="px-4 pt-3 pb-2 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-sm flex-shrink-0 z-30">
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Sidebar toggle */}
+        <button
+          onClick={onSidebar}
+          className="h-8 w-8 grid place-items-center rounded-md border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700"
+        >
+          <ScannerIcon name="sidebar" />
+        </button>
+
+        {/* Search */}
+        <div className="relative">
+          <ScannerIcon
+            name="search"
+            className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search PNR, client, consultant…"
+            className="h-8 w-72 pl-8 pr-12 rounded-md bg-zinc-900/80 border border-zinc-800 text-zinc-100 placeholder:text-zinc-500 text-[12.5px] focus:outline-none focus:border-zinc-700"
+          />
+          <kbd className="hidden md:inline-flex absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 border border-zinc-800 rounded px-1 py-0.5 font-mono">
+            ⌘K
+          </kbd>
+        </div>
+
+        <button className="h-8 px-2.5 rounded-md border border-zinc-800 text-zinc-300 text-[12px] hover:border-zinc-700 inline-flex items-center gap-1.5">
+          <ScannerIcon name="reload" className="w-3.5 h-3.5" /> Reload
+        </button>
+
+        {/* Status filter */}
+        <div className="ml-1 inline-flex bg-zinc-900/60 border border-zinc-800 rounded-md p-0.5 text-[12px]">
+          {([
+            { k: "all",       label: "All",       dot: null             },
+            { k: "exception", label: "Exception", dot: "bg-rose-500"   },
+            { k: "pending",   label: "Pending",   dot: "bg-amber-400"  },
+            { k: "complete",  label: "Complete",  dot: "bg-emerald-400" },
+          ] as const).map((opt) => {
+            const active = statusFilter === opt.k
+            return (
+              <button
+                key={opt.k}
+                onClick={() => setStatusFilter(opt.k)}
+                className={`h-7 px-2.5 rounded-[5px] inline-flex items-center gap-1.5 transition-colors ${
+                  active ? "bg-zinc-100 text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-100"
+                }`}
+              >
+                {opt.dot && <span className={`w-1.5 h-1.5 rounded-full ${opt.dot}`} />}
+                <span className="font-medium">{opt.label}</span>
+                <span className="text-[10.5px] tabular-nums text-zinc-500">
+                  {counts[opt.k] ?? 0}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Layout toggle */}
+          <div className="inline-flex bg-zinc-900/60 border border-zinc-800 rounded-md p-0.5 text-[12px]">
+            {(["single", "dual"] as const).map((v) => {
+              const active = layout === v
+              return (
+                <button
+                  key={v}
+                  onClick={() => onLayoutToggle(v)}
+                  className={`h-7 px-2 rounded-[5px] transition-colors font-medium ${
+                    active ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-100"
+                  }`}
+                >
+                  {v === "single" ? "1 col" : "2 col"}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Brand dropdown */}
+          <div className="h-8 px-2.5 rounded-md border border-zinc-800 text-[12px] text-zinc-300 inline-flex items-center gap-1.5 cursor-pointer hover:border-zinc-700">
+            <span className="text-zinc-500">Brand</span>
+            <span className="font-medium">YP</span>
+            <ScannerIcon name="chevron" className="w-3 h-3 text-zinc-500" />
+          </div>
+
+          {/* Scan */}
+          <button
+            onClick={onScan}
+            className="h-8 px-3 rounded-md text-[12px] font-medium text-sky-50 bg-sky-500/90 hover:bg-sky-500 inline-flex items-center gap-1.5"
+          >
+            <ScannerIcon name="scan" className="w-3.5 h-3.5" /> Scan
+          </button>
+
+          {/* Move PNR */}
+          <button
+            onClick={onMove}
+            className="h-8 px-2.5 rounded-md text-[12px] font-medium border border-zinc-800 text-zinc-100 hover:border-zinc-700 hover:bg-zinc-900/60 inline-flex items-center gap-1.5"
+          >
+            <ScannerIcon name="move" className="w-3.5 h-3.5" />
+            Move PNR
+            {selectedCount > 0 && (
+              <span className="text-[10.5px] tabular-nums text-zinc-400 bg-zinc-800/70 rounded-full px-1.5 min-w-[16px] text-center">
+                {selectedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={onDelete}
+            className="h-8 px-2.5 rounded-md text-[12px] font-medium border border-rose-500/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 inline-flex items-center gap-1.5"
+          >
+            <ScannerIcon name="trash" className="w-3.5 h-3.5" />
+            Delete
+            {selectedCount > 0 && (
+              <span className="text-[10.5px] tabular-nums text-rose-200/80 bg-rose-500/20 rounded-full px-1.5 min-w-[16px] text-center">
+                {selectedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Queue health */}
+          <button
+            onClick={onQueueHealth}
+            className="h-8 w-8 grid place-items-center rounded-md border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700"
+            title="Queue health"
+          >
+            <ScannerIcon name="chart" />
+          </button>
+
+          {/* Settings */}
+          <button
+            onClick={onSettings}
+            className="h-8 w-8 grid place-items-center rounded-md border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700"
+            title="Global settings (⌘,)"
+          >
+            <ScannerIcon name="settings" />
+          </button>
+
+          {/* Avatar */}
+          <div className="h-7 w-7 rounded-full bg-zinc-800 grid place-items-center text-[11px] font-semibold text-zinc-100 ring-2 ring-zinc-900">
+            HG
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+
+function ScannerSidebar({ counts }: { counts: PnrCounts }) {
+  return (
+    <div className="w-56 flex-shrink-0 border-r border-zinc-800/80 bg-zinc-950/40 flex flex-col h-full">
+      {/* Brand */}
+      <div className="px-4 py-3.5 border-b border-zinc-800/80">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-md bg-zinc-800/70 border border-zinc-800 grid place-items-center flex-shrink-0 text-zinc-100">
+            <svg
+              viewBox="0 0 64 36"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+              aria-label="Complex Travel Group"
+            >
+              <circle cx="20" cy="18" r="11" />
+              <circle cx="44" cy="18" r="11" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[12.5px] font-semibold text-zinc-100 leading-tight">CTG Intranet</div>
+            <div className="text-[9.5px] uppercase tracking-[0.16em] text-zinc-500 font-medium mt-0.5">
+              Complex Travel
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <div className="px-2 py-3 space-y-0.5 flex-1">
+        <SidebarItem icon="dashboard" label="Dashboard"      href="/dashboard" />
+        <SidebarItem icon="plane"     label="Pre-Departure"  href="/pre-departure" active count={counts.exception + counts.pending} />
+        <SidebarItem icon="seat"      label="Seat Scanner"   href="/seat-scanner" />
+        <SidebarItem icon="users"     label="Team"           href="/team" />
+        <SidebarItem icon="shield"    label="Permissions"    href="/permissions" />
+      </div>
+
+      {/* Footer */}
+      <div className="p-3 border-t border-zinc-800/80 space-y-2">
+        <div className="px-2 py-2 rounded border border-zinc-800 bg-zinc-900/50">
+          <div className="text-[10.5px] text-zinc-400 mb-1">Last sync</div>
+          <div className="text-[11.5px] text-zinc-100">Today, 14:32</div>
+          <div className="text-[10px] text-zinc-500 mt-1.5 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> P3 connected
+          </div>
+        </div>
+        <SidebarItem icon="userCog" label="Profile Settings" href="/profile" />
+      </div>
+    </div>
+  )
+}
+
+function SidebarItem({
+  label,
+  count,
+  active,
+  icon,
+  href,
+}: {
+  label: string
+  count?: number
+  active?: boolean
+  icon?: string
+  href?: string
+}) {
+  return (
+    <a
+      href={href}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-[12px] text-left no-underline ${
+        active
+          ? "bg-zinc-800/60 text-zinc-100"
+          : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-100"
+      }`}
+      onClick={(e) => e.preventDefault()}
+    >
+      {icon && (
+        <ScannerIcon
+          name={icon}
+          className={`w-3.5 h-3.5 flex-shrink-0 ${active ? "text-sky-300" : "text-zinc-500"}`}
+        />
+      )}
+      <span className="flex-1 truncate">{label}</span>
+      {count !== undefined && (
+        <span className="text-[10.5px] tabular-nums text-zinc-500">{count}</span>
+      )}
+    </a>
+  )
+}
+
+// ─── Dual pane ────────────────────────────────────────────────────────────────
+
+function DualPane({
+  exceptionList,
+  pendingList,
+  completeList,
+  settings,
+  setSettings,
+  selected,
+  setSelected,
+  focusedId,
+  setFocusedId,
+  rowApprove,
+  rowResync,
+}: {
+  exceptionList: ScannerPnr[]
+  pendingList: ScannerPnr[]
+  completeList: ScannerPnr[]
+  settings: ScannerSettings
+  setSettings: (patch: Partial<ScannerSettings>) => void
+  selected: Set<string>
+  setSelected: (s: Set<string>) => void
+  focusedId: string | undefined
+  setFocusedId: (id: string) => void
+  rowApprove: (id: string) => void
+  rowResync: (id: string) => void
+}) {
+  const rightList =
+    settings.dualRight === "pending" ? pendingList : completeList
+
+  const sharedListProps = {
+    columns: settings.listColumns,
+    selected,
+    setSelected,
+    density: settings.density,
+    focusedId,
+    setFocusedId,
+    settings,
+    onRowApprove: rowApprove,
+    onRowResync:  rowResync,
+  }
+
+  return (
+    <div className="flex-1 min-w-0 flex gap-3 p-3 bg-zinc-950/30 overflow-hidden">
+      {/* Exceptions pane */}
+      <div className="flex-1 min-w-0 flex flex-col rounded-md border border-zinc-800/80 bg-zinc-950/40 overflow-hidden">
+        <PaneHeader
+          title="Exceptions"
+          subtitle="PNRs with errors or data quality issues"
+          accentDot="bg-rose-500"
+          count={exceptionList.length}
+        />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <PnrScannerList pnrs={exceptionList} {...sharedListProps} />
+        </div>
+      </div>
+
+      {/* Pending/Complete pane */}
+      <div className="flex-1 min-w-0 flex flex-col rounded-md border border-zinc-800/80 bg-zinc-950/40 overflow-hidden">
+        <PaneHeader
+          title={settings.dualRight === "pending" ? "Pending" : "Completed"}
+          subtitle={
+            settings.dualRight === "pending"
+              ? "Awaiting consultant approval"
+              : "Approved within the last 7 days"
+          }
+          accentDot={settings.dualRight === "pending" ? "bg-amber-400" : "bg-emerald-400"}
+          count={rightList.length}
+          right={
+            <RightModeToggle
+              value={settings.dualRight}
+              onChange={(v) => setSettings({ dualRight: v })}
+              pendingCount={pendingList.length}
+              completeCount={completeList.length}
+            />
+          }
+        />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <PnrScannerList pnrs={rightList} {...sharedListProps} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PaneHeader({
+  title,
+  subtitle,
+  count,
+  accentDot,
+  right,
+}: {
+  title: string
+  subtitle: string
+  count: number
+  accentDot: string
+  right?: React.ReactNode
+}) {
+  return (
+    <div className="px-4 py-2.5 border-b border-zinc-800/80 flex items-center gap-3 bg-zinc-950/30 flex-shrink-0">
+      <span className={`w-2 h-2 rounded-full ${accentDot} flex-shrink-0`} />
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-zinc-100 font-medium text-[13px]">{title}</span>
+          <span className="text-[11px] text-zinc-500 tabular-nums">{count}</span>
+        </div>
+        <div className="text-[10.5px] text-zinc-500 truncate">{subtitle}</div>
+      </div>
+      {right && <div className="ml-auto">{right}</div>}
+    </div>
+  )
+}
+
+function RightModeToggle({
+  value,
+  onChange,
+  pendingCount,
+  completeCount,
+}: {
+  value: ScannerSettings["dualRight"]
+  onChange: (v: ScannerSettings["dualRight"]) => void
+  pendingCount: number
+  completeCount: number
+}) {
+  return (
+    <div className="inline-flex bg-zinc-900/60 border border-zinc-800 rounded-md p-0.5 text-[11.5px]">
+      <button
+        onClick={() => onChange("pending")}
+        className={`h-7 px-2.5 rounded-[5px] inline-flex items-center gap-1.5 transition-colors ${
+          value === "pending" ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-100"
+        }`}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        <span className="font-medium">Pending</span>
+        <span className="text-[10.5px] tabular-nums text-zinc-500">{pendingCount}</span>
+      </button>
+      <button
+        onClick={() => onChange("complete")}
+        className={`h-7 px-2.5 rounded-[5px] inline-flex items-center gap-1.5 transition-colors ${
+          value === "complete" ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-100"
+        }`}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <span className="font-medium">Complete</span>
+        <span className="text-[10.5px] tabular-nums text-zinc-500">{completeCount}</span>
+      </button>
+    </div>
+  )
+}
+
+// ─── Single-column sub-header ─────────────────────────────────────────────────
+
+function ListSubHeader({
+  statusFilter,
+  count,
+}: {
+  statusFilter: string
+  count: number
+}) {
+  const titleMap: Record<string, string> = {
+    all:       "All PNRs",
+    exception: "Exceptions — needs attention",
+    pending:   "Pending",
+    complete:  "Completed",
+  }
+  const subMap: Record<string, string> = {
+    all:       "All bookings across statuses.",
+    exception: "PNRs with data quality issues or unresolved errors.",
+    pending:   "PNRs awaiting consultant approval.",
+    complete:  "Approved and archived in the last 7 days.",
+  }
+  return (
+    <div className="px-4 py-2.5 border-b border-zinc-800/80 flex items-center gap-3 bg-zinc-950/30 flex-shrink-0">
+      <div>
+        <div className="text-zinc-100 font-medium text-[13px]">{titleMap[statusFilter]}</div>
+        <div className="text-[10.5px] text-zinc-500">{subMap[statusFilter]}</div>
+      </div>
+      <span className="ml-2 text-[11px] text-zinc-500 tabular-nums">
+        {count} PNR{count === 1 ? "" : "s"}
+      </span>
+      <div className="ml-auto flex items-center gap-1">
+        <button className="h-7 px-2 rounded text-[11px] border border-zinc-800 text-zinc-400 hover:text-zinc-100 inline-flex items-center gap-1">
+          <ScannerIcon name="sort" className="w-3 h-3" />
+          Sort: Departure
+        </button>
+        <button className="h-7 px-2 rounded text-[11px] border border-zinc-800 text-zinc-400 hover:text-zinc-100 inline-flex items-center gap-1">
+          <ScannerIcon name="filter" className="w-3 h-3" />
+          Filter
+        </button>
+      </div>
+    </div>
+  )
+}
