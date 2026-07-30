@@ -219,7 +219,7 @@ export function RangeCalendar({ value, onChange, monthAirlines = [], width = "w-
         </button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-auto p-0">
+      <PopoverContent align="start" className="w-[min(92vw,900px)] p-0">
         {/* Presets */}
         <div className="flex flex-wrap gap-1.5 border-b p-2">
           {PRESETS.map((p) => (
@@ -239,11 +239,13 @@ export function RangeCalendar({ value, onChange, monthAirlines = [], width = "w-
 
         {/* Calendar + side panel */}
         <div
-          className="grid"
-          style={{ gridTemplateColumns: sortedMonths.length ? "minmax(660px,auto) 220px" : "auto" }}
+          className={cn(
+            "grid grid-cols-1",
+            sortedMonths.length > 0 && "sm:grid-cols-[minmax(0,1fr)_220px]",
+          )}
         >
           {/* Month grids */}
-          <div ref={calRef} className="grid max-h-[420px] grid-cols-3 gap-x-4 gap-y-4 overflow-y-auto p-3 scroll-smooth">
+          <div ref={calRef} className="grid max-h-[420px] grid-cols-1 gap-x-4 gap-y-4 overflow-y-auto p-3 scroll-smooth sm:grid-cols-3">
             {months.map((m) => (
               <div key={`${m.getFullYear()}-${m.getMonth()}`} data-month-key={`${m.getFullYear()}-${m.getMonth()}`}>
                 <MonthGrid

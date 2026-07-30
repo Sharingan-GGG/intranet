@@ -118,7 +118,7 @@ export function CompareButton<T extends string | number>({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[380px] p-0">
+      <PopoverContent align="end" className="w-[min(92vw,380px)] p-0">
         <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
           <span className="text-[13px] font-semibold">Comparison</span>
           <Button

@@ -101,7 +101,7 @@ export function RouteMultiSelect({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[320px] p-0"
+        className="w-[min(90vw,320px)] p-0"
         onOpenAutoFocus={(e: Event) => { e.preventDefault(); setTimeout(() => inputRef.current?.focus(), 0) }}
       >
         {/* Search */}

@@ -465,7 +465,7 @@ export function LoginScene({ error, existing, redirect, cormorantClass }: Props)
         )}
 
         {/* Hint */}
-        <p className="login-fade-up mt-6 text-xs" style={{ color: '#b3b3b3' }}>
+        <p className="login-fade-up mt-6 text-xs text-center" style={{ color: '#b3b3b3' }}>
           Use your{' '}
           <span className="underline underline-offset-2">@complextravel.com.au</span> or{' '}
           <span className="underline underline-offset-2">@roundabouttravel.com.au</span> account
