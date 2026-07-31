@@ -27,6 +27,7 @@ import { deriveQueueWorkflowStatusFromScan } from "@/lib/sabre/derive-queue-work
 import {
   fetchPnrQueueMetadata,
   mergeSheetMetadataForHistory,
+  recordInitialScanOutcome,
   upsertPnrQueueWorkflowAfterScan,
 } from "@/lib/supabase/pnr-queue-metadata"
 import { updateSheetRows } from "@/lib/google-sheets"
@@ -485,6 +486,22 @@ async function persistSabrePnrScan({
     processedAt: now,
     meta,
   })
+
+  // Freeze this verdict for the monthly Queue Health rate. Must follow the upsert
+  // above, which creates the queue row for a PNR the queue has not seen and whose
+  // created_at keys the occurrence. Best-effort: a stats write must not fail a scan
+  // whose PNR data has already been persisted.
+  try {
+    await recordInitialScanOutcome(db, {
+      pnr,
+      brandId,
+      verdict: workflow,
+      decidedAt: now,
+      consultantName: meta.consultant_name,
+    })
+  } catch (e) {
+    console.error("[pnr-fetch] Failed to record scan outcome:", e)
+  }
 
   // Write pnr_type back to col F when the queue row has a sheet_row reference.
   // Fire-and-forget so sheet latency never blocks the scan response.

@@ -220,3 +220,54 @@ export async function upsertPnrQueueWorkflowAfterScan(
   })
   if (error) throw new Error(`pnr_queue workflow insert: ${error.message}`)
 }
+
+/**
+ * Freeze the first scan verdict for this queue occurrence, for the monthly
+ * exception/pending rate in Queue Health.
+ *
+ * Write-once by construction: the unique `(pnr, queued_at)` makes every later scan of
+ * the same occurrence a no-op. That is the point — a month already reported on must
+ * not shift because someone re-scanned or approved a PNR afterwards. `queued_at` is
+ * the queue row's `created_at`, so a PNR deleted and re-imported later counts again
+ * in the month it reappears rather than being masked by its first verdict forever.
+ *
+ * Only ever called from the scan path. A sheet import writes `queue_status: "pending"`
+ * as a placeholder without consulting pnr_json / pnr_p3 / pnr_ticket, and counting
+ * that as a verdict would dilute the exception rate with rows nobody scanned.
+ */
+export async function recordInitialScanOutcome(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  args: {
+    pnr: string
+    brandId: number
+    verdict: PnrQueueWorkflowStatus
+    decidedAt: string
+    consultantName: string | null
+  }
+): Promise<void> {
+  const { data: queueRow } = await db
+    .from("pnr_queue")
+    .select("created_at")
+    .eq("pnr", args.pnr)
+    .maybeSingle()
+
+  const { error } = await db.from("pnr_scan_outcomes").insert({
+    pnr: args.pnr,
+    brand_id: args.brandId,
+    verdict: args.verdict,
+    decided_at: args.decidedAt,
+    // Copied, not referenced: the row must keep reporting correctly after the queue
+    // row is deleted or its consultant reassigned.
+    consultant_name: args.consultantName?.trim() || null,
+    // created_at is nullable on pnr_queue; fall back so the unique key is never null,
+    // which Postgres would treat as distinct and let duplicates through.
+    queued_at: queueRow?.created_at ?? args.decidedAt,
+  })
+
+  // 23505 is the unique violation: this occurrence already has its first verdict.
+  // Expected on every re-scan, and exactly what freezing means — not a failure.
+  if (error && error.code !== "23505") {
+    throw new Error(`pnr_scan_outcomes insert: ${error.message}`)
+  }
+}
