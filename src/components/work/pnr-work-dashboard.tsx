@@ -1042,6 +1042,25 @@ export function PnrWorkDashboard({
     [items]
   )
 
+  /**
+   * Pre-select Transfer To with the current owner of the rows being moved —
+   * `pnr_queue.added_by`, rendered as that profile's `full_name`. Previously this
+   * defaulted to whoever was logged in, which showed a name that had nothing to do
+   * with the PNR.
+   *
+   * A selection spanning several owners has no single answer, so it falls back to
+   * "No change" rather than picking one and silently reassigning the rest.
+   */
+  const moveDefaultProfileId = React.useMemo(() => {
+    const pool = [...exceptionRows, ...pendingRows, ...completeRows]
+    const target =
+      totalSelected > 0 ? pool.filter((r) => allSelectedPnrs.has(r.pnr)) : pool
+    if (target.length === 0) return undefined
+    const owners = new Set(target.map((r) => r.addedBy ?? null))
+    if (owners.size !== 1) return undefined
+    return target[0].addedBy ?? undefined
+  }, [exceptionRows, pendingRows, completeRows, allSelectedPnrs, totalSelected])
+
   // Counts for status filter badges and health drawer
   const counts = React.useMemo(
     () => ({
@@ -1771,7 +1790,7 @@ export function PnrWorkDashboard({
         }}
         pnrList={totalSelected > 0 ? Array.from(allSelectedPnrs) : []}
         defaultBrand={scanBrand}
-        defaultProfileId={profileId}
+        defaultProfileId={moveDefaultProfileId}
         availableBrands={availableBrands}
         onConfirm={handleMoveConfirm}
       />

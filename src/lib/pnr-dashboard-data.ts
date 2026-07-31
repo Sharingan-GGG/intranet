@@ -162,6 +162,7 @@ async function getSupabaseQueueItems(
         brand: row.brand,
         statusRaw,
         scannedBy: row.added_by ? (ownerNames.get(row.added_by) ?? null) : null,
+        addedBy: row.added_by,
         departureDate: row.departure_date ?? null,
         createdAt: row.created_at,
         scannedOn: null,
@@ -252,6 +253,7 @@ function overlaySupabaseQueueOntoLegacy(
     // Queue ownership wins: `move` reassigns added_by, while the legacy row keeps
     // the original scanner's name forever.
     scannedBy: queue.scannedBy ?? legacy.scannedBy,
+    addedBy: queue.addedBy ?? legacy.addedBy,
     client: queue.client?.trim() ? queue.client : legacy.client,
     consultant: queue.consultant?.trim() ? queue.consultant : legacy.consultant,
     departureDate: queue.departureDate ?? legacy.departureDate,

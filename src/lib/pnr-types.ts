@@ -33,6 +33,13 @@ export type DashboardPnrItem = {
   brand?: string
   statusRaw: string
   scannedBy?: string | null
+  /**
+   * `pnr_queue.added_by` — the owner's profile id, as opposed to `scannedBy`, which is
+   * their display name. Kept alongside the name because names are not unique and the
+   * Transfer To select is keyed by id. Null for legacy MySQL rows, which only carry a
+   * name.
+   */
+  addedBy?: string | null
   departureDate?: string | null
   createdAt?: string | null
   scannedOn?: string | null
