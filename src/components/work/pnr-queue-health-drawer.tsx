@@ -8,6 +8,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { DashboardPnrItem } from "@/lib/pnr-types"
 
 type Counts = {
@@ -53,6 +60,52 @@ function isOverdue(dateStr: string | null | undefined): boolean {
   return d.getTime() < startOfToday.getTime()
 }
 
+type ScanOutcomeMonth = {
+  month: string
+  pending: number
+  exception: number
+}
+
+type ScanOutcomeConsultant = {
+  name: string
+  pending: number
+  exception: number
+}
+
+/**
+ * Pre Departure palette, from the `--chart-*` tokens in pre-departure.css. Using the
+ * tokens rather than literal Tailwind colours keeps the drawer on brand and correct
+ * in both themes, since each token carries a light and a dark value.
+ *
+ * chart-3 is the brand navy (#112E81), chart-4 the brand green, chart-5 the brand red.
+ */
+const TONE = {
+  exception: { bar: "bg-chart-5", text: "text-chart-5", stroke: "text-chart-5" },
+  pending: { bar: "bg-chart-3", text: "text-chart-3", stroke: "text-chart-3" },
+  complete: { bar: "bg-chart-4", text: "text-chart-4", stroke: "text-chart-4" },
+} as const
+
+/** "2026-07-01" → "Jul". Parsed as UTC to match how the API buckets months. */
+function formatMonthLabel(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  if (isNaN(d.getTime())) return "?"
+  return d.toLocaleString("en-AU", { month: "short", timeZone: "UTC" })
+}
+
+/** "2026-07" → "July 2026", for the picker. */
+function formatMonthOption(ym: string): string {
+  const d = new Date(`${ym}-01T00:00:00Z`)
+  if (isNaN(d.getTime())) return ym
+  return d.toLocaleString("en-AU", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+}
+
+/** Sentinel for "no month filter" — Radix Select forbids an empty string value. */
+const ALL_MONTHS = "__all__"
+
 function formatConsultantInitials(name: string): string {
   return name
     .trim()
@@ -77,6 +130,48 @@ export function PnrQueueHealthDrawer({
   items: DashboardPnrItem[]
 }) {
   const now = new Date()
+
+  // Monthly first-scan verdicts. Fetched only while the drawer is open — this is a
+  // panel most sessions never expose, so it should not cost a query on every render
+  // of the dashboard behind it.
+  const [outcomes, setOutcomes] = React.useState<ScanOutcomeMonth[] | null>(null)
+  const [outcomeConsultants, setOutcomeConsultants] = React.useState<
+    ScanOutcomeConsultant[]
+  >([])
+  const [availableMonths, setAvailableMonths] = React.useState<string[]>([])
+  const [monthFilter, setMonthFilter] = React.useState<string>(ALL_MONTHS)
+  const [outcomesError, setOutcomesError] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setOutcomesError(false)
+    setOutcomes(null)
+    const qs =
+      monthFilter === ALL_MONTHS
+        ? ""
+        : `?month=${encodeURIComponent(monthFilter)}`
+    fetch(`/api/pnr-queue/scan-outcomes${qs}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(
+        (json: {
+          months?: ScanOutcomeMonth[]
+          consultants?: ScanOutcomeConsultant[]
+          available?: string[]
+        }) => {
+          if (cancelled) return
+          setOutcomes(json.months ?? [])
+          setOutcomeConsultants(json.consultants ?? [])
+          setAvailableMonths(json.available ?? [])
+        }
+      )
+      .catch(() => {
+        if (!cancelled) setOutcomesError(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, monthFilter])
 
   const today = items.filter((p) => isDateMatch(p.departureDate, now)).length
   const thisMonthCount = items.filter((p) =>
@@ -118,7 +213,7 @@ export function PnrQueueHealthDrawer({
       >
         <SheetHeader className="border-b pb-4">
           <div className="flex items-center gap-2.5">
-            <ActivityIcon className="size-4 text-emerald-500 shrink-0" />
+            <ActivityIcon className="size-4 text-chart-4 shrink-0" />
             <div>
               <SheetTitle>Queue health</SheetTitle>
               <p className="text-xs text-muted-foreground">Real-time snapshot</p>
@@ -146,19 +241,19 @@ export function PnrQueueHealthDrawer({
               {totalAll > 0 && (
                 <>
                   <div
-                    className="bg-rose-500"
+                    className="bg-chart-5"
                     style={{
                       width: `${(counts.exception / totalAll) * 100}%`,
                     }}
                   />
                   <div
-                    className="bg-amber-400"
+                    className="bg-chart-3"
                     style={{
                       width: `${(counts.pending / totalAll) * 100}%`,
                     }}
                   />
                   <div
-                    className="bg-emerald-400"
+                    className="bg-chart-4"
                     style={{
                       width: `${(counts.complete / totalAll) * 100}%`,
                     }}
@@ -169,22 +264,22 @@ export function PnrQueueHealthDrawer({
 
             <div className="mt-2 grid grid-cols-3 gap-1 text-xs">
               <StatusLegend
-                dot="bg-rose-500"
+                dot="bg-chart-5"
                 label="Exception"
                 value={counts.exception}
-                valueClass="text-rose-500"
+                valueClass="text-chart-5"
               />
               <StatusLegend
-                dot="bg-amber-400"
+                dot="bg-chart-3"
                 label="Pending"
                 value={counts.pending}
-                valueClass="text-amber-500"
+                valueClass="text-chart-3"
               />
               <StatusLegend
-                dot="bg-emerald-400"
+                dot="bg-chart-4"
                 label="Done"
                 value={counts.complete}
-                valueClass="text-emerald-500"
+                valueClass="text-chart-4"
               />
             </div>
           </div>
@@ -237,7 +332,7 @@ export function PnrQueueHealthDrawer({
                     strokeWidth="3.5"
                     strokeDasharray={`${completionRate}, 100`}
                     strokeLinecap="round"
-                    className="text-emerald-500"
+                    className="text-chart-4"
                   />
                 </svg>
                 <div className="absolute inset-0 grid place-items-center text-sm font-semibold tabular-nums">
@@ -288,15 +383,15 @@ export function PnrQueueHealthDrawer({
                       {total > 0 && (
                         <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
                           <div
-                            className="bg-rose-500"
+                            className="bg-chart-5"
                             style={{ width: `${(c.exception / total) * 100}%` }}
                           />
                           <div
-                            className="bg-amber-400"
+                            className="bg-chart-3"
                             style={{ width: `${(c.pending / total) * 100}%` }}
                           />
                           <div
-                            className="bg-emerald-400"
+                            className="bg-chart-4"
                             style={{ width: `${(c.complete / total) * 100}%` }}
                           />
                         </div>
@@ -307,6 +402,17 @@ export function PnrQueueHealthDrawer({
               </div>
             </div>
           )}
+
+          {/* Analytics last: it is the historical read, and everything above it is
+              the live snapshot the drawer leads with. */}
+          <MonthlyVerdictChart
+            months={outcomes}
+            consultants={outcomeConsultants}
+            failed={outcomesError}
+            availableMonths={availableMonths}
+            monthFilter={monthFilter}
+            onMonthFilterChange={setMonthFilter}
+          />
         </div>
       </SheetContent>
     </Sheet>
@@ -314,6 +420,209 @@ export function PnrQueueHealthDrawer({
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+/**
+ * Grouped bar chart of the first scan verdict per month: two bars per month, pending
+ * in the brand navy and exception in red.
+ *
+ * Both series share one y-scale — the tallest single value across the window — so a
+ * bar's height means the same thing in every month. Built from divs rather than a
+ * charting dependency, matching the CSS bars used elsewhere in this drawer.
+ *
+ * The figures come from `pnr_scan_outcomes` and are frozen at first scan — they do
+ * not move when a PNR is later approved or completed, which is what makes a past
+ * month comparable to this one.
+ */
+function MonthlyVerdictChart({
+  months,
+  consultants,
+  failed,
+  availableMonths,
+  monthFilter,
+  onMonthFilterChange,
+}: {
+  months: ScanOutcomeMonth[] | null
+  consultants: ScanOutcomeConsultant[]
+  failed: boolean
+  availableMonths: string[]
+  monthFilter: string
+  onMonthFilterChange: (v: string) => void
+}) {
+  const peak = React.useMemo(
+    () =>
+      Math.max(1, ...(months ?? []).map((m) => Math.max(m.pending, m.exception))),
+    [months]
+  )
+
+  const totals = React.useMemo(() => {
+    const src = months ?? []
+    return {
+      pending: src.reduce((a, m) => a + m.pending, 0),
+      exception: src.reduce((a, m) => a + m.exception, 0),
+    }
+  }, [months])
+
+  const scanned = totals.pending + totals.exception
+
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          Analytics PNR Status
+        </p>
+        <Select value={monthFilter} onValueChange={onMonthFilterChange}>
+          <SelectTrigger className="h-6 w-auto gap-1 border-none px-1.5 text-[10px] shadow-none focus:ring-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value={ALL_MONTHS} className="text-xs">
+              Last 6 months
+            </SelectItem>
+            {availableMonths.map((ym) => (
+              <SelectItem key={ym} value={ym} className="text-xs">
+                {formatMonthOption(ym)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {scanned > 0 && (
+        <p className="mb-2 text-[10px] tabular-nums text-muted-foreground">
+          {Math.round((totals.exception / scanned) * 100)}% exception across{" "}
+          {scanned} scan{scanned !== 1 ? "s" : ""}
+        </p>
+      )}
+
+      {failed ? (
+        <p className="py-4 text-center text-xs text-muted-foreground">
+          Could not load scan history.
+        </p>
+      ) : months === null ? (
+        <div className="flex h-24 items-end gap-2">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="flex-1 animate-pulse rounded-sm bg-muted" style={{ height: `${30 + ((i * 17) % 50)}%` }} />
+          ))}
+        </div>
+      ) : scanned === 0 ? (
+        <p className="py-4 text-center text-xs text-muted-foreground">
+          {monthFilter === ALL_MONTHS
+            ? "No scans recorded yet."
+            : `No scans in ${formatMonthOption(monthFilter)}.`}
+        </p>
+      ) : (
+        <>
+          {/* One month on its own would stretch to the full card width and stop
+              reading as a bar, so a single group keeps a column-like footprint. */}
+          <div
+            className={`flex h-24 items-end gap-2 border-b pb-px ${
+              months.length === 1 ? "mx-auto w-20" : ""
+            }`}
+          >
+            {months.map((m) => (
+              <div
+                key={m.month}
+                className="flex h-full flex-1 items-end justify-center gap-1"
+              >
+                {/* min-height keeps a zero month visible as a hairline rather than
+                    disappearing, so the group still reads as a month with no scans. */}
+                <div
+                  className={`w-1/2 min-w-[3px] rounded-t-sm transition-[height] ${TONE.pending.bar}`}
+                  style={{ height: `${Math.max((m.pending / peak) * 100, 1)}%` }}
+                  title={`${formatMonthLabel(m.month)}: ${m.pending} pending`}
+                />
+                <div
+                  className={`w-1/2 min-w-[3px] rounded-t-sm transition-[height] ${TONE.exception.bar}`}
+                  style={{ height: `${Math.max((m.exception / peak) * 100, 1)}%` }}
+                  title={`${formatMonthLabel(m.month)}: ${m.exception} exception`}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div
+            className={`mt-1.5 flex text-[9px] text-muted-foreground ${
+              months.length === 1 ? "justify-center" : ""
+            }`}
+          >
+            {months.map((m) => (
+              <span key={m.month} className="flex-1 text-center">
+                {formatMonthLabel(m.month)}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-3 flex justify-center gap-4 border-t pt-2 text-xs">
+            <StatusLegend
+              dot="bg-chart-3"
+              label="Pending"
+              value={totals.pending}
+              valueClass="text-chart-3"
+            />
+            <StatusLegend
+              dot="bg-chart-5"
+              label="Exception"
+              value={totals.exception}
+              valueClass="text-chart-5"
+            />
+          </div>
+
+          <ConsultantOutcomes consultants={consultants} />
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Per-consultant split of the same frozen verdicts the chart above shows, and so it
+ * follows the month filter with it.
+ *
+ * Distinct from the "By consultant" section further down, which counts live queue
+ * state: this one cannot change after the fact, so it answers "how did their work
+ * land when it was first scanned" rather than "what is on their plate now".
+ */
+function ConsultantOutcomes({
+  consultants,
+}: {
+  consultants: ScanOutcomeConsultant[]
+}) {
+  if (consultants.length === 0) return null
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        By consultant
+      </p>
+      <div className="space-y-2">
+        {consultants.map((c) => {
+          const total = c.pending + c.exception
+          return (
+            <div key={c.name}>
+              <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                <span className="truncate">{c.name}</span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {c.exception}/{total} exc
+                </span>
+              </div>
+              <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={TONE.exception.bar}
+                  style={{ width: `${(c.exception / total) * 100}%` }}
+                />
+                <div
+                  className={TONE.pending.bar}
+                  style={{ width: `${(c.pending / total) * 100}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function StatusLegend({
   dot,
@@ -348,9 +657,9 @@ function HealthTile({
 }) {
   const valueClass =
     tone === "rose"
-      ? "text-rose-500"
+      ? "text-chart-5"
       : tone === "amber"
-        ? "text-amber-500"
+        ? "text-chart-3"
         : "text-muted-foreground"
 
   return (
