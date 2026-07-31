@@ -10,7 +10,12 @@ import {
   deleteSheetRowsByIndex,
   appendToSheetTab,
 } from "@/lib/google-sheets"
-import { DEFAULT_MARKED, refreshSheetRows } from "@/lib/sheet-sync"
+import { ensureBrandId } from "@/lib/supabase/ensure-brand"
+import {
+  DEFAULT_MARKED,
+  queueStatusToSheetStatus,
+  refreshSheetRows,
+} from "@/lib/sheet-sync"
 
 type MoveBody = {
   pnrs: string[]
@@ -27,13 +32,6 @@ type QueuePreRow = {
   pnr_type: string | null
   queue_status: string | null
   sheet_row: number | null
-}
-
-/** Map pnr_queue.queue_status → Google Sheet column G value. */
-function queueStatusToSheetStatus(status: string | null | undefined): string {
-  if (status === "no-flight") return "no-flight"
-  if (status === "exception") return "Exception"
-  return "Processing"
 }
 
 export async function POST(req: NextRequest) {
@@ -122,7 +120,27 @@ export async function POST(req: NextRequest) {
       scannedByName = toProfile?.full_name ?? toProfile?.email ?? ""
     }
 
-    const patch: Record<string, unknown> = { brand: toBrand }
+    // `brand` and `brand_id` are two independent columns. A trigger backfills the
+    // text from the id, but not the other way round — writing `brand` alone leaves
+    // `brand_id` pointing at the old brand, and every brand_id-keyed read (the
+    // dashboard, pnr_history) keeps showing the PNR under the tab it just left.
+    let toBrandId: number
+    try {
+      toBrandId = await ensureBrandId(db, toBrand)
+    } catch (e) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Unknown destination brand ${toBrand}: ${e instanceof Error ? e.message : String(e)}`,
+        },
+        { status: 400 }
+      )
+    }
+
+    const patch: Record<string, unknown> = {
+      brand: toBrand,
+      brand_id: toBrandId,
+    }
     if (toProfileId) patch.added_by = toProfileId
 
     const { data: updatedRows, error: updateError } = await db
@@ -148,6 +166,17 @@ export async function POST(req: NextRequest) {
 
     if (movedCount > 0) {
       const nowIso = new Date().toISOString()
+
+      // pnr_history is keyed by brand_id as well, so it has to follow the move or
+      // the scan history stays filed under the source brand.
+      const { error: historyError } = await db
+        .from("pnr_history")
+        .update({ brand_id: toBrandId })
+        .in("pnr", pnrs)
+      if (historyError) {
+        console.error("[move] pnr_history brand sync error:", historyError)
+      }
+
       try {
         await db.from("pnr_audit_log").insert(
           (updatedRows as { pnr: string; brand: string }[]).map((r) => ({

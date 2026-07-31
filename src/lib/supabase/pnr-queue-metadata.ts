@@ -158,7 +158,15 @@ export type PnrQueueWorkflowStatus = "pending" | "exception"
 
 /**
  * After Sabre Scan PNR: set `queue_status` from operational total (green → pending, red → exception).
- * Upserts so PNRs without a prior sheet row still appear in the correct dashboard column.
+ *
+ * A scan only owns `queue_status`, `processed_at` and the metadata it derived. It
+ * must never touch `brand_id`, `sheet_row` or `added_by` on a row that already
+ * exists — `args.brandId` is the brand the *scan* ran under (the dashboard tab the
+ * user happens to be on), not the brand the PNR belongs to. Writing it back undoes
+ * a move seconds after it lands, and re-asserting a `sheet_row` read moments earlier
+ * clobbers whatever `refreshSheetRows` re-anchored in the meantime.
+ *
+ * Those three columns are set once, on insert, for a PNR the queue has never seen.
  */
 export async function upsertPnrQueueWorkflowAfterScan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,30 +184,39 @@ export async function upsertPnrQueueWorkflowAfterScan(
 
   const { data: existing } = await db
     .from("pnr_queue")
-    .select(
-      "added_by, client_name, departure_date, consultant_name, pnr_type, sheet_row"
-    )
+    .select("id")
     .eq("pnr", args.pnr)
     .maybeSingle()
 
-  const row = {
+  // Only carry across metadata the scan actually resolved; a null must not blank a
+  // value the sheet or an earlier scan already supplied.
+  const metaPatch: Record<string, string> = {}
+  if (nonEmpty(args.meta.client_name)) metaPatch.client_name = args.meta.client_name
+  if (nonEmpty(args.meta.departure_date))
+    metaPatch.departure_date = args.meta.departure_date
+  if (nonEmpty(args.meta.consultant_name))
+    metaPatch.consultant_name = args.meta.consultant_name
+  if (nonEmpty(args.meta.pnr_type)) metaPatch.pnr_type = args.meta.pnr_type
+
+  if (existing) {
+    const { error } = await db
+      .from("pnr_queue")
+      .update({
+        queue_status: normalizedStatus,
+        processed_at: args.processedAt,
+        ...metaPatch,
+      })
+      .eq("pnr", args.pnr)
+    if (error) throw new Error(`pnr_queue workflow update: ${error.message}`)
+    return
+  }
+
+  const { error } = await db.from("pnr_queue").insert({
     pnr: args.pnr,
     brand_id: args.brandId,
     queue_status: normalizedStatus,
     processed_at: args.processedAt,
-    client_name:
-      args.meta.client_name ?? existing?.client_name ?? null,
-    departure_date:
-      args.meta.departure_date ?? existing?.departure_date ?? null,
-    consultant_name:
-      args.meta.consultant_name ?? existing?.consultant_name ?? null,
-    pnr_type: args.meta.pnr_type ?? existing?.pnr_type ?? null,
-    added_by: existing?.added_by ?? null,
-    sheet_row: existing?.sheet_row ?? null,
-  }
-
-  const { error } = await db
-    .from("pnr_queue")
-    .upsert(row, { onConflict: "pnr" })
-  if (error) throw new Error(`pnr_queue workflow upsert: ${error.message}`)
+    ...metaPatch,
+  })
+  if (error) throw new Error(`pnr_queue workflow insert: ${error.message}`)
 }

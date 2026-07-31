@@ -29,6 +29,7 @@ async function runReconcile(
       importedToDb: [],
       restoredToSheet: [],
       metadataUpdated: [],
+      statusPushed: [],
       errors: [msg],
     }
   }
@@ -126,6 +127,7 @@ export async function POST(req: NextRequest) {
       recovered_to_db: sync.importedToDb.length,
       restored_to_sheet: sync.restoredToSheet.length,
       metadata_updated: sync.metadataUpdated.length,
+      status_pushed: sync.statusPushed.length,
       sync_errors: sync.errors.length > 0 ? sync.errors : undefined,
     })
   }
@@ -204,6 +206,7 @@ export async function POST(req: NextRequest) {
       recovered_to_db: sync.importedToDb.length,
       restored_to_sheet: sync.restoredToSheet.length,
       metadata_updated: sync.metadataUpdated.length,
+      status_pushed: sync.statusPushed.length,
       sync_errors: sync.errors.length > 0 ? sync.errors : undefined,
     })
   }
@@ -279,6 +282,7 @@ export async function POST(req: NextRequest) {
     recovered_to_db: sync.importedToDb.length,
     restored_to_sheet: sync.restoredToSheet.length,
     metadata_updated: sync.metadataUpdated.length,
+    status_pushed: sync.statusPushed.length,
     sync_errors: sync.errors.length > 0 ? sync.errors : undefined,
   })
 }

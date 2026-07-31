@@ -380,7 +380,19 @@ async function persistSabrePnrScan({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
   const now = new Date().toISOString()
-  const brandId = await ensureBrandId(db, brand)
+  const scanBrandId = await ensureBrandId(db, brand)
+
+  // `brand` is the tab the scan was launched from, which is not necessarily the
+  // brand the PNR belongs to — a PNR moved to QF is still scannable from the FB
+  // dashboard. The queue owns the answer, so file everything under the queued
+  // brand and fall back to the scan's own brand only for a PNR the queue has
+  // never seen.
+  const { data: queuedBrand } = await db
+    .from("pnr_queue")
+    .select("brand_id")
+    .eq("pnr", pnr)
+    .maybeSingle()
+  const brandId: number = queuedBrand?.brand_id ?? scanBrandId
 
   const { data: prevHist } = await db
     .from("pnr_history")

@@ -2,7 +2,7 @@
  * Google Sheets ↔ Supabase reconciliation for the Pre Departure queue.
  *
  * The brand tabs and `pnr_queue` are two copies of the same list, so they drift
- * apart in three ways. This module closes all three:
+ * apart in four ways. This module closes all four:
  *
  * 1. **Stale row indices.** `pnr_queue.sheet_row` is captured at import time, but
  *    deleting a row shifts every row below it up. Writing to a stored index later
@@ -13,6 +13,9 @@
  *    and since lost from the queue. These are inserted into `pnr_queue`.
  * 3. **Rows only in the queue.** The sheet row was deleted by hand while the queue
  *    row survived. These are appended back to the tab in column order.
+ * 4. **A stale column G.** Status is one-way: `pnr_queue.queue_status` owns it and
+ *    the sheet only mirrors it. A column G that disagrees — hand-edited, or left
+ *    behind by a failed write — is overwritten from the queue, never read back.
  *
  * Sheet column order (A–H), shared by every writer here:
  *   A client name · B departure date · C consultant name · D PNR
@@ -47,14 +50,18 @@ export type QueueSyncRow = {
 const QUEUE_SYNC_COLUMNS =
   "pnr, brand, queue_status, client_name, departure_date, consultant_name, pnr_type, sheet_row, added_by"
 
-/** Map `pnr_queue.queue_status` → the sheet's column G wording. */
+/**
+ * Map `pnr_queue.queue_status` → the sheet's column G wording.
+ *
+ * Column G carries two values and no others: work that is finished (`done`) reads
+ * Completed, everything else reads Processing. The queue's finer states —
+ * `exception`, `failed`, `no-flight` — are an intranet concern and are deliberately
+ * flattened here rather than leaked into the tab.
+ */
 export function queueStatusToSheetStatus(
   status: string | null | undefined
 ): string {
-  if (status === "no-flight") return "no-flight"
-  if (status === "exception") return "Exception"
-  if (status === "done") return "Completed"
-  return "Processing"
+  return status === "done" ? "Completed" : "Processing"
 }
 
 /**
@@ -179,6 +186,8 @@ export type ReconcileResult = {
   restoredToSheet: string[]
   /** Matched rows whose sheet metadata differed and were copied into the queue. */
   metadataUpdated: string[]
+  /** Matched rows whose column G disagreed with the queue and were overwritten. */
+  statusPushed: string[]
   /** Non-fatal sheet/DB failures encountered along the way. */
   errors: string[]
 }
@@ -219,6 +228,7 @@ export async function reconcileBrandSheet(
     importedToDb: [],
     restoredToSheet: [],
     metadataUpdated: [],
+    statusPushed: [],
     errors: [],
   }
 
@@ -364,12 +374,35 @@ export async function reconcileBrandSheet(
   }
 
   // ── Matched rows: copy sheet edits into the queue ─────────────────────────
+  // Metadata (A–C, F) flows sheet → queue. Status (column G) flows the other way
+  // only: Supabase owns `queue_status`, so a column G that disagrees is a stale or
+  // hand-edited cell and gets overwritten, never read back.
   const updates: { pnr: string; patch: Partial<QueueSyncRow> }[] = []
+  const statusWrites: { rowIndex: number; colG: string; pnr: string }[] = []
   for (const [key, sheet] of sheetByPnr) {
     const queue = queueByPnr.get(key)
     if (!queue) continue
     const patch = sheetMetadataDiff(sheet, queue)
     if (patch) updates.push({ pnr: queue.pnr, patch })
+
+    const expected = queueStatusToSheetStatus(queue.queue_status)
+    if (sheet.status.trim() !== expected) {
+      statusWrites.push({ rowIndex: sheet.rowIndex, colG: expected, pnr: queue.pnr })
+    }
+  }
+
+  if (statusWrites.length > 0) {
+    try {
+      await updateSheetRows(
+        brand,
+        statusWrites.map(({ rowIndex, colG }) => ({ rowIndex, colG }))
+      )
+      result.statusPushed = statusWrites.map((s) => s.pnr)
+    } catch (e) {
+      result.errors.push(
+        `status push to ${brand}: ${e instanceof Error ? e.message : String(e)}`
+      )
+    }
   }
 
   if (updates.length > 0) {
