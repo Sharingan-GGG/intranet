@@ -350,6 +350,8 @@ const MOVE_STEPS = [
 function MovePnrDialog({
   isOpen,
   onClose,
+  onDone,
+  onGoToBrand,
   pnrList,
   defaultBrand,
   defaultProfileId,
@@ -358,6 +360,9 @@ function MovePnrDialog({
 }: {
   isOpen: boolean
   onClose: () => void
+  /** Closing the success state — dismissal reloads the queue the rows just left. */
+  onDone: () => void
+  onGoToBrand: (brand: string) => void
   pnrList: string[]
   defaultBrand: string
   defaultProfileId?: string
@@ -402,7 +407,10 @@ function MovePnrDialog({
       if (status === "idle" && toBrand) {
         e.preventDefault()
         void handleSubmit()
-      } else if (status === "success" || status === "error") {
+      } else if (status === "success") {
+        e.preventDefault()
+        onDone()
+      } else if (status === "error") {
         e.preventDefault()
         onClose()
       }
@@ -455,7 +463,11 @@ function MovePnrDialog({
     <Dialog
       open={isOpen}
       onOpenChange={(v) => {
-        if (!v && status !== "loading") onClose()
+        if (v || status === "loading") return
+        // Escape or click-outside on the success state is the same intent as its
+        // Close button, so it reloads too.
+        if (status === "success") onDone()
+        else onClose()
       }}
     >
       <DialogContent className="max-w-sm">
@@ -590,7 +602,27 @@ function MovePnrDialog({
               </Button>
             </>
           )}
-          {(status === "success" || status === "error") && (
+          {status === "success" && (
+            <>
+              {/* The rows have left this queue, so offer the one they landed in
+                  rather than making the user find it in the brand picker. A
+                  same-brand transfer has nowhere to go. */}
+              {toBrand !== defaultBrand && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onGoToBrand(toBrand)}
+                >
+                  Go to Brand {toBrand}
+                </Button>
+              )}
+              <Button type="button" size="sm" onClick={onDone} autoFocus>
+                Close
+              </Button>
+            </>
+          )}
+          {status === "error" && (
             <Button type="button" size="sm" onClick={onClose} autoFocus>
               Close
             </Button>
@@ -898,6 +930,16 @@ export function PnrWorkDashboard({
     }
   }
 
+  /**
+   * Refetch the queue after a write. `invalidateQueries` alone is not enough: the
+   * Next.js Router Cache still holds the RSC payload rendered before the write and
+   * would re-hydrate the rows under their old brand or owner on the next navigation.
+   */
+  async function reloadQueue() {
+    await queryClient.invalidateQueries({ queryKey: ["pnr-queue"] })
+    router.refresh()
+  }
+
   async function handleMoveConfirm(toBrand: string, toProfileId: string | null) {
     const pnrsToMove =
       totalSelected > 0
@@ -949,11 +991,7 @@ export function PnrWorkDashboard({
       handleSelectPnr(null)
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["pnr-queue"] })
-
-    // Drop the Next.js Router Cache too, so the prefetched RSC payload cannot
-    // re-hydrate these PNRs under their old brand or owner.
-    router.refresh()
+    await reloadQueue()
   }
 
   function handleDraftModalClose() {
@@ -1723,6 +1761,14 @@ export function PnrWorkDashboard({
       <MovePnrDialog
         isOpen={moveDialogOpen}
         onClose={() => setMoveDialogOpen(false)}
+        onDone={() => {
+          setMoveDialogOpen(false)
+          void reloadQueue()
+        }}
+        onGoToBrand={(brand) => {
+          setMoveDialogOpen(false)
+          handleScanBrandChange(brand)
+        }}
         pnrList={totalSelected > 0 ? Array.from(allSelectedPnrs) : []}
         defaultBrand={scanBrand}
         defaultProfileId={profileId}
