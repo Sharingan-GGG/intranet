@@ -287,6 +287,10 @@ export interface Post {
    * Show this post in the homepage Featured spotlight.
    */
   featured?: boolean | null;
+  /**
+   * Order within the Featured spotlight (1 shows first). Leave blank to fall back to newest first, after the numbered posts.
+   */
+  featuredOrder?: number | null;
   publishedAt?: string | null;
   categories?: (number | Category)[] | null;
   authors?: (string | User)[] | null;
@@ -2129,6 +2133,7 @@ export interface PostsSelect<T extends boolean = true> {
         description?: T;
       };
   featured?: T;
+  featuredOrder?: T;
   publishedAt?: T;
   categories?: T;
   authors?: T;

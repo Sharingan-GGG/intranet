@@ -166,6 +166,17 @@ export const Posts: CollectionConfig<'posts'> = {
       },
     },
     {
+      name: 'featuredOrder',
+      type: 'number',
+      min: 1,
+      admin: {
+        position: 'sidebar',
+        condition: (_, siblingData) => Boolean(siblingData?.featured),
+        description:
+          'Order within the Featured spotlight (1 shows first). Leave blank to fall back to newest first, after the numbered posts.',
+      },
+    },
+    {
       name: 'publishedAt',
       type: 'date',
       admin: {

@@ -182,19 +182,31 @@ export async function getEdms(): Promise<EdmCard[]> {
   })
 }
 
-/** Featured spotlight — posts with the `featured` checkbox ticked, newest first. */
+/**
+ * Featured spotlight — posts with the `featured` checkbox ticked, ordered by
+ * `featuredOrder` (1 first). Posts with no order set follow, newest first.
+ * The ordering is applied here rather than in the query because SQLite sorts
+ * NULLs first on an ascending column, which would float the unordered posts
+ * to the top.
+ */
 export async function getFeaturedNews(): Promise<NewsCard[]> {
   const payload = await getPayload({ config: configPromise })
   const { docs } = await payload.find({
     collection: 'posts',
     where: { featured: { equals: true } },
     sort: '-publishedAt',
-    limit: 6,
+    limit: 50,
     depth: 1,
   })
   if (docs.length === 0) return FEATURED_NEWS
 
-  return docs.map((d, i) => ({
+  // Sort by order before capping, so a post given an explicit order is never
+  // dropped by the cap in favour of a newer unordered one.
+  const ordered = [...docs]
+    .sort((a, b) => (a.featuredOrder ?? Infinity) - (b.featuredOrder ?? Infinity))
+    .slice(0, 6)
+
+  return ordered.map((d, i) => ({
     kicker: categoryKicker(d, 'Company'),
     title: d.title,
     excerpt: postExcerpt(d),
