@@ -74,9 +74,52 @@ import { dashboardStatusesFromDetailLike } from "@/lib/pnr-dashboard-statuses"
 import { usePnrQueue } from "@/hooks/use-pnr-queue"
 import { usePnrDetail, fetchPnrDetail } from "@/hooks/use-pnr-detail"
 import { useQueueRealtime } from "@/hooks/use-queue-realtime"
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels"
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+  useGroupRef,
+} from "react-resizable-panels"
+import type { Layout, LayoutChangedMeta } from "react-resizable-panels"
 import type { DashboardPnrItem } from "@/lib/pnr-types"
 import { cn } from "@/lib/utils"
+
+/**
+ * Where the queue/detail split is remembered.
+ *
+ * The detail tab is a path segment, so clicking "Flights Details", "P3", … is a
+ * route change: the dashboard remounts, and a fresh Group starts from its
+ * `defaultSize` again — which is why a dragged separator used to snap back.
+ * `sessionLayout` holds the last drag in module scope, so that remount renders
+ * at the dragged height directly, with no flicker. localStorage carries the
+ * same layout across page loads.
+ *
+ * A stored layout is applied after mount rather than fed straight into
+ * `defaultLayout`, because the server cannot read localStorage: seeding the
+ * first render from it would make the client's markup disagree with the HTML
+ * the server just sent. `sessionLayout` is safe there — it is only ever written
+ * from a browser event, so it is empty on the server and empty again on a fresh
+ * page load, and only carries a value once the user has dragged in this tab.
+ */
+const PANEL_LAYOUT_KEY = "pre-departure:queue-detail-layout"
+
+let sessionLayout: Layout | undefined
+
+function readStoredLayout(): Layout | undefined {
+  try {
+    const raw = window.localStorage.getItem(PANEL_LAYOUT_KEY)
+    if (!raw) return undefined
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== "object") return undefined
+    const layout = parsed as Layout
+    const sizes = Object.values(layout)
+    return sizes.length > 0 && sizes.every((n) => typeof n === "number")
+      ? layout
+      : undefined
+  } catch {
+    return undefined
+  }
+}
 
 const DRAFT_STEPS = [
   "Checking Frequent Flyer Condition",
@@ -664,6 +707,35 @@ export function PnrWorkDashboard({
 
   // Brands visible to this user — IT is Super Admin only
   const availableBrands = React.useMemo(() => visibleBrands(role), [role])
+
+  // ─── Queue/detail split ───────────────────────────────────────────────────
+  // Survives the remount every tab click causes; see PANEL_LAYOUT_KEY above.
+  const panelGroupRef = useGroupRef()
+  const layoutRestored = React.useRef(false)
+
+  function handlePanelLayoutChanged(layout: Layout, meta: LayoutChangedMeta) {
+    // Only deliberate drags are saved — a mount, a window resize or a
+    // constraint recompute must not overwrite the height the user picked.
+    if (meta.isUserInteraction) {
+      sessionLayout = layout
+      try {
+        window.localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout))
+      } catch {
+        // Private mode / quota — the split still holds for this session.
+      }
+      return
+    }
+
+    // First non-interactive report is the group's initial layout, and the
+    // earliest point a stored one can be applied: the group ignores `setLayout`
+    // until it has measured itself, which is exactly when this fires. An
+    // in-session drag needs nothing here — `defaultLayout` already placed it.
+    if (layoutRestored.current) return
+    layoutRestored.current = true
+    if (sessionLayout) return
+    const stored = readStoredLayout()
+    if (stored) panelGroupRef.current?.setLayout(stored)
+  }
 
   // Live Supabase subscription: any pnr_queue change invalidates the queue cache
   useQueueRealtime()
@@ -1592,10 +1664,16 @@ export function PnrWorkDashboard({
       </header>
 
       {/* ─── Content area ────────────────────────────────────────────────────── */}
-      <PanelGroup orientation="vertical" className="flex min-h-0 flex-1 flex-col">
+      <PanelGroup
+        orientation="vertical"
+        groupRef={panelGroupRef}
+        defaultLayout={sessionLayout}
+        onLayoutChanged={handlePanelLayoutChanged}
+        className="flex min-h-0 flex-1 flex-col"
+      >
 
         {/* Queue section */}
-        <Panel defaultSize={56} minSize={20}>
+        <Panel id="queue" defaultSize={56} minSize={20}>
         <div
           className={cn(
             "flex h-full",
@@ -1730,7 +1808,7 @@ export function PnrWorkDashboard({
         </PanelResizeHandle>
 
         {/* ─── Detail panel ─────────────────────────────────────────────────── */}
-        <Panel defaultSize={44} minSize={20}>
+        <Panel id="detail" defaultSize={44} minSize={20}>
           <div className="flex h-full flex-col p-3">
             <div className="min-h-0 flex-1 overflow-y-auto">
               <PnrDetailPanel {...detailProps} />
