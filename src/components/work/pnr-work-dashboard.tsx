@@ -202,7 +202,7 @@ function DraftModal({
           )}
           {status === "error" && (
             <>
-              <div className="text-red-600">
+              <div className="text-red-600 dark:text-red-400">
                 <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -211,9 +211,9 @@ function DraftModal({
                   />
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-red-600">Draft Failed</p>
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400">Draft Failed</p>
               {error && (
-                <p className="text-center text-sm text-red-600">{error}</p>
+                <p className="text-center text-sm text-red-600 dark:text-red-400">{error}</p>
               )}
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
                 Close
@@ -1617,7 +1617,11 @@ export function PnrWorkDashboard({
               {/* Left pane: Exception */}
               <div className="flex flex-1 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(17,46,129,0.06)]">
                 <div className="flex flex-none items-center gap-2.5 px-5 py-3.5">
-                  <h2 className="text-[13px] font-semibold text-primary">Exception</h2>
+                  {/* --primary is the brand navy in both themes, which all but
+                      disappears against the dark card — hence the white override. */}
+                  <h2 className="text-[13px] font-semibold text-primary dark:text-white">
+                    Exception
+                  </h2>
                   <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-destructive">
                     {counts.exception} alerts
                   </span>
@@ -1642,7 +1646,17 @@ export function PnrWorkDashboard({
               {/* Right pane: Pending / Complete */}
               <div className="flex flex-1 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(17,46,129,0.06)]">
                 <div className="flex flex-none items-center justify-between gap-3 px-5 pb-2 pt-2.5">
-                  <span className="rounded-full bg-[#10B981]/12 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[#047857]">
+                  {/* Pending reads blue and complete green, so the pill matches the
+                      status dots and the queue health legend rather than always
+                      showing the "cleared" green. */}
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums",
+                      rightTab === "pending"
+                        ? "bg-chart-3/12 text-chart-3"
+                        : "bg-[#10B981]/12 text-[#047857] dark:text-chart-4"
+                    )}
+                  >
                     {rightTab === "pending" ? counts.pending : counts.complete} records
                   </span>
                   {/* Pending / Complete toggle */}

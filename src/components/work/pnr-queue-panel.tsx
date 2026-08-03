@@ -330,7 +330,7 @@ function PnrQueueRow({
                   </p>
                 )}
                 {row.frequentFlyer === "YES" && (
-                  <p className="text-amber-600">Frequent Flyer</p>
+                  <p className="text-amber-600 dark:text-amber-400">Frequent Flyer</p>
                 )}
               </TooltipContent>
             </Tooltip>

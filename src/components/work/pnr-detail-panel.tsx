@@ -154,9 +154,9 @@ function StickyDetailHeader({
           {tabStatuses.total === "exception" ? (
             <span className="text-destructive">Exception</span>
           ) : tabStatuses.total === "warning" ? (
-            <span className="text-amber-600">Warning</span>
+            <span className="text-amber-600 dark:text-amber-400">Warning</span>
           ) : (
-            <span className="text-emerald-600">Pending</span>
+            <span className="text-blue-600 dark:text-blue-400">Pending</span>
           )}
         </span>
       </div>

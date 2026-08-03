@@ -40,8 +40,8 @@ const STATUS_META: Record<
   Pending: {
     label: "Pending",
     icon: ClockIcon,
-    color: "text-amber-600",
-    bg: "bg-amber-500",
+    color: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-500",
   },
   Done: {
     label: "Done",
@@ -162,7 +162,7 @@ function StatusPill({ status }: { status: string | null }) {
         "inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium",
         status === "Reported" && "bg-destructive/10 text-destructive",
         status === "Pending" &&
-          "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+          "bg-blue-500/10 text-blue-700 dark:text-blue-400",
         status === "Done" &&
           "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
       )}
@@ -296,7 +296,7 @@ export function PnrReportItTab({
               className={cn(
                 "inline-flex h-5 items-center rounded-full border px-2 text-[10px] font-medium transition-colors",
                 selectedUser === u
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "border-primary bg-primary/10 text-primary dark:text-white"
                   : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
                 u === ADMIN_ROLE && "font-bold"
               )}
@@ -335,7 +335,7 @@ export function PnrReportItTab({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1.5 border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+                  className="h-8 gap-1.5 border-blue-500/40 text-blue-700 hover:bg-blue-500/10 dark:text-blue-400"
                   disabled={statusMutation.isPending}
                   onClick={() =>
                     statusMutation.mutate({ id: flag.id, status: "Pending" })

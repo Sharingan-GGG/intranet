@@ -127,7 +127,7 @@ export function PnrNotesTab({
                 className={cn(
                   "inline-flex h-5 items-center rounded-full border px-2 text-[10px] font-medium transition-colors",
                   adminName === a
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "border-primary bg-primary/10 text-primary dark:text-white"
                     : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
                 )}
               >

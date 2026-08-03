@@ -77,7 +77,8 @@ type ScanOutcomeConsultant = {
  * tokens rather than literal Tailwind colours keeps the drawer on brand and correct
  * in both themes, since each token carries a light and a dark value.
  *
- * chart-3 is the brand navy (#112E81), chart-4 the brand green, chart-5 the brand red.
+ * chart-3 is pending (brand navy in light, a lighter blue in dark), chart-4 complete
+ * (green), chart-5 exception (red).
  */
 const TONE = {
   exception: { bar: "bg-chart-5", text: "text-chart-5", stroke: "text-chart-5" },

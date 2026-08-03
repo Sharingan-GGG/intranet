@@ -71,9 +71,13 @@
     --ring: oklch(0.556 0 0);
     --chart-1: oklch(0.809 0.105 251.813);
     --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
+    /* Status hues, one per queue state — the shadcn defaults shipped three shades of
+       the same blue here, which flattened exception/pending/complete into one colour
+       in dark mode. Lightened against the dark card so each stays legible.
+       chart-3 pending (blue), chart-4 complete (green), chart-5 exception (red). */
+    --chart-3: oklch(0.68 0.16 258);
+    --chart-4: oklch(0.76 0.15 162);
+    --chart-5: oklch(0.704 0.191 22.216);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.623 0.214 259.815);
