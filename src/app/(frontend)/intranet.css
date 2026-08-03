@@ -7,36 +7,10 @@
    (inline styles + the rules below) instead of hardcoded brand hexes, so the
    header scheme toggle can recolor everything by swapping the values.
    Switched via a `data-scheme` attribute on <html> (see SchemeProvider +
-   InitTheme). Scheme 1 "Current" is the default and reproduces the original
-   palette exactly, so a missing/unknown attribute renders unchanged.
+   InitTheme). "Ocean" is the default, and is also applied to bare `:root`, so a
+   missing/unknown attribute renders as Ocean.
    Independent of the light/dark `data-theme` used by the Payload admin. */
 :root,
-[data-scheme='default'] {
-  --il-brand: #112e81;
-  --il-brand-hover: #4647ae;
-  --il-accent: #4382df;
-  --il-secondary: #4647ae;
-  --il-highlight: #dce7f5;
-  --il-text: #1b2233;
-  --il-text-body: #5a6478;
-  --il-text-muted: #8a94a6;
-  --il-border: #e3ebf1;
-  --il-page-bg: #f4f7fa;
-  --il-surface: #ffffff;
-  --il-on-brand: #ffffff;
-  --il-on-accent: #ffffff;
-  --il-action-pop: none;
-  --il-grad-band: linear-gradient(120deg, #112e81, #4647ae 70%, #4382df);
-  --il-grad-footer: #112e81;
-  --il-grad-hero: linear-gradient(
-    to top,
-    rgba(9, 20, 55, 0.9) 0%,
-    rgba(9, 20, 55, 0.45) 38%,
-    rgba(9, 20, 55, 0.08) 72%,
-    rgba(9, 20, 55, 0) 100%
-  );
-}
-
 [data-scheme='ocean'] {
   --il-brand: #406093;
   --il-brand-hover: #34506f;

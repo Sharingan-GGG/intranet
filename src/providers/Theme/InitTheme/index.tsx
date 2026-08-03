@@ -50,7 +50,7 @@ export const InitTheme: React.FC = () => {
     // Color scheme (il-scheme) — independent of light/dark data-theme above.
     // Default 'ocean' applies when no valid stored preference exists.
     function schemeIsValid(scheme) {
-      return scheme === 'default' || scheme === 'ocean' || scheme === 'midnight'
+      return scheme === 'ocean' || scheme === 'midnight'
     }
     var schemePreference = window.localStorage.getItem('il-scheme')
     document.documentElement.setAttribute(
