@@ -256,11 +256,11 @@ export const NEWS: NewsCard[] = [
 export const FEATURED_NEWS: NewsCard[] = NEWS.filter((n) => n.featured)
 
 export const EDMS: EdmCard[] = [
-  { title: 'July client newsletter', kicker: 'Newsletter', sent: '5 Jul 2026', img: IMGS[0], href: '#' },
-  { title: 'EOFY travel deals wrap-up', kicker: 'Campaign', sent: '26 Jun 2026', img: IMGS[1], href: '#' },
-  { title: 'Airline update — Qantas network changes', kicker: 'Airline update', sent: '18 Jun 2026', img: IMGS[2], href: '#' },
-  { title: 'Winter escapes campaign', kicker: 'Campaign', sent: '10 Jun 2026', img: IMGS[3], href: '#' },
-  { title: 'June client newsletter', kicker: 'Newsletter', sent: '2 Jun 2026', img: IMGS[4], href: '#' },
+  { title: 'July client newsletter', kicker: 'Newsletter', sent: 'Sun 5th July', img: IMGS[0], href: '#' },
+  { title: 'EOFY travel deals wrap-up', kicker: 'Campaign', sent: 'Fri 26th June', img: IMGS[1], href: '#' },
+  { title: 'Airline update — Qantas network changes', kicker: 'Airline update', sent: 'Thu 18th June', img: IMGS[2], href: '#' },
+  { title: 'Winter escapes campaign', kicker: 'Campaign', sent: 'Wed 10th June', img: IMGS[3], href: '#' },
+  { title: 'June client newsletter', kicker: 'Newsletter', sent: 'Tue 2nd June', img: IMGS[4], href: '#' },
 ]
 
 /** Combined pool for the header typeahead. */

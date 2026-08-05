@@ -97,6 +97,20 @@ const dayMonthYear = new Intl.DateTimeFormat('en-AU', {
   year: 'numeric',
 })
 
+const weekdayAndMonth = new Intl.DateTimeFormat('en-AU', { weekday: 'short', month: 'long' })
+
+const ordinalDay = (day: number): string =>
+  day % 100 >= 11 && day % 100 <= 13 ? `${day}th` : `${day}${['th', 'st', 'nd', 'rd'][day % 10] ?? 'th'}`
+
+/** "Tue 14th July" — the sent-date label on EDM cards. */
+export const edmSentLabel = (value: string): string => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const parts = weekdayAndMonth.formatToParts(date)
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${part('weekday')} ${ordinalDay(date.getDate())} ${part('month')}`
+}
+
 /** Map a post to the news-card view type used by the homepage and /posts. */
 export const postToNewsCard = (d: Post, i: number): NewsCard => ({
   kicker: categoryKicker(d, 'News'),
@@ -173,7 +187,7 @@ export async function getEdms(): Promise<EdmCard[]> {
     return {
       kicker: category,
       title: d.title,
-      sent: dayMonthYear.format(new Date(d.createdAt)),
+      sent: edmSentLabel(d.dateSent ?? d.createdAt),
       description: d.description ?? null,
       img: gradient(i),
       imageUrl: mediaUrl(d.image),

@@ -129,6 +129,9 @@ export const EDMSlider: React.FC<{ items: EdmCard[]; categories?: string[]; head
                   {e.description}
                 </div>
               )}
+              {e.sent && (
+                <div style={{ fontSize: 12, color: 'var(--il-text-muted)', marginTop: 10 }}>{e.sent}</div>
+              )}
             </div>
           </a>
         ))}
