@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 
 /**
@@ -9,11 +9,8 @@ import { createServiceClient } from "@/lib/supabase/server"
  * Optional brand filters by brands.code via pnr_history.brand_id.
  */
 export async function GET(req: NextRequest) {
-  const ssr = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssr.auth.getUser()
-  if (!user)
+  const profile = await getPreDepartureUser()
+  if (!profile)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const pnr = new URL(req.url).searchParams.get("pnr")?.trim().toUpperCase()

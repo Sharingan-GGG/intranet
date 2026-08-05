@@ -11,7 +11,8 @@
 
 import type { DashboardPnrItem, LegacyPnrHistoryRow } from "@/lib/pnr-types"
 import { createServiceClient } from "@/lib/supabase/server"
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
+import { findDirectoryEntries } from "@/lib/pre-departure-directory"
 
 const DEFAULT_BASE = "http://localhost/pre"
 
@@ -129,18 +130,8 @@ async function getSupabaseQueueItems(
       new Set(rows.map((r) => r.added_by).filter((v): v is string => !!v))
     )
     const ownerNames = new Map<string, string>()
-    if (ownerIds.length > 0) {
-      const { data: owners } = await db
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", ownerIds)
-      for (const o of (owners ?? []) as {
-        id: string
-        full_name: string | null
-        email: string | null
-      }[]) {
-        ownerNames.set(o.id, o.full_name ?? o.email ?? "")
-      }
+    for (const [id, owner] of await findDirectoryEntries(ownerIds)) {
+      ownerNames.set(id, owner.full_name ?? owner.email ?? "")
     }
 
     return rows.map((row) => {
@@ -223,18 +214,10 @@ async function getDeletedPnrSet(): Promise<Set<string>> {
  * the whole queue and narrow it themselves with the view-as picker.
  */
 async function getOwnerScope(): Promise<OwnerScope> {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user) return null
+  const profile = await getPreDepartureUser()
+  if (!profile) return null
 
   const admin = createServiceClient()
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id, role, full_name")
-    .eq("auth_id", user.id)
-    .single()
 
   if (!profile || profile.role !== "user") return null
   return { profileId: profile.id, fullName: profile.full_name ?? null }

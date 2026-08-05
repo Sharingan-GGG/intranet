@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 import { getRolePermissions, isAllowed } from "@/lib/permissions-server"
 
@@ -10,11 +10,8 @@ type ApproveBody = {
 }
 
 export async function POST(req: NextRequest) {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user) {
+  const profile = await getPreDepartureUser()
+  if (!profile) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
@@ -26,11 +23,6 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, role")
-    .eq("auth_id", user.id)
-    .single()
 
   const permissions = await getRolePermissions(
     supabase,

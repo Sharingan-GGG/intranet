@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 
 /**
@@ -44,11 +44,8 @@ function monthKey(d: Date): string {
 }
 
 export async function GET(req: NextRequest) {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user) {
+  const profile = await getPreDepartureUser()
+  if (!profile) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

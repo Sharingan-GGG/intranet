@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 import { getRolePermissions, isAllowed } from "@/lib/permissions-server"
 
@@ -22,19 +22,11 @@ export async function GET(req: NextRequest) {
 
 // POST /api/notes  { pnr, note }
 export async function POST(req: NextRequest) {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user)
+  const profile = await getPreDepartureUser()
+  if (!profile)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const supabase = createServiceClient()
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, email, role")
-    .eq("auth_id", user.id)
-    .single()
 
   const permissions = await getRolePermissions(
     supabase,
@@ -52,7 +44,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const noteBy = profile?.full_name ?? profile?.email ?? user.email ?? user.id
+  const noteBy = profile?.full_name ?? profile?.email ?? profile.email ?? profile.id
   const now = new Date().toISOString()
   const { data, error } = await supabase
     .from("PNR_Note")
@@ -72,19 +64,11 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/notes?pnr=ABC123&created_at=<iso>
 export async function DELETE(req: NextRequest) {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user)
+  const profile = await getPreDepartureUser()
+  if (!profile)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const supabase = createServiceClient()
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("auth_id", user.id)
-    .single()
 
   const permissions = await getRolePermissions(
     supabase,

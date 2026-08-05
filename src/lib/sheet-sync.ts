@@ -30,6 +30,7 @@ import {
 } from "@/lib/google-sheets"
 import { ensureBrandId } from "@/lib/supabase/ensure-brand"
 import { upsertPnrHistoryFromSheetRow } from "@/lib/supabase/pnr-queue-metadata"
+import { findDirectoryEntries } from "@/lib/pre-departure-directory"
 
 /** Untyped service client — `pnr_queue` outpaces the generated Supabase types. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -335,19 +336,9 @@ export async function reconcileBrandSheet(
         )
       )
       const ownerNames = new Map<string, string>()
-      if (ownerIds.length > 0) {
-        const { data: owners } = await db
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", ownerIds)
-        for (const o of (owners ?? []) as {
-          id: string
-          full_name: string | null
-          email: string | null
-        }[]) {
-          const name = o.full_name ?? o.email ?? ""
-          if (name) ownerNames.set(o.id, name)
-        }
+      for (const [id, owner] of await findDirectoryEntries(ownerIds)) {
+        const name = owner.full_name ?? owner.email ?? ""
+        if (name) ownerNames.set(id, name)
       }
 
       const historyStatuses = await fetchHistoryStatuses(

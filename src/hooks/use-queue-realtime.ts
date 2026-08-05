@@ -25,7 +25,7 @@ export function useQueueRealtime() {
       .channel("pnr-queue-live")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "pnr_queue" },
+        { event: "*", schema: "pre_departure", table: "pnr_queue" },
         (payload) => {
           void queryClient.invalidateQueries({ queryKey: ["pnr-queue"] })
 

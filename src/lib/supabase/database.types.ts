@@ -7,7 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  public: {
+  // These tables moved from the Departure project's `public` schema into the intranet
+  // project's `pre_departure` schema. The key must match the `db.schema` set in
+  // createServiceClient, or supabase-js rejects every table name at compile time.
+  pre_departure: {
     Tables: {
       profiles: {
         Row: {
@@ -203,22 +206,22 @@ export type Database = {
   }
 }
 
-export type BrandRow = Database["public"]["Tables"]["brands"]["Row"]
-export type BrandInsert = Database["public"]["Tables"]["brands"]["Insert"]
-export type PnrNote = Database["public"]["Tables"]["PNR_Note"]["Row"]
-export type PnrNoteInsert = Database["public"]["Tables"]["PNR_Note"]["Insert"]
-export type ReportItRow = Database["public"]["Tables"]["PNR_Report_IT"]["Row"]
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
-export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"]
-export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"]
+export type BrandRow = Database["pre_departure"]["Tables"]["brands"]["Row"]
+export type BrandInsert = Database["pre_departure"]["Tables"]["brands"]["Insert"]
+export type PnrNote = Database["pre_departure"]["Tables"]["PNR_Note"]["Row"]
+export type PnrNoteInsert = Database["pre_departure"]["Tables"]["PNR_Note"]["Insert"]
+export type ReportItRow = Database["pre_departure"]["Tables"]["PNR_Report_IT"]["Row"]
+export type Profile = Database["pre_departure"]["Tables"]["profiles"]["Row"]
+export type ProfileInsert = Database["pre_departure"]["Tables"]["profiles"]["Insert"]
+export type ProfileUpdate = Database["pre_departure"]["Tables"]["profiles"]["Update"]
 export type RolePermission =
-  Database["public"]["Tables"]["role_permissions"]["Row"]
-export type SabreOAuthToken = Database["public"]["Tables"]["sabre_oauth_tokens"]["Row"]
+  Database["pre_departure"]["Tables"]["role_permissions"]["Row"]
+export type SabreOAuthToken = Database["pre_departure"]["Tables"]["sabre_oauth_tokens"]["Row"]
 export type SabreOAuthTokenInsert =
-  Database["public"]["Tables"]["sabre_oauth_tokens"]["Insert"]
+  Database["pre_departure"]["Tables"]["sabre_oauth_tokens"]["Insert"]
 export type SabreOAuthTokenUpdate =
-  Database["public"]["Tables"]["sabre_oauth_tokens"]["Update"]
-export type SabreToken = Database["public"]["Tables"]["sabre_tokens"]["Row"]
-export type SabreTokenInsert = Database["public"]["Tables"]["sabre_tokens"]["Insert"]
-export type SabreTokenUpdate = Database["public"]["Tables"]["sabre_tokens"]["Update"]
+  Database["pre_departure"]["Tables"]["sabre_oauth_tokens"]["Update"]
+export type SabreToken = Database["pre_departure"]["Tables"]["sabre_tokens"]["Row"]
+export type SabreTokenInsert = Database["pre_departure"]["Tables"]["sabre_tokens"]["Insert"]
+export type SabreTokenUpdate = Database["pre_departure"]["Tables"]["sabre_tokens"]["Update"]
 export type UserRole = Profile["role"]

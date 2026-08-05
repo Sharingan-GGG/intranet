@@ -1,34 +1,20 @@
 import { NextResponse } from "next/server"
 import { unstable_cache, revalidateTag } from "next/cache"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
-import { createServiceClient } from "@/lib/supabase/server"
+import { listDirectory } from "@/lib/pre-departure-directory"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 
 const getActiveProfiles = unstable_cache(
-  async () => {
-    const db = createServiceClient()
-    const { data: profiles, error } = await db
-      .from("profiles")
-      .select("id, full_name, email, department")
-      .eq("status", "active")
-      .order("department", { ascending: true })
-      .order("full_name", { ascending: true })
-
-    if (error) {
-      throw new Error("Failed to fetch profiles")
-    }
-    return profiles ?? []
-  },
+  // Every Payload user is active — the `status` column profiles had has no equivalent, so
+  // there is nothing left to filter on here.
+  async () => listDirectory(),
   ["profiles"],
   { revalidate: 3600, tags: ["profiles"] }
 )
 
 export async function GET() {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user) {
+  const profile = await getPreDepartureUser()
+  if (!profile) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

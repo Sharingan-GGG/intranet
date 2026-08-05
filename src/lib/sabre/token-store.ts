@@ -8,14 +8,17 @@ import {
 } from "@/lib/sabre/soap-session-token"
 import type { Database } from "@/lib/supabase/database.types"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_AUTH_URL
+const supabaseServiceKey = process.env.SUPABASE_AUTH_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error("Missing Supabase env vars for token store")
 }
 
-const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+// sabre_tokens lives in `pre_departure` alongside the rest of the module's tables.
+const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  db: { schema: "pre_departure" },
+})
 
 const TOKEN_ID = "sabre_platform"
 
@@ -54,7 +57,7 @@ function isUniqueViolation(err: {
 /** Updates only the given columns so JSON and SOAP caches never wipe each other. */
 async function persistSabreTokenPartial(
   patch: Pick<
-    Database["public"]["Tables"]["sabre_tokens"]["Update"],
+    Database["pre_departure"]["Tables"]["sabre_tokens"]["Update"],
     | "json_token"
     | "json_token_expires_at"
     | "soap_session_token"
@@ -77,7 +80,7 @@ async function persistSabreTokenPartial(
     return
   }
 
-  const insertPayload: Database["public"]["Tables"]["sabre_tokens"]["Insert"] =
+  const insertPayload: Database["pre_departure"]["Tables"]["sabre_tokens"]["Insert"] =
     {
       id: TOKEN_ID,
       ...patch,

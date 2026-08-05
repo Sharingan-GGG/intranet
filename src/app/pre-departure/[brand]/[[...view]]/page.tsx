@@ -18,7 +18,7 @@ import {
   parsePreDepartureRoute,
   preDeparturePath,
 } from "@/lib/pre-departure-route"
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 import { getRolePermissions } from "@/lib/permissions-server"
 
@@ -47,22 +47,15 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
 export default async function PreDeparturePage({ params }: Args) {
   const { brand: brandSegment, view } = await params
 
-  const supabase = await createSSRClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const profile = await getPreDepartureUser()
 
-  if (!user) redirect("/login")
+  if (!profile) redirect("/login")
 
   const admin = createServiceClient()
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id, role, status, full_name")
-    .eq("auth_id", user.id)
-    .single()
 
-  if (!profile || profile.status !== "active") redirect("/pending")
-
+  // The profiles table had a `status` column gating access on an "active" value. Payload has
+  // no equivalent — holding a user record *is* being active — so the check is gone, along
+  // with the /pending redirect it pointed at, which was never a real route.
   const role = profile.role ?? "user"
   const segments = [brandSegment, ...(view ?? [])]
   const route = parsePreDepartureRoute(brandSegment, view ?? [], role)

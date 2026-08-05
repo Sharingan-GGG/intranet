@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
+import { findDirectoryEntry } from "@/lib/pre-departure-directory"
 
 type DraftBody = {
   pnr: string
@@ -12,11 +13,8 @@ const N8N_WEBHOOK_URL =
   "https://n8n.srv1421859.hstgr.cloud/webhook/3e94d9e1-cecf-42b3-9a2b-3394687b46c6"
 
 export async function POST(req: NextRequest) {
-  const ssrClient = await createSSRClient()
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser()
-  if (!user) {
+  const profile = await getPreDepartureUser()
+  if (!profile) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
@@ -65,19 +63,11 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Resolve added_by UUID to profile name
+  // Resolve added_by to a display name. It holds a Payload user ID now, not a profiles UUID.
   let adminName = queueRow.added_by
-  if (queueRow.added_by) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", queueRow.added_by)
-      .single()
-
-    if (profile) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      adminName = (profile as any).full_name || (profile as any).email || queueRow.added_by
-    }
+  const addedBy = await findDirectoryEntry(queueRow.added_by)
+  if (addedBy) {
+    adminName = addedBy.full_name || addedBy.email || queueRow.added_by
   }
 
   // POST to n8n webhook

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-import { createSSRClient } from "@/lib/supabase/ssr-client"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 import {
   getSheetRows,
@@ -13,13 +13,10 @@ const DONE_TAB = "Done"
 const IT_BRAND = "IT"
 
 export async function POST(req: NextRequest) {
-  const supabase = await createSSRClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const profile = await getPreDepartureUser()
+  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  let deletedBy = user.email ?? user.id
+  let deletedBy = profile.email ?? profile.id
   try {
     const body = (await req.json().catch(() => null)) as
       | { deletedBy?: string }
