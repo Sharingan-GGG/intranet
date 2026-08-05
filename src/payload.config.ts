@@ -1,3 +1,4 @@
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import sharp from 'sharp'
 import path from 'path'
@@ -86,11 +87,33 @@ export default buildConfig({
   },
   // This config helps us configure global or default features that the other editors can inherit
   editor: defaultLexical,
-  db: sqliteAdapter({
-    client: {
-      url: process.env.DATABASE_URL || '',
-    },
-  }),
+  // Postgres (Supabase) when POSTGRES_URL is set, otherwise the local SQLite file.
+  // Use Supabase's *session* pooler (port 5432): the transaction pooler (6543) has no
+  // prepared-statement support, which Drizzle needs, and the direct connection is IPv6-only.
+  db: process.env.POSTGRES_URL
+    ? postgresAdapter({
+        pool: {
+          connectionString: process.env.POSTGRES_URL,
+        },
+        // Supabase gives us the database; Payload must not try to create one.
+        disableCreateDatabase: true,
+        // Required by scripts/db-import.ts so migrated documents keep their original IDs.
+        allowIDOnCreate: true,
+        // Schema changes go through `payload migrate`, never Drizzle's dev push.
+        //
+        // Dev push infers the diff and applies it on boot. Its only guard is an interactive
+        // confirm (see pushDevSchema in @payloadcms/drizzle), which cannot fire in a
+        // background dev server, a script or CI — and Drizzle only raises that warning for
+        // tables it detects as non-empty, so a silent push proves nothing about the rest of
+        // the schema. That trade is fine for a disposable dev database; this one holds the
+        // only Postgres copy of the real content, so the SQL gets reviewed before it runs.
+        push: false,
+      })
+    : sqliteAdapter({
+        client: {
+          url: process.env.DATABASE_URL || '',
+        },
+      }),
   collections: [
     Pages,
     Posts,
