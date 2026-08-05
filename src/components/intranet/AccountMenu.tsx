@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 
+import { createAuthBrowserClient } from '@/lib/auth/supabase-browser'
+
 export type AccountUser = {
   name?: string | null
   email: string
@@ -42,6 +44,14 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
 
   const logout = async () => {
     setLoggingOut(true)
+    // Both sessions are cleared: Supabase issues the session for everyone signing in through
+    // Google, while payload-token still exists for an admin who used email/password.
+    try {
+      const supabase = createAuthBrowserClient()
+      await supabase.auth.signOut()
+    } catch {
+      /* ignore — clear the rest regardless */
+    }
     try {
       await fetch('/api/users/logout', { method: 'POST', credentials: 'include' })
     } catch {

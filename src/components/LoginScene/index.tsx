@@ -1,8 +1,9 @@
 'use client'
 
 import { MoonIcon, SunIcon } from 'lucide-react'
-import { signIn } from 'next-auth/react'
 import React, { useCallback, useEffect, useState } from 'react'
+
+import { createAuthBrowserClient } from '@/lib/auth/supabase-browser'
 
 // Mountain paths extracted from design
 const FAR_PATH =
@@ -117,7 +118,22 @@ export function LoginScene({ error, existing, redirect, cormorantClass }: Props)
 
   async function handleGoogleLogin() {
     setLoading(true)
-    await signIn('google', { callbackUrl })
+    const supabase = createAuthBrowserClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // Supabase returns to /auth/callback, which exchanges the code and provisions the
+        // Payload user before forwarding to wherever the middleware sent them from.
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
+        queryParams: {
+          // The Workspace allow-list is enforced by the enforce_workspace_domain trigger on
+          // auth.users; no `hd` hint here, so both domains stay visible in the chooser.
+          prompt: 'select_account',
+        },
+      },
+    })
+    // On success the browser has already left for Google, so this only runs on failure.
+    if (error) setLoading(false)
   }
 
   const px = offset.x

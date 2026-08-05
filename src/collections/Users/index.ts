@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../../access/authenticated'
 import { isAdmin, isAdminFieldLevel, isAdminOrSelf } from '../../access/isAdmin'
+import { supabaseStrategy } from './supabaseStrategy'
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -18,7 +19,17 @@ export const Users: CollectionConfig = {
     defaultColumns: ['name', 'email', 'roles'],
     useAsTitle: 'name',
   },
-  auth: true,
+  // Supabase Auth is the sign-in route for everyone. Payload's own email/password strategy
+  // stays enabled underneath it as an admin fallback: if Supabase Auth is unreachable, the
+  // superAdmin can still reach /admin, and only that account has a password hash.
+  //
+  // payload-authjs prepends its own strategy to this array. It is left installed but inert —
+  // nothing issues an Auth.js session any more — because removing it would revert users.id
+  // from varchar to a serial integer and Payload would try to convert eleven existing rows,
+  // ten of which hold UUIDs.
+  auth: {
+    strategies: [supabaseStrategy],
+  },
   fields: [
     {
       name: 'name',

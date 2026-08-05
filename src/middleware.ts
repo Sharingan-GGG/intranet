@@ -1,25 +1,23 @@
-import NextAuth from 'next-auth'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
-
-import { authConfig } from '@/auth.config'
+import type { NextRequest } from 'next/server'
 
 /**
- * Require a login for every page, including the landing page. Users may be
- * authenticated either via Google SSO (Auth.js session — cryptographically
- * verified here, so stale/invalid cookies don't pass) or via Payload's local
- * strategy (payload-token, used by admins; validated by Payload's access
- * control on every data request).
+ * Require a login for every page, including the landing page. Users may be authenticated
+ * either via Supabase Auth (Google SSO — the route everyone uses) or via Payload's local
+ * strategy (payload-token, the admin fallback, validated by Payload's access control on
+ * every data request).
  *
- * This edge instance of Auth.js uses only the provider/callback config — no
- * Payload adapter — which is all that's needed to decrypt and verify the
- * session cookie.
+ * The Supabase client here also refreshes an expiring session and writes the rotated cookies
+ * onto the response, which is why the response object has to be threaded through it rather
+ * than created at the end.
  */
-const { auth } = NextAuth(authConfig)
 
-// API prefixes that must stay reachable without a session:
-// - /api/auth: Auth.js endpoints — the Google sign-in flow itself
-// - /api/users: Payload admin login/me/logout — Payload enforces its own access control
-const PUBLIC_API_PREFIXES = ['/api/auth/', '/api/users/']
+// Paths that must stay reachable without a session:
+// - /auth/: the Supabase OAuth callback, which is what establishes the session
+// - /api/auth/: Auth.js endpoints, still mounted while payload-authjs is installed
+// - /api/users/: Payload admin login/me/logout — Payload enforces its own access control
+const PUBLIC_PREFIXES = ['/auth/', '/api/auth/', '/api/users/']
 
 /**
  * The Pre-Departure module is local-development-only: its brand-scoped PNR queue
@@ -48,7 +46,7 @@ const PRE_DEPARTURE_PREFIXES = [
 const preDepartureEnabled =
   process.env.NODE_ENV !== 'production' || process.env.PRE_DEPARTURE_ENABLED === 'true'
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Checked before the session gate: on live this must read as "no such route",
@@ -60,20 +58,41 @@ export default auth((req) => {
     return NextResponse.rewrite(new URL('/not-found', req.url), { status: 404 })
   }
 
-  const hasSession = req.auth !== null || req.cookies.has('payload-token')
-
-  if (hasSession) {
+  // Checked before the session gate too: the OAuth callback is what creates the session, so
+  // gating it would deadlock sign-in.
+  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.next()
   }
 
+  const response = NextResponse.next({ request: req })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_AUTH_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_AUTH_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (list) => {
+          for (const { name, options, value } of list) response.cookies.set(name, value, options)
+        },
+      },
+    },
+  )
+
+  // getClaims() verifies the token rather than trusting the cookie's contents, so a stale or
+  // forged session does not pass, and it refreshes the session as a side effect.
+  const { data } = await supabase.auth.getClaims()
+  const hasSession = Boolean(data?.claims) || req.cookies.has('payload-token')
+
+  if (hasSession) {
+    return response
+  }
+
   if (pathname.startsWith('/api/')) {
-    if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) {
-      return NextResponse.next()
-    }
     // Cron hits /api/payload-jobs/run with an Authorization header;
     // Payload's jobs access control validates the CRON_SECRET itself.
     if (pathname.startsWith('/api/payload-jobs/') && req.headers.has('authorization')) {
-      return NextResponse.next()
+      return response
     }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -81,7 +100,7 @@ export default auth((req) => {
   const loginUrl = new URL('/login', req.url)
   loginUrl.searchParams.set('redirect', pathname + req.nextUrl.search)
   return NextResponse.redirect(loginUrl)
-})
+}
 
 export const config = {
   // Everything except the login page, admin panel (has its own login),
