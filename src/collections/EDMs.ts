@@ -50,6 +50,18 @@ export const EDMs: CollectionConfig = {
       type: 'textarea',
     },
     {
+      name: 'dateSent',
+      type: 'date',
+      label: 'Date sent',
+      admin: {
+        date: {
+          pickerAppearance: 'dayOnly',
+          displayFormat: 'd MMM yyyy',
+        },
+        description: 'The day the EDM was sent. Falls back to the created date when blank.',
+      },
+    },
+    {
       name: 'url',
       type: 'text',
       required: true,
