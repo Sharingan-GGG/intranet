@@ -33,7 +33,12 @@ type UserRow = {
 
 // `department` was a text column on profiles; on Payload it is a relationship, so the name is
 // joined through rather than read directly.
-const SELECT = 'id, email, name, departments(name)'
+//
+// The FK is named explicitly because two relationships exist between these tables —
+// users.department_id -> departments.id, and departments.lead_id -> users.id. Left ambiguous,
+// PostgREST refuses to pick one (PGRST201, HTTP 300) and the whole query returns nothing,
+// which shows up as an empty "Transfer to" list rather than an error.
+const SELECT = 'id, email, name, departments!users_department_id_departments_id_fk(name)'
 
 const toEntry = (row: UserRow): DirectoryEntry => ({
   department: row.departments?.name ?? null,

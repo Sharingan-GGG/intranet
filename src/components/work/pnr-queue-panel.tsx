@@ -282,12 +282,23 @@ function PnrQueueRow({
     <>
       <TableRow
         data-state={isSelected ? "selected" : undefined}
+        data-checked={isChecked ? "true" : undefined}
+        // Ordered lowest-priority first: tailwind-merge keeps the last conflicting class, so
+        // precedence falls out of the order rather than needing !isSelected guards on each.
         className={cn(
           "cursor-pointer border-b border-[#aaccd6]/35 transition-colors even:bg-[#aaccd6]/12 hover:bg-[#aaccd6]/30",
+          // Departure-date tints inform, but must never mask a selection.
+          departing24h && "bg-amber-500/10 even:bg-amber-500/10",
+          overdueRow && "bg-muted/40 even:bg-muted/40",
+          // Ticked for a bulk action (move, approve, delete) — previously the checkbox was
+          // the only indication, which made a multi-row selection hard to keep track of.
+          isChecked &&
+            "bg-primary/12 even:bg-primary/12 hover:bg-primary/20 shadow-[inset_3px_0_0_var(--primary)]",
+          // The row whose detail panel is open.
           isSelected &&
-            "bg-[#aaccd6]/35 shadow-[inset_3px_0_0_var(--primary)] even:bg-[#aaccd6]/35",
-          departing24h && !isSelected && "bg-amber-500/10 even:bg-amber-500/10",
-          overdueRow && !isSelected && "bg-muted/40 even:bg-muted/40"
+            "bg-[#aaccd6]/35 even:bg-[#aaccd6]/35 shadow-[inset_3px_0_0_var(--primary)]",
+          // Both at once: keep it clearly distinct from either state alone.
+          isChecked && isSelected && "bg-primary/25 even:bg-primary/25 hover:bg-primary/30"
         )}
         onClick={() => onSelect(row.pnr)}
       >
