@@ -7,10 +7,20 @@ node_modules
 next-env.d.ts
 .vercel
 
+# SQLite → Postgres migration dump (contains user password hashes)
+scripts/.migration/
+
 # SQLite database (local dev data)
 *.db
 *.db-shm
 *.db-wal
+
+# Archived pre-Postgres SQLite databases (contain user password hashes).
+# Ignore everything in the folder except the revert instructions, which are
+# worth keeping in version control. Note the timestamped .bak files do not end
+# in .db, so the patterns above would not catch them.
+sqlite-archive/*
+!sqlite-archive/README.md
 
 # TypeScript build info
 *.tsbuildinfo
