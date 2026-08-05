@@ -36,8 +36,9 @@ export const Roles: CollectionConfig = {
       name: 'department',
       type: 'relationship',
       relationTo: 'departments',
+      hasMany: true,
       admin: {
-        description: 'Department this role belongs to (optional).',
+        description: 'Department(s) this role belongs to (optional).',
       },
     },
     {

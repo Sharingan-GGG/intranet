@@ -59,6 +59,15 @@ export const Permissions: CollectionConfig = {
       ],
     },
     {
+      name: 'department',
+      type: 'relationship',
+      relationTo: 'departments',
+      hasMany: true,
+      admin: {
+        description: 'Department(s) this permission applies to (optional).',
+      },
+    },
+    {
       name: 'category',
       type: 'text',
       admin: {

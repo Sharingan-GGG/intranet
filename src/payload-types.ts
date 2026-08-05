@@ -500,9 +500,9 @@ export interface Department {
   id: number;
   name: string;
   /**
-   * Short code, e.g. "ENG", "HR", "SALES".
+   * Google Workspace OU path (e.g. "/Sales/APAC"). Set by scripts/sync-ous.ts — leave blank for departments that aren't tied to a Workspace OU.
    */
-  code?: string | null;
+  orgUnitPath?: string | null;
   description?: string | null;
   /**
    * Department head / manager.
@@ -527,9 +527,9 @@ export interface Role {
   name: string;
   description?: string | null;
   /**
-   * Department this role belongs to (optional).
+   * Department(s) this role belongs to (optional).
    */
-  department?: (number | null) | Department;
+  department?: (number | Department)[] | null;
   permissions?: (number | Permission)[] | null;
   updatedAt: string;
   createdAt: string;
@@ -554,6 +554,10 @@ export interface Permission {
   collections: (
     'all' | 'pages' | 'posts' | 'media' | 'categories' | 'departments' | 'roles' | 'permissions' | 'users'
   )[];
+  /**
+   * Department(s) this permission applies to (optional).
+   */
+  department?: (number | Department)[] | null;
   /**
    * Optional grouping, e.g. "Reports", "Content", "Users".
    */
@@ -2109,7 +2113,7 @@ export interface EdmsSelect<T extends boolean = true> {
  */
 export interface DepartmentsSelect<T extends boolean = true> {
   name?: T;
-  code?: T;
+  orgUnitPath?: T;
   description?: T;
   lead?: T;
   parent?: T;
@@ -2136,6 +2140,7 @@ export interface PermissionsSelect<T extends boolean = true> {
   name?: T;
   key?: T;
   collections?: T;
+  department?: T;
   category?: T;
   description?: T;
   updatedAt?: T;

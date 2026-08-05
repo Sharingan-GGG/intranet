@@ -16,7 +16,7 @@ export const Departments: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'code', 'lead'],
+    defaultColumns: ['name', 'orgUnitPath', 'lead'],
     group: 'Organization',
   },
   fields: [
@@ -24,14 +24,17 @@ export const Departments: CollectionConfig = {
       name: 'name',
       type: 'text',
       required: true,
-      unique: true,
+      // Not unique: Workspace OUs can share a leaf name under different parents
+      // (e.g. "Support" nested under both Sales and Engineering). orgUnitPath
+      // below is the real unique identifier once OUs are synced in.
     },
     {
-      name: 'code',
+      name: 'orgUnitPath',
       type: 'text',
       unique: true,
       admin: {
-        description: 'Short code, e.g. "ENG", "HR", "SALES".',
+        description:
+          'Google Workspace OU path (e.g. "/Sales/APAC"). Set by scripts/sync-ous.ts — leave blank for departments that aren\'t tied to a Workspace OU.',
       },
     },
     {
@@ -52,6 +55,16 @@ export const Departments: CollectionConfig = {
       relationTo: 'departments',
       admin: {
         description: 'Parent department, for nested org structures.',
+      },
+    },
+    {
+      name: 'workspaceUsers',
+      type: 'ui',
+      admin: {
+        condition: (data) => Boolean(data?.orgUnitPath),
+        components: {
+          Field: '@/components/admin/DepartmentWorkspaceUsers#DepartmentWorkspaceUsers',
+        },
       },
     },
   ],
