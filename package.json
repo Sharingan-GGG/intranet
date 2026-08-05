@@ -6,6 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "db:export": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/db-export.ts",
+    "db:import": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/db-import.ts",
+    "db:push": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/db-push.ts",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
@@ -23,10 +26,10 @@
   },
   "dependencies": {
     "@payloadcms/admin-bar": "3.85.2",
+    "@payloadcms/db-postgres": "3.85.2",
     "@payloadcms/db-sqlite": "3.85.2",
     "@payloadcms/live-preview-react": "3.85.2",
     "@payloadcms/next": "3.85.2",
-    "@payloadcms/plugin-form-builder": "3.85.2",
     "@payloadcms/plugin-nested-docs": "3.85.2",
     "@payloadcms/plugin-redirects": "3.85.2",
     "@payloadcms/plugin-search": "3.85.2",

@@ -6,7 +6,6 @@ import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { Archive } from '../../blocks/ArchiveBlock/config'
 import { CallToAction } from '../../blocks/CallToAction/config'
 import { Content } from '../../blocks/Content/config'
-import { FormBlock } from '../../blocks/Form/config'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
 import { GreetingBar } from '../../blocks/home/GreetingBar/config'
 import { FeaturedSpotlight } from '../../blocks/home/FeaturedSpotlight/config'
@@ -87,7 +86,6 @@ export const Pages: CollectionConfig<'pages'> = {
                 Content,
                 MediaBlock,
                 Archive,
-                FormBlock,
                 GreetingBar,
                 FeaturedSpotlight,
                 QuickLinks,
