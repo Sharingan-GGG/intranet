@@ -17,6 +17,8 @@ import type { User } from '@/payload-types'
  */
 export type DirectoryEntry = {
   department: null | string
+  /** Payload department id — lets callers scope the list to "same OU as the viewer". */
+  departmentId: null | string
   email: string
   full_name: null | string
   id: string
@@ -47,6 +49,9 @@ const SELECT = 'id, email, name, departments!users_department_id_departments_id_
 
 const toEntry = (row: UserRow): DirectoryEntry => ({
   department: row.departments?.name ?? null,
+  // Not selected on this raw-SQL path — these two functions only resolve names for display
+  // (e.g. "moved by"), never for access filtering, so there's no need for the id here.
+  departmentId: null,
   email: row.email,
   full_name: row.name,
   id: String(row.id),
@@ -83,6 +88,7 @@ export async function listDirectory(): Promise<DirectoryEntry[]> {
     .filter((_, i) => allowed[i])
     .map((user: User): DirectoryEntry => ({
       department: typeof user.department === 'object' ? (user.department?.name ?? null) : null,
+      departmentId: typeof user.department === 'object' ? (user.department?.id ?? null) : (user.department ?? null),
       email: user.email,
       full_name: user.name ?? null,
       id: String(user.id),

@@ -20,7 +20,17 @@ export async function GET() {
 
   try {
     const profiles = await getActiveProfiles()
-    return NextResponse.json(profiles)
+
+    // Super admins switch between OUs freely, so they see everyone Pre-Departure grants
+    // access to. Everyone else — admin or user — is scoped to their own OU: no department
+    // means no teammates to see.
+    if (profile.role === "super_admin") {
+      return NextResponse.json(profiles)
+    }
+    const ownDepartment = profiles.filter(
+      (p) => profile.departmentId !== null && p.departmentId === profile.departmentId
+    )
+    return NextResponse.json(ownDepartment)
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch profiles" }, { status: 500 })
   }
