@@ -4,6 +4,8 @@ import { useState } from 'react'
 
 import type { WorkspaceUser } from '@/lib/google-admin'
 
+import { syncWorkspaceUsers } from './syncWorkspaceUsers'
+
 export function DepartmentWorkspaceUsersClient({
   orgUnitPath,
   initialUsers,
@@ -19,13 +21,7 @@ export function DepartmentWorkspaceUsersClient({
     setSyncing(true)
     setError(null)
     try {
-      const res = await fetch(
-        `/api/departments/workspace-users?orgUnitPath=${encodeURIComponent(orgUnitPath)}`,
-        { credentials: 'include' },
-      )
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`)
-      setUsers(json.users)
+      setUsers(await syncWorkspaceUsers(orgUnitPath))
     } catch (e) {
       setError((e as Error).message)
     } finally {

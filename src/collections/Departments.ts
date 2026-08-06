@@ -2,7 +2,6 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { isAdmin } from '../access/isAdmin'
-import { workspaceUsersEndpoint } from './Departments/workspaceUsersEndpoint'
 import { listUsersInOu } from '../lib/google-admin'
 
 export const Departments: CollectionConfig = {
@@ -21,13 +20,6 @@ export const Departments: CollectionConfig = {
     defaultColumns: ['name', 'orgUnitPath', 'lead'],
     group: 'Organization',
   },
-  endpoints: [
-    {
-      handler: workspaceUsersEndpoint,
-      method: 'get',
-      path: '/workspace-users',
-    },
-  ],
   fields: [
     {
       name: 'name',
