@@ -1,47 +1,30 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
-import { isAdmin } from '../access/isAdmin'
+import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 export const QuickLinks: CollectionConfig = {
   slug: 'quick-links',
   access: {
     read: authenticated,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'quick-links'),
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'quick-links'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'quick-links'),
   },
   admin: {
-    useAsTitle: 'label',
-    defaultColumns: ['label', 'link', 'order'],
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'department', 'order'],
     group: 'Intranet',
-    description: 'Shortcut buttons shown on the intranet home page.',
+    description: 'Templates of shortcut buttons shown on the intranet home page, grouped and tagged by department.',
   },
   defaultSort: 'order',
   fields: [
     {
-      name: 'label',
+      name: 'name',
       type: 'text',
       required: true,
       admin: {
-        description: 'Button name, e.g. "Gmail".',
-      },
-    },
-    {
-      name: 'image',
-      type: 'upload',
-      relationTo: 'media',
-      required: true,
-      admin: {
-        description: 'Icon shown on the button.',
-      },
-    },
-    {
-      name: 'link',
-      type: 'text',
-      required: true,
-      admin: {
-        description: 'External URL (https://…) or internal path (/page).',
+        description: 'Internal name for this group of links, e.g. "Sales Tools". Not shown on the site.',
       },
     },
     {
@@ -52,6 +35,50 @@ export const QuickLinks: CollectionConfig = {
         description: 'Lower numbers appear first.',
         position: 'sidebar',
       },
+    },
+    {
+      name: 'department',
+      type: 'relationship',
+      relationTo: 'departments',
+      hasMany: true,
+      admin: {
+        description: 'Restrict this group of links to specific departments. Leave empty to show to everyone.',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'links',
+      type: 'array',
+      admin: {
+        description: 'The buttons in this group, in the order they should appear.',
+      },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          required: true,
+          admin: {
+            description: 'Button name, e.g. "Gmail".',
+          },
+        },
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          required: true,
+          admin: {
+            description: 'Icon shown on the button.',
+          },
+        },
+        {
+          name: 'link',
+          type: 'text',
+          required: true,
+          admin: {
+            description: 'External URL (https://…) or internal path (/page).',
+          },
+        },
+      ],
     },
   ],
   timestamps: true,

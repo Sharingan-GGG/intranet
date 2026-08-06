@@ -16,7 +16,6 @@ import { TimeZones } from './collections/TimeZones'
 import { Pages } from './collections/Pages'
 import { Permissions } from './collections/Permissions'
 import { Posts } from './collections/Posts'
-import { Roles } from './collections/Roles'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
@@ -127,7 +126,6 @@ export default buildConfig({
     Events,
     EDMs,
     Departments,
-    Roles,
     Permissions,
     Users,
   ],

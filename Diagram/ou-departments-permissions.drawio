@@ -1,0 +1,205 @@
+<mxfile host="app.diagrams.net" modified="2026-08-06T00:00:00.000Z" agent="claude-code" version="24.7.5" type="device">
+  <diagram id="ou-permissions" name="OU / Departments / Permissions">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Google Workspace source -->
+        <mxCell id="gws" value="&lt;b&gt;Google Workspace&lt;/b&gt;&lt;br&gt;Admin SDK Directory API&lt;br&gt;OUs + users per OU&lt;br&gt;&lt;i&gt;src/lib/google-admin.ts&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="40" width="260" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Roles removed note -->
+        <mxCell id="rolesNote" value="&lt;b&gt;Roles collection — removed&lt;/b&gt;&lt;br&gt;Was purely decorative (Role ↔ Department,&lt;br&gt;Role ↔ Permission) — never read at runtime.&lt;br&gt;Folded into &lt;b&gt;Users.roles&lt;/b&gt; +&lt;br&gt;&lt;b&gt;Permissions.role&lt;/b&gt;." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="40" width="280" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Departments -->
+        <mxCell id="departments" value="&lt;b&gt;Departments&lt;/b&gt; (collection)&lt;br&gt;&lt;br&gt;name&lt;br&gt;orgUnitPath — unique, Google OU path&lt;br&gt;description&lt;br&gt;lead → Users, filtered to users&lt;br&gt;&amp;nbsp;&amp;nbsp;already in this department&lt;br&gt;parent → Departments (self-ref hierarchy)&lt;br&gt;workspaceUsers — live OU members, UI-only&lt;br&gt;&lt;br&gt;access: read=authenticated, write=isAdmin" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="200" width="300" height="220" as="geometry" />
+        </mxCell>
+
+        <!-- Users -->
+        <mxCell id="users" value="&lt;b&gt;Users&lt;/b&gt; (collection)&lt;br&gt;&lt;br&gt;roles (hasMany, saveToJWT):&lt;br&gt;&amp;nbsp;&amp;nbsp;super-admin / admin / editor / user&lt;br&gt;department → Departments (single)&lt;br&gt;&lt;br&gt;access.admin: super-admin/admin/editor&lt;br&gt;update: isAdminOrSelf" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="220" width="300" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- Permissions -->
+        <mxCell id="permissions" value="&lt;b&gt;Permissions&lt;/b&gt; (collection)&lt;br&gt;&lt;br&gt;role (hasMany): super-admin/admin/editor/user&lt;br&gt;department (hasMany) — empty = global&lt;br&gt;adminCollections (select) — Payload collections&lt;br&gt;pages (select) — home:* blocks + route:*&lt;br&gt;excludedPages (select) — always wins&lt;br&gt;category, description&lt;br&gt;&lt;br&gt;access: read=authenticated, write=isAdmin" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="860" y="200" width="320" height="220" as="geometry" />
+        </mxCell>
+
+        <!-- Resolver -->
+        <mxCell id="resolver" value="&lt;b&gt;src/access/departmentPermissions.ts&lt;/b&gt;&lt;br&gt;&lt;br&gt;getRoleTier(user)&lt;br&gt;&amp;nbsp;&amp;nbsp;highest of super-admin &amp;gt; admin &amp;gt; editor &amp;gt; user&lt;br&gt;resolveUserPermissions(payload, user):&lt;br&gt;&amp;nbsp;&amp;nbsp;find Permissions where role contains tier&lt;br&gt;&amp;nbsp;&amp;nbsp;AND (department empty OR contains user.department)&lt;br&gt;&amp;nbsp;&amp;nbsp;→ union adminCollections / pages / excludedPages&lt;br&gt;&lt;br&gt;hasAdminCollectionAccess(payload, user, slug)&lt;br&gt;hasPageAccess(payload, user, pageKey)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="480" width="420" height="220" as="geometry" />
+        </mxCell>
+
+        <!-- Admin enforcement -->
+        <mxCell id="adminEnforcement" value="&lt;b&gt;Admin-panel collections&lt;/b&gt;&lt;br&gt;Categories, Posts, Pages, Media,&lt;br&gt;EDMs, Events, KnowledgeBase,&lt;br&gt;QuickLinks, TimeZones&lt;br&gt;&lt;br&gt;create/update/delete → hasAdminCollectionAccess(slug)&lt;br&gt;super-admin/admin bypass everything&lt;br&gt;editor/user need a matching Permission&lt;br&gt;(scoped to their department)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="780" width="380" height="210" as="geometry" />
+        </mxCell>
+
+        <!-- Front-end enforcement -->
+        <mxCell id="frontendEnforcement" value="&lt;b&gt;Front-end&lt;/b&gt;&lt;br&gt;Homepage blocks (home:*): quickLinks, knowledgeBase,&lt;br&gt;eventsBlock, edmSlider, newsSlider, timeZones,&lt;br&gt;featuredSpotlight — filtered in RenderHomeBlocks&lt;br&gt;Routes (route:*): calendar, posts, search,&lt;br&gt;seat-scanner, pre-departure — selectable,&lt;br&gt;&amp;nbsp;&amp;nbsp;not yet route-guarded&lt;br&gt;&lt;br&gt;hasPageAccess(pageKey) via resolveUserPermissions&lt;br&gt;in page.tsx — no Permission rows yet ⇒ show-all&lt;br&gt;excludedPages always wins, even over bypass" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="780" width="420" height="230" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" value="scripts/sync-ous.ts&lt;br&gt;upserts by orgUnitPath" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="gws" target="departments">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" value="user.department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="departments" target="users">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" value="department (optional scope)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="departments" target="permissions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4" value="role tier + department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="users" target="resolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="matching rules" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="permissions" target="resolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" value="hasAdminCollectionAccess" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="resolver" target="adminEnforcement">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e7" value="hasPageAccess" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="resolver" target="frontendEnforcement">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="dept-permissions-workflow" name="Department + Permission Access Workflow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="1120" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="wfTitle" value="Department + Permission — Access Resolution Workflow" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="10" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Inputs -->
+        <mxCell id="wDept" value="User's department&lt;br&gt;(Users.department →&lt;br&gt;a single Department / OU)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wRole" value="User's role tier&lt;br&gt;(Users.roles → getRoleTier)&lt;br&gt;highest of: super-admin &amp;gt; admin &amp;gt; editor &amp;gt; user" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="440" y="60" width="360" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Resolve step -->
+        <mxCell id="wResolve" value="Find every Permission where:&lt;br&gt;role contains the user's tier&lt;br&gt;AND (department is empty — global —&lt;br&gt;OR department contains the user's department)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="180" width="440" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Union step -->
+        <mxCell id="wUnion" value="Union every matched Permission's&lt;br&gt;adminCollections, pages and excludedPages&lt;br&gt;into three resolved sets" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="310" width="440" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Column headers -->
+        <mxCell id="wColAdminHeader" value="Admin-panel collection access&lt;br&gt;(hasAdminCollectionAccess)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="440" width="360" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wColPageHeader" value="Front-end page / block access&lt;br&gt;(hasPageAccess)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="440" width="440" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Admin-collection path -->
+        <mxCell id="wD1" value="role tier is&lt;br&gt;super-admin or admin?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="520" width="320" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="wD2" value="adminCollections contains&lt;br&gt;the collection slug, or 'all'?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="680" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Front-end page path -->
+        <mxCell id="wD3" value="excludedPages contains&lt;br&gt;the page key, or 'all'?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="520" width="400" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="wD4" value="role tier is&lt;br&gt;super-admin or admin?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="680" width="400" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="wD5" value="pages contains&lt;br&gt;the page key, or 'all'?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="840" width="400" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Terminal nodes -->
+        <mxCell id="wGrant" value="✅ Grant access" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="280" y="1010" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="wDeny" value="🚫 Deny access" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1010" width="260" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: inputs to resolve/union -->
+        <mxCell id="we1" edge="1" parent="1" source="wDept" target="wResolve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we2" edge="1" parent="1" source="wRole" target="wResolve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we3" edge="1" parent="1" source="wResolve" target="wUnion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Split into the two checks -->
+        <mxCell id="we4" edge="1" parent="1" source="wUnion" target="wColAdminHeader" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we5" edge="1" parent="1" source="wUnion" target="wColPageHeader" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we6" edge="1" parent="1" source="wColAdminHeader" target="wD1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we7" edge="1" parent="1" source="wColPageHeader" target="wD3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Admin-collection path logic -->
+        <mxCell id="we8" value="Yes — bypass" edge="1" parent="1" source="wD1" target="wGrant" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#82b366;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we9" value="No" edge="1" parent="1" source="wD1" target="wD2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we10" value="Yes" edge="1" parent="1" source="wD2" target="wGrant" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#82b366;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we11" value="No" edge="1" parent="1" source="wD2" target="wDeny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#b85450;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Front-end page path logic -->
+        <mxCell id="we12" value="Yes — exclusion always wins,&lt;br&gt;even over bypass" edge="1" parent="1" source="wD3" target="wDeny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#b85450;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we13" value="No" edge="1" parent="1" source="wD3" target="wD4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we14" value="Yes — bypass" edge="1" parent="1" source="wD4" target="wGrant" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#82b366;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we15" value="No" edge="1" parent="1" source="wD4" target="wD5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we16" value="Yes" edge="1" parent="1" source="wD5" target="wGrant" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#82b366;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="we17" value="No" edge="1" parent="1" source="wD5" target="wDeny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#b85450;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

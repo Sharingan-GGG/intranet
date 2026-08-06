@@ -1,16 +1,16 @@
 import type { CollectionConfig } from 'payload'
 
 import { anyone } from '../access/anyone'
-import { isAdminOrEditor } from '../access/isAdmin'
+import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 import { slugField } from 'payload'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
   access: {
-    create: isAdminOrEditor,
-    delete: isAdminOrEditor,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'categories'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'categories'),
     read: anyone,
-    update: isAdminOrEditor,
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'categories'),
   },
   admin: {
     useAsTitle: 'title',

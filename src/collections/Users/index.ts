@@ -63,20 +63,6 @@ export const Users: CollectionConfig = {
         description: 'The department this user belongs to.',
       },
     },
-    {
-      name: 'assignedRoles',
-      type: 'relationship',
-      relationTo: 'roles',
-      hasMany: true,
-      access: {
-        // Only admins can assign business roles
-        create: isAdminFieldLevel,
-        update: isAdminFieldLevel,
-      },
-      admin: {
-        description: 'Business roles (from the Roles collection) assigned to this user.',
-      },
-    },
   ],
   timestamps: true,
 }

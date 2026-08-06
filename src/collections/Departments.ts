@@ -45,8 +45,11 @@ export const Departments: CollectionConfig = {
       name: 'lead',
       type: 'relationship',
       relationTo: 'users',
+      // Only offer users already assigned to this department (Workspace OU). New,
+      // unsaved departments have no id to filter by yet, so show everyone until saved.
+      filterOptions: ({ id }) => (id ? { department: { equals: id } } : true),
       admin: {
-        description: 'Department head / manager.',
+        description: 'Department head / manager — must already belong to this department.',
       },
     },
     {

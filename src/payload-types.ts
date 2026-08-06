@@ -77,7 +77,6 @@ export interface Config {
     events: Event;
     edms: Edm;
     departments: Department;
-    roles: Role;
     permissions: Permission;
     users: User;
     redirects: Redirect;
@@ -105,7 +104,6 @@ export interface Config {
     events: EventsSelect<false> | EventsSelect<true>;
     edms: EdmsSelect<false> | EdmsSelect<true>;
     departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
-    roles: RolesSelect<false> | RolesSelect<true>;
     permissions: PermissionsSelect<false> | PermissionsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
@@ -287,6 +285,10 @@ export interface Post {
    */
   featuredOrder?: number | null;
   publishedAt?: string | null;
+  /**
+   * When set, this post automatically unpublishes at this date and time.
+   */
+  expiryDate?: string | null;
   categories?: (number | Category)[] | null;
   authors?: (string | User)[] | null;
   populatedAuthors?:
@@ -468,10 +470,6 @@ export interface User {
    * The department this user belongs to.
    */
   department?: (number | null) | Department;
-  /**
-   * Business roles (from the Roles collection) assigned to this user.
-   */
-  assignedRoles?: (number | Role)[] | null;
   accounts?:
     | {
         provider: string;
@@ -505,64 +503,13 @@ export interface Department {
   orgUnitPath?: string | null;
   description?: string | null;
   /**
-   * Department head / manager.
+   * Department head / manager — must already belong to this department.
    */
   lead?: (string | null) | User;
   /**
    * Parent department, for nested org structures.
    */
   parent?: (number | null) | Department;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "roles".
- */
-export interface Role {
-  id: number;
-  /**
-   * Business role, e.g. "HR Manager", "Sales Rep".
-   */
-  name: string;
-  description?: string | null;
-  /**
-   * Department(s) this role belongs to (optional).
-   */
-  department?: (number | Department)[] | null;
-  permissions?: (number | Permission)[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "permissions".
- */
-export interface Permission {
-  id: number;
-  /**
-   * Human-readable label, e.g. "View Reports".
-   */
-  name: string;
-  /**
-   * Machine key used in code, e.g. "reports:view". Must be unique.
-   */
-  key: string;
-  /**
-   * Which collections this permission grants access to. Use "All" for every collection.
-   */
-  collections: (
-    'all' | 'pages' | 'posts' | 'media' | 'categories' | 'departments' | 'roles' | 'permissions' | 'users'
-  )[];
-  /**
-   * Department(s) this permission applies to (optional).
-   */
-  department?: (number | Department)[] | null;
-  /**
-   * Optional grouping, e.g. "Reports", "Content", "Users".
-   */
-  category?: string | null;
-  description?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -807,7 +754,7 @@ export interface FeedbackBlock {
   blockType: 'feedback';
 }
 /**
- * Shortcut buttons shown on the intranet home page.
+ * Templates of shortcut buttons shown on the intranet home page, grouped and tagged by department.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "quick-links".
@@ -815,21 +762,37 @@ export interface FeedbackBlock {
 export interface QuickLink {
   id: number;
   /**
-   * Button name, e.g. "Gmail".
+   * Internal name for this group of links, e.g. "Sales Tools". Not shown on the site.
    */
-  label: string;
-  /**
-   * Icon shown on the button.
-   */
-  image: number | Media;
-  /**
-   * External URL (https://…) or internal path (/page).
-   */
-  link: string;
+  name: string;
   /**
    * Lower numbers appear first.
    */
   order?: number | null;
+  /**
+   * Restrict this group of links to specific departments. Leave empty to show to everyone.
+   */
+  department?: (number | Department)[] | null;
+  /**
+   * The buttons in this group, in the order they should appear.
+   */
+  links?:
+    | {
+        /**
+         * Button name, e.g. "Gmail".
+         */
+        label: string;
+        /**
+         * Icon shown on the button.
+         */
+        image: number | Media;
+        /**
+         * External URL (https://…) or internal path (/page).
+         */
+        link: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1393,6 +1356,92 @@ export interface Edm {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "permissions".
+ */
+export interface Permission {
+  id: number;
+  /**
+   * Human-readable label, e.g. "Sales admin access".
+   */
+  name: string;
+  /**
+   * Which user role tier(s) this rule applies to.
+   */
+  role: ('super-admin' | 'admin' | 'editor' | 'user')[];
+  /**
+   * Department(s) this rule applies to. Leave empty to apply to every department.
+   */
+  department?: (number | Department)[] | null;
+  /**
+   * Admin-panel collections this rule grants access to. Use "All" for every collection.
+   */
+  adminCollections?:
+    | (
+        | 'all'
+        | 'pages'
+        | 'posts'
+        | 'media'
+        | 'categories'
+        | 'edms'
+        | 'events'
+        | 'knowledge-base'
+        | 'quick-links'
+        | 'time-zones'
+        | 'departments'
+        | 'permissions'
+        | 'users'
+      )[]
+    | null;
+  /**
+   * Front-end homepage sections / routes this rule grants visibility to. Use "All" for everything.
+   */
+  pages?:
+    | (
+        | 'all'
+        | 'home:quickLinks'
+        | 'home:knowledgeBase'
+        | 'home:eventsBlock'
+        | 'home:edmSlider'
+        | 'home:newsSlider'
+        | 'home:timeZones'
+        | 'home:featuredSpotlight'
+        | 'route:calendar'
+        | 'route:posts'
+        | 'route:search'
+        | 'route:seat-scanner'
+        | 'route:pre-departure'
+      )[]
+    | null;
+  /**
+   * Pages to exclude, even if granted by "All" (in this rule or another matching rule). Use for "all pages except X".
+   */
+  excludedPages?:
+    | (
+        | 'all'
+        | 'home:quickLinks'
+        | 'home:knowledgeBase'
+        | 'home:eventsBlock'
+        | 'home:edmSlider'
+        | 'home:newsSlider'
+        | 'home:timeZones'
+        | 'home:featuredSpotlight'
+        | 'route:calendar'
+        | 'route:posts'
+        | 'route:search'
+        | 'route:seat-scanner'
+        | 'route:pre-departure'
+      )[]
+    | null;
+  /**
+   * Optional grouping, e.g. "Reports", "Content", "Users".
+   */
+  category?: string | null;
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -1603,10 +1652,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'departments';
         value: number | Department;
-      } | null)
-    | ({
-        relationTo: 'roles';
-        value: number | Role;
       } | null)
     | ({
         relationTo: 'permissions';
@@ -1901,6 +1946,7 @@ export interface PostsSelect<T extends boolean = true> {
   featured?: T;
   featuredOrder?: T;
   publishedAt?: T;
+  expiryDate?: T;
   categories?: T;
   authors?: T;
   populatedAuthors?:
@@ -2035,10 +2081,17 @@ export interface CategoriesSelect<T extends boolean = true> {
  * via the `definition` "quick-links_select".
  */
 export interface QuickLinksSelect<T extends boolean = true> {
-  label?: T;
-  image?: T;
-  link?: T;
+  name?: T;
   order?: T;
+  department?: T;
+  links?:
+    | T
+    | {
+        label?: T;
+        image?: T;
+        link?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2122,25 +2175,15 @@ export interface DepartmentsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "roles_select".
- */
-export interface RolesSelect<T extends boolean = true> {
-  name?: T;
-  description?: T;
-  department?: T;
-  permissions?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "permissions_select".
  */
 export interface PermissionsSelect<T extends boolean = true> {
   name?: T;
-  key?: T;
-  collections?: T;
+  role?: T;
   department?: T;
+  adminCollections?: T;
+  pages?: T;
+  excludedPages?: T;
   category?: T;
   description?: T;
   updatedAt?: T;
@@ -2157,7 +2200,6 @@ export interface UsersSelect<T extends boolean = true> {
   image?: T;
   roles?: T;
   department?: T;
-  assignedRoles?: T;
   accounts?:
     | T
     | {

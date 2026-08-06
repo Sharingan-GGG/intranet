@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
-import { isAdmin } from '../access/isAdmin'
+import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 export const KnowledgeBase: CollectionConfig = {
   slug: 'knowledge-base',
@@ -11,9 +11,9 @@ export const KnowledgeBase: CollectionConfig = {
   },
   access: {
     read: authenticated,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'knowledge-base'),
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'knowledge-base'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'knowledge-base'),
   },
   admin: {
     useAsTitle: 'title',

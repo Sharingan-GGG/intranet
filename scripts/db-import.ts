@@ -23,7 +23,6 @@ if (!process.env.POSTGRES_URL) {
 const ORDER = [
   'departments',
   'permissions',
-  'roles',
   'payload-folders',
   'users',
   'media',
@@ -203,8 +202,8 @@ const relationFieldNames = (slug: string): string[] => {
 if (deferred.length) {
   console.log(`\nretrying ${deferred.length} deferred document(s)...`)
 
-  // Repeat while progress is being made: a chain like roles -> departments -> users needs
-  // one pass per link, and the chain length is not known ahead of time.
+  // Repeat while progress is being made: a chain like departments -> permissions -> users
+  // needs one pass per link, and the chain length is not known ahead of time.
   let pending = deferred
   while (pending.length) {
     const stillFailing: typeof pending = []

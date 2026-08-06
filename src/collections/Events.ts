@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
-import { isAdmin } from '../access/isAdmin'
+import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 const slugify = (value: string): string =>
   value
@@ -13,9 +13,9 @@ export const Events: CollectionConfig = {
   slug: 'events',
   access: {
     read: authenticated,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'events'),
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'events'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'events'),
   },
   admin: {
     useAsTitle: 'title',

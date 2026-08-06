@@ -47,13 +47,29 @@ const renderBlock = (block: HomeBlock, index: number, userName?: string) => {
 export const RenderHomeBlocks: React.FC<{
   blocks: Page['layout']
   userName?: string
-}> = ({ blocks, userName }) => {
+  /**
+   * Home blocks this user's role/department grants (e.g. 'home:knowledgeBase').
+   * Undefined or empty means "no Permission rules configured yet" — show
+   * everything rather than blanking the homepage.
+   */
+  visiblePages?: Set<string>
+  /** Blocks explicitly excluded — wins even over "All" or an empty visiblePages. */
+  excludedPages?: Set<string>
+}> = ({ blocks, userName, visiblePages, excludedPages }) => {
   if (!blocks?.length) return null
 
+  const isVisible = (block: HomeBlock) => {
+    const key = `home:${block.blockType}`
+    if (excludedPages?.has('all') || excludedPages?.has(key)) return false
+    return !visiblePages || visiblePages.size === 0 || visiblePages.has('all') || visiblePages.has(key)
+  }
+
+  const filteredBlocks = blocks.filter(isVisible)
+
   const rendered: React.ReactNode[] = []
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]
-    const next = blocks[i + 1]
+  for (let i = 0; i < filteredBlocks.length; i++) {
+    const block = filteredBlocks[i]
+    const next = filteredBlocks[i + 1]
     const pair = pairing[block.blockType]
 
     if (pair?.role === 'main' && next && pairing[next.blockType]?.role === 'side') {

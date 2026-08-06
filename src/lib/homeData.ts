@@ -1,3 +1,4 @@
+import { headers as getHeaders } from 'next/headers'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
@@ -234,20 +235,28 @@ export async function getFeaturedNews(): Promise<NewsCard[]> {
 
 export async function getQuickLinks(): Promise<QuickLink[]> {
   const payload = await getPayload({ config: configPromise })
+  const { user } = await payload.auth({ headers: await getHeaders() })
+  const deptId = typeof user?.department === 'object' ? user?.department?.id : user?.department
+
   const { docs } = await payload.find({
     collection: 'quick-links',
     sort: 'order',
-    limit: 24,
+    limit: 100,
     depth: 1,
+    where: {
+      or: [{ department: { exists: false } }, ...(deptId ? [{ department: { contains: deptId } }] : [])],
+    },
   })
 
   if (docs.length === 0) return QUICK_LINKS
 
-  return docs.map((d) => ({
-    label: d.label,
-    href: d.link,
-    icon: mediaUrl(d.image) ?? '/ctg-icon.png',
-  }))
+  return docs.flatMap((group) =>
+    (group.links ?? []).map((l) => ({
+      label: l.label,
+      href: l.link,
+      icon: mediaUrl(l.image) ?? '/ctg-icon.png',
+    })),
+  )
 }
 
 export async function getOffices(): Promise<OfficeZone[]> {

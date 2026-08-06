@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
-import { isAdmin } from '../access/isAdmin'
+import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 export const EDMs: CollectionConfig = {
   slug: 'edms',
@@ -11,9 +11,9 @@ export const EDMs: CollectionConfig = {
   },
   access: {
     read: authenticated,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'edms'),
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'edms'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'edms'),
   },
   admin: {
     useAsTitle: 'title',

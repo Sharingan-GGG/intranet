@@ -20,10 +20,6 @@ export const isAdminFieldLevel: FieldAccess = ({ req: { user } }) => {
   return hasRole(user, 'super-admin', 'admin')
 }
 
-export const isAdminOrEditor: Access = ({ req: { user } }: AccessArgs<User>) => {
-  return hasRole(user, 'super-admin', 'admin', 'editor')
-}
-
 export const isAdminOrSelf: Access = ({ req: { user } }: AccessArgs<User>) => {
   if (!user) return false
   if (hasRole(user, 'super-admin', 'admin')) return true

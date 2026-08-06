@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
-import { isAdmin } from '../access/isAdmin'
+import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 const timezoneOptions = Intl.supportedValuesOf('timeZone').map((tz) => ({
   label: tz.replace(/_/g, ' '),
@@ -12,9 +12,9 @@ export const TimeZones: CollectionConfig = {
   slug: 'time-zones',
   access: {
     read: authenticated,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'time-zones'),
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'time-zones'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'time-zones'),
   },
   admin: {
     useAsTitle: 'label',

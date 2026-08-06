@@ -125,11 +125,13 @@ export const TAG_STYLE: Record<string, [string, string]> = {
 export const tagStyle = (tag: EventTag): [string, string] =>
   TAG_STYLE[tag] ?? ['#EEF1F6', '#5A6478']
 
-/** Search-result type badge tints: [foreground, background]. */
-export const SEARCH_TINT: Record<'News' | 'Doc' | 'Event', [string, string]> = {
+/** Search-result type badge tints, keyed by SEARCH_SCOPES label: [foreground, background]. */
+export const SEARCH_TINT: Record<string, [string, string]> = {
   News: ['#4647AE', '#EEEDF8'],
-  Doc: ['#2E66B8', '#EAF1FB'],
-  Event: ['#1F8A5B', '#E8F3EC'],
+  Pages: ['#8A5A2E', '#F8F0E8'],
+  Events: ['#1F8A5B', '#E8F3EC'],
+  EDMs: ['#B84A8C', '#FBEAF3'],
+  'Knowledge Base': ['#2E66B8', '#EAF1FB'],
 }
 
 const fav = (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
@@ -263,11 +265,3 @@ export const EDMS: EdmCard[] = [
   { title: 'June client newsletter', kicker: 'Newsletter', sent: 'Tue 2nd June', img: IMGS[4], href: '#' },
 ]
 
-/** Combined pool for the header typeahead. */
-export type SearchDoc = { type: 'News' | 'Doc' | 'Event'; title: string; href: string }
-
-export const SEARCH_POOL: SearchDoc[] = [
-  ...NEWS.map((n) => ({ type: 'News' as const, title: n.title, href: '/#news' })),
-  ...DOCUMENTS.map((d) => ({ type: 'Doc' as const, title: d.title, href: d.href })),
-  ...EVENT_GROUPS.flatMap((g) => g.items.map((ev) => ({ type: 'Event' as const, title: ev.title, href: '/#calendar' }))),
-]

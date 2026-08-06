@@ -3,103 +3,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { LinksModal } from '@/components/home/KnowledgeBase'
-import type { KbLink } from '@/lib/home'
+import {
+  fetchScopeResults,
+  SEARCH_SCOPE_ORDER,
+  SEARCH_SCOPES,
+  type SearchResult,
+  type SearchScopeKey,
+} from '@/lib/searchScopes'
 
-type Scope = 'events' | 'news' | 'kb'
+type Scope = SearchScopeKey
+type Result = SearchResult
 
-type Result = { title: string; sub: string; href: string; sortKey?: number; links?: KbLink[] }
-
-const mediaUrl = (file: unknown): string | null => {
-  const f = file as { url?: string } | null
-  return f && typeof f === 'object' && f.url ? f.url : null
-}
-
-const dateFmt = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
-
-/** Next occurrence of an event on/after today — mirrors the recurrence expansion in lib/homeData. */
-const nextOccurrence = (d: any): Date | null => {
-  if (!d.date) return null
-  const date = new Date(d.date)
-  if (Number.isNaN(date.getTime())) return null
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const stepMap: Record<string, { every: number; unit: string }> = {
-    weekly: { every: 1, unit: 'weeks' },
-    fortnightly: { every: 2, unit: 'weeks' },
-    monthly: { every: 1, unit: 'months' },
-    quarterly: { every: 3, unit: 'months' },
-    biannually: { every: 6, unit: 'months' },
-    annually: { every: 1, unit: 'years' },
-  }
-  const step =
-    d.repeat === 'custom'
-      ? { every: Math.max(1, d.repeatEvery ?? 1), unit: d.repeatFrequency ?? 'weeks' }
-      : stepMap[d.repeat]
-  if (!step) return date // non-repeating: the stored date is the only occurrence
-
-  for (let i = 0; date < today && i < 500; i++) {
-    if (step.unit === 'days') date.setDate(date.getDate() + step.every)
-    else if (step.unit === 'weeks') date.setDate(date.getDate() + step.every * 7)
-    else if (step.unit === 'months') date.setMonth(date.getMonth() + step.every)
-    else if (step.unit === 'years') date.setFullYear(date.getFullYear() + step.every)
-    else break
-  }
-  return date
-}
-
-const localDateKey = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
-const SCOPES: Record<
-  Scope,
-  { label: string; shortcut: string; endpoint: (q: string) => string; map: (d: any) => Result }
-> = {
-  events: {
-    label: 'Events',
-    shortcut: 'E',
-    endpoint: (q) =>
-      `/api/events?where[or][0][title][like]=${q}&where[or][1][description][like]=${q}&limit=8&depth=0&sort=date`,
-    map: (d) => {
-      const next = nextOccurrence(d)
-      return {
-        title: d.title,
-        sub: [d.location, next ? dateFmt.format(next) : null].filter(Boolean).join(' · ') || 'Event',
-        href: next ? `/calendar?date=${localDateKey(next)}` : '/calendar',
-        sortKey: next?.getTime(),
-      }
-    },
-  },
-  news: {
-    label: 'News',
-    shortcut: 'B',
-    endpoint: (q) =>
-      `/api/posts?where[or][0][title][like]=${q}&where[or][1][meta.description][like]=${q}&limit=8&depth=0&sort=-publishedAt`,
-    map: (d) => ({ title: d.title, sub: 'Post', href: `/posts/${d.slug}` }),
-  },
-  kb: {
-    label: 'Knowledge Base',
-    shortcut: 'K',
-    endpoint: (q) =>
-      `/api/knowledge-base?where[or][0][title][like]=${q}&where[or][1][description][like]=${q}&limit=8&depth=1`,
-    map: (d) => {
-      const absolute = (url: string): string => (/^https?:\/\//i.test(url) ? url : `https://${url}`)
-      const links: KbLink[] = (d.links ?? []).map((l: any) => ({
-        label: l.label ?? null,
-        url: absolute(l.url),
-      }))
-      return {
-        title: d.title,
-        sub: (typeof d.category === 'object' ? d.category?.title : d.category) ?? 'Document',
-        href: mediaUrl(d.file) ?? links[0]?.url ?? '#',
-        links,
-      }
-    },
-  },
-}
-
-const SCOPE_ORDER: Scope[] = ['news', 'events', 'kb']
+const SCOPES = SEARCH_SCOPES
+const SCOPE_ORDER = SEARCH_SCOPE_ORDER
 
 export const SearchModal: React.FC = () => {
   const [open, setOpen] = useState(false)
@@ -144,6 +60,13 @@ export const SearchModal: React.FC = () => {
     if (open) inputRef.current?.focus()
   }, [open])
 
+  // Clear stale results immediately on scope switch so a News/Event result never flashes under a different tab
+  // while the new scope's fetch is still debouncing.
+  useEffect(() => {
+    setResults([])
+    setActive(0)
+  }, [scope])
+
   // Debounced fetch of results for the current scope + query.
   useEffect(() => {
     if (!open) return
@@ -157,19 +80,10 @@ export const SearchModal: React.FC = () => {
     const ctrl = new AbortController()
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(SCOPES[scope].endpoint(encodeURIComponent(q)), {
-          signal: ctrl.signal,
-          credentials: 'same-origin',
-        })
-        if (!res.ok) {
-          setResults([])
-        } else {
-          const data = await res.json()
-          const mapped: Result[] = (data.docs ?? []).map(SCOPES[scope].map)
-          // Soonest next occurrence first (events); other scopes have no sortKey and keep API order.
-          mapped.sort((a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0))
-          setResults(mapped)
-        }
+        const mapped = await fetchScopeResults(scope, q, { signal: ctrl.signal })
+        // Soonest next occurrence first (events); other scopes have no sortKey and keep API order.
+        mapped.sort((a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0))
+        setResults(mapped)
         setActive(0)
       } catch {
         /* aborted or network error — ignore */

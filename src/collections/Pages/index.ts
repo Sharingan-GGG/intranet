@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../../access/authenticated'
-import { isAdminOrEditor } from '../../access/isAdmin'
+import { hasAdminCollectionAccess } from '../../access/departmentPermissions'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { Archive } from '../../blocks/ArchiveBlock/config'
 import { CallToAction } from '../../blocks/CallToAction/config'
@@ -33,10 +33,10 @@ import {
 export const Pages: CollectionConfig<'pages'> = {
   slug: 'pages',
   access: {
-    create: isAdminOrEditor,
-    delete: isAdminOrEditor,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'pages'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'pages'),
     read: authenticatedOrPublished,
-    update: isAdminOrEditor,
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'pages'),
   },
   // This config controls what's populated by default when a page is referenced
   // https://payloadcms.com/docs/queries/select#defaultpopulate-collection-config-property

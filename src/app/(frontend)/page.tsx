@@ -8,6 +8,7 @@ import type { Page } from '@/payload-types'
 
 import { RenderHomeBlocks } from '@/blocks/home/RenderHomeBlocks'
 import { HardcodedHome } from '@/components/home/HardcodedHome'
+import { resolveUserPermissions } from '@/access/departmentPermissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ export default async function HomePage() {
   const payload = await getPayload({ config: configPromise })
   const { user } = await payload.auth({ headers: await getHeaders() })
   const firstName = user?.name?.trim().split(/\s+/)[0]
+  const { pages: visiblePages, excludedPages } = await resolveUserPermissions(payload, user)
 
   let layout: Page['layout'] | undefined
   try {
@@ -34,7 +36,12 @@ export default async function HomePage() {
     <div className="il-root il-page">
       <main className="il-main">
         {layout?.length ? (
-          <RenderHomeBlocks blocks={layout} userName={firstName} />
+          <RenderHomeBlocks
+            blocks={layout}
+            userName={firstName}
+            visiblePages={visiblePages}
+            excludedPages={excludedPages}
+          />
         ) : (
           <HardcodedHome userName={firstName} />
         )}

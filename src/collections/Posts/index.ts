@@ -10,7 +10,7 @@ import {
 } from '@payloadcms/richtext-lexical'
 
 import { authenticated } from '../../access/authenticated'
-import { isAdminOrEditor } from '../../access/isAdmin'
+import { hasAdminCollectionAccess } from '../../access/departmentPermissions'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 import { Banner } from '../../blocks/Banner/config'
 import { Code } from '../../blocks/Code/config'
@@ -18,6 +18,7 @@ import { MediaBlock } from '../../blocks/MediaBlock/config'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { populateAuthors } from './hooks/populateAuthors'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
+import { scheduleExpiry } from './hooks/scheduleExpiry'
 
 import {
   MetaDescriptionField,
@@ -31,10 +32,10 @@ import { slugField } from 'payload'
 export const Posts: CollectionConfig<'posts'> = {
   slug: 'posts',
   access: {
-    create: isAdminOrEditor,
-    delete: isAdminOrEditor,
+    create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'posts'),
+    delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'posts'),
     read: authenticatedOrPublished,
-    update: isAdminOrEditor,
+    update: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'posts'),
   },
   // This config controls what's populated by default when a post is referenced
   // https://payloadcms.com/docs/queries/select#defaultpopulate-collection-config-property
@@ -49,7 +50,7 @@ export const Posts: CollectionConfig<'posts'> = {
     },
   },
   admin: {
-    defaultColumns: ['title', 'slug', 'updatedAt'],
+    defaultColumns: ['title', 'slug', '_status', 'updatedAt'],
     livePreview: {
       url: ({ data, req }) =>
         generatePreviewPath({
@@ -197,6 +198,24 @@ export const Posts: CollectionConfig<'posts'> = {
       },
     },
     {
+      name: 'expiryDate',
+      type: 'date',
+      admin: {
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+        position: 'sidebar',
+        description: 'When set, this post automatically unpublishes at this date and time.',
+      },
+      validate: (value, { siblingData }) => {
+        const data = siblingData as { publishedAt?: string } | undefined
+        if (value && data?.publishedAt && new Date(value) <= new Date(data.publishedAt)) {
+          return 'Expiry Date must be after Published At.'
+        }
+        return true
+      },
+    },
+    {
       name: 'categories',
       type: 'relationship',
       admin: {
@@ -247,7 +266,7 @@ export const Posts: CollectionConfig<'posts'> = {
     slugField(),
   ],
   hooks: {
-    afterChange: [revalidatePost],
+    afterChange: [revalidatePost, scheduleExpiry],
     afterRead: [populateAuthors],
     afterDelete: [revalidateDelete],
   },
