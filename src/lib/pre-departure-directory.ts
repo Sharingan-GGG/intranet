@@ -1,6 +1,11 @@
 import 'server-only'
 
+import config from '@payload-config'
 import { createClient } from '@supabase/supabase-js'
+import { getPayload } from 'payload'
+
+import { hasPageAccess } from '@/access/departmentPermissions'
+import type { User } from '@/payload-types'
 
 /**
  * Looks up *other* people — the person a PNR was moved to, who added a queue row, the full
@@ -47,13 +52,41 @@ const toEntry = (row: UserRow): DirectoryEntry => ({
   id: String(row.id),
 })
 
-/** Everyone in the intranet. There is no `status` column — a Payload user is always active. */
+/**
+ * Everyone in the intranet who actually has `route:pre-departure` access. Feeds the
+ * "Transfer to" / "Scanned by" pickers — reuses the same `hasPageAccess` check that decides
+ * whether the homepage shows a user the Pre-Departure link, so the picker and the nav agree.
+ *
+ * Access here is default-deny: a global Permission rule excludes `route:pre-departure` for
+ * everyone, and only specific departments (granted via their own rule) get it back — a user
+ * with no department assigned can't match a department-scoped grant, so they're excluded too.
+ *
+ * Goes through Payload rather than the raw `directoryClient` below so department + roles are
+ * populated for the access check. There is no `status` column — a Payload user is always
+ * active, so page access is the only filter left.
+ */
 export async function listDirectory(): Promise<DirectoryEntry[]> {
-  const { data } = await directoryClient()
-    .from('users')
-    .select(SELECT)
-    .order('name', { ascending: true })
-  return ((data ?? []) as unknown as UserRow[]).map(toEntry)
+  const payload = await getPayload({ config })
+  const { docs } = await payload.find({
+    collection: 'users',
+    overrideAccess: true,
+    depth: 1,
+    pagination: false,
+    sort: 'name',
+  })
+
+  const allowed = await Promise.all(
+    docs.map((user) => hasPageAccess(payload, user, 'route:pre-departure')),
+  )
+
+  return docs
+    .filter((_, i) => allowed[i])
+    .map((user: User): DirectoryEntry => ({
+      department: typeof user.department === 'object' ? (user.department?.name ?? null) : null,
+      email: user.email,
+      full_name: user.name ?? null,
+      id: String(user.id),
+    }))
 }
 
 /** Several users at once, keyed by ID — avoids a query per row when naming queue owners. */
