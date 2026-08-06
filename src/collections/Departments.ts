@@ -22,6 +22,16 @@ export const Departments: CollectionConfig = {
   },
   fields: [
     {
+      // Random text id instead of the default auto-incrementing integer, so department ids
+      // aren't sequentially guessable (e.g. in URLs or API responses).
+      name: 'id',
+      type: 'text',
+      defaultValue: () => crypto.randomUUID(),
+      admin: {
+        hidden: true,
+      },
+    },
+    {
       name: 'name',
       type: 'text',
       required: true,

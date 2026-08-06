@@ -23,7 +23,7 @@ const ROLE_MAP: Record<string, UserRole> = {
 }
 
 export type PreDepartureUser = {
-  departmentId: null | number
+  departmentId: null | string
   email: string
   full_name: null | string
   id: string
@@ -45,9 +45,9 @@ export async function getPreDepartureUser(): Promise<null | PreDepartureUser> {
   const roles = Array.isArray(user.roles) ? (user.roles as string[]) : []
   const highest = ROLE_PRECEDENCE.find((r) => roles.includes(r)) ?? 'user'
 
-  const department = user.department as null | number | { id: number } | undefined
+  const department = user.department as null | string | { id: string } | undefined
   const departmentId =
-    typeof department === 'number' ? department : (department?.id ?? null)
+    typeof department === 'string' ? department : (department?.id ?? null)
 
   return {
     departmentId,

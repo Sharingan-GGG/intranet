@@ -469,7 +469,7 @@ export interface User {
   /**
    * The department this user belongs to.
    */
-  department?: (number | null) | Department;
+  department?: (string | null) | Department;
   accounts?:
     | {
         provider: string;
@@ -495,7 +495,7 @@ export interface User {
  * via the `definition` "departments".
  */
 export interface Department {
-  id: number;
+  id: string;
   name: string;
   /**
    * Google Workspace OU path (e.g. "/Sales/APAC"). Set by scripts/sync-ous.ts — leave blank for departments that aren't tied to a Workspace OU.
@@ -509,7 +509,7 @@ export interface Department {
   /**
    * Parent department, for nested org structures.
    */
-  parent?: (number | null) | Department;
+  parent?: (string | null) | Department;
   updatedAt: string;
   createdAt: string;
 }
@@ -772,7 +772,7 @@ export interface QuickLink {
   /**
    * Restrict this group of links to specific departments. Leave empty to show to everyone.
    */
-  department?: (number | Department)[] | null;
+  department?: (string | Department)[] | null;
   /**
    * The buttons in this group, in the order they should appear.
    */
@@ -1379,7 +1379,7 @@ export interface Permission {
   /**
    * Department(s) this rule applies to. Leave empty to apply to every department.
    */
-  department?: (number | Department)[] | null;
+  department?: (string | Department)[] | null;
   /**
    * Admin-panel collections this rule grants access to. Use "All" for every collection.
    */
@@ -1659,7 +1659,7 @@ export interface PayloadLockedDocument {
       } | null)
     | ({
         relationTo: 'departments';
-        value: number | Department;
+        value: string | Department;
       } | null)
     | ({
         relationTo: 'permissions';
@@ -2175,6 +2175,7 @@ export interface EdmsSelect<T extends boolean = true> {
  * via the `definition` "departments_select".
  */
 export interface DepartmentsSelect<T extends boolean = true> {
+  id?: T;
   name?: T;
   orgUnitPath?: T;
   description?: T;
