@@ -365,6 +365,7 @@ function MovePnrDialog({
   pnrList,
   defaultBrand,
   defaultProfileId,
+  currentProfileId,
   availableBrands,
   onConfirm,
 }: {
@@ -376,6 +377,8 @@ function MovePnrDialog({
   pnrList: string[]
   defaultBrand: string
   defaultProfileId?: string
+  /** The signed-in user's own profile — the Transfer To fallback when there's no one else. */
+  currentProfileId?: string
   availableBrands: readonly string[]
   onConfirm: (toBrand: string, toProfileId: string | null) => Promise<void>
 }) {
@@ -408,6 +411,17 @@ function MovePnrDialog({
       .catch(() => setProfiles([]))
       .finally(() => setProfilesLoading(false))
   }, [isOpen, defaultBrand, defaultProfileId])
+
+  /**
+   * No owner-based default (no rows selected, or a mixed-owner selection) and nobody else in
+   * the list to hand the PNR to — the OU-scoped picker can come back with just the viewer
+   * themselves. Rather than leave Transfer To on "No change", default it to their own profile.
+   */
+  React.useEffect(() => {
+    if (!isOpen || profilesLoading || defaultProfileId || !currentProfileId) return
+    const hasSomeoneElse = profiles.some((p) => p.id !== currentProfileId)
+    if (!hasSomeoneElse) setToProfileId(currentProfileId)
+  }, [isOpen, profiles, profilesLoading, defaultProfileId, currentProfileId])
 
   // Enter key: submit when idle, close when success/error
   React.useEffect(() => {
@@ -975,13 +989,22 @@ export function PnrWorkDashboard({
       success?: boolean
       moved?: number
       error?: string
+      sheetErrors?: string[]
     } | null
 
     if (!res.ok) {
       throw new Error(json?.error ?? `Move failed (${res.status})`)
     }
 
-    toast.success(`Moved ${json?.moved ?? 0} PNR${(json?.moved ?? 0) !== 1 ? "s" : ""} to ${toBrand}`)
+    const movedCount = json?.moved ?? 0
+    toast.success(`Moved ${movedCount} PNR${movedCount !== 1 ? "s" : ""} to ${toBrand}`)
+
+    // The DB move went through even when this fires — sheet sync is best-effort — so this
+    // is a second, separate toast rather than a thrown error that would flip the dialog to
+    // its failure state and invite a retry that double-moves the rows.
+    if (json?.sheetErrors && json.sheetErrors.length > 0) {
+      toast.error(`Sheet update failed:\n${json.sheetErrors.join("\n")}`)
+    }
     setExceptionSelectedPnrs(new Set())
     setRightSelectedPnrs(new Set())
 
@@ -1826,6 +1849,7 @@ export function PnrWorkDashboard({
         pnrList={totalSelected > 0 ? Array.from(allSelectedPnrs) : []}
         defaultBrand={scanBrand}
         defaultProfileId={moveDefaultProfileId}
+        currentProfileId={profileId}
         availableBrands={availableBrands}
         onConfirm={handleMoveConfirm}
       />
