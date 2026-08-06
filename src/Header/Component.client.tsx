@@ -11,6 +11,7 @@ import { AccountMenu, type AccountUser } from '@/components/intranet/AccountMenu
 import { SchemeToggle } from '@/components/intranet/SchemeToggle'
 import {
   fetchScopeResults,
+  openSearchResult,
   SEARCH_SCOPE_ORDER,
   SEARCH_SCOPES,
   type SearchResult,
@@ -89,7 +90,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
       setLinksResult(r)
       return
     }
-    if (r.href && r.href !== '#') window.location.assign(r.href)
+    openSearchResult(r.href)
   }
 
   return (

@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LinksModal } from '@/components/home/KnowledgeBase'
 import {
   fetchScopeResults,
+  openSearchResult,
   SEARCH_SCOPE_ORDER,
   SEARCH_SCOPES,
   type SearchResult,
@@ -103,7 +104,7 @@ export const SearchModal: React.FC = () => {
       return
     }
     setOpen(false)
-    if (r.href && r.href !== '#') window.location.assign(r.href)
+    openSearchResult(r.href)
   }, [])
 
   const onInputKey = (e: React.KeyboardEvent) => {

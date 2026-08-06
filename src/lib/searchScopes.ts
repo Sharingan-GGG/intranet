@@ -157,3 +157,16 @@ export async function fetchScopeResults(
   if (config.matches) docs = docs.filter((d: any) => config.matches!(d, q))
   return docs.map(config.map)
 }
+
+/** EDMs and Knowledge Base results point off-intranet (a hosted EDM, an uploaded file, an external link). */
+const isExternalHref = (href: string): boolean => /^https?:\/\//i.test(href)
+
+/** Same-tab redirect for an internal result (Posts/Pages/Events), new tab for an external one (EDMs/KB). */
+export const openSearchResult = (href: string): void => {
+  if (!href || href === '#') return
+  if (isExternalHref(href)) {
+    window.open(href, '_blank', 'noopener,noreferrer')
+  } else {
+    window.location.assign(href)
+  }
+}
