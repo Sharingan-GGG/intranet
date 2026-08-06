@@ -2,6 +2,8 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { isAdmin } from '../access/isAdmin'
+import { workspaceUsersEndpoint } from './Departments/workspaceUsersEndpoint'
+import { listUsersInOu } from '../lib/google-admin'
 
 export const Departments: CollectionConfig = {
   slug: 'departments',
@@ -19,6 +21,13 @@ export const Departments: CollectionConfig = {
     defaultColumns: ['name', 'orgUnitPath', 'lead'],
     group: 'Organization',
   },
+  endpoints: [
+    {
+      handler: workspaceUsersEndpoint,
+      method: 'get',
+      path: '/workspace-users',
+    },
+  ],
   fields: [
     {
       name: 'name',
@@ -45,9 +54,14 @@ export const Departments: CollectionConfig = {
       name: 'lead',
       type: 'relationship',
       relationTo: 'users',
-      // Only offer users already assigned to this department (Workspace OU). New,
-      // unsaved departments have no id to filter by yet, so show everyone until saved.
-      filterOptions: ({ id }) => (id ? { department: { equals: id } } : true),
+      // Only offer users currently in this department's Workspace OU. No OU set yet
+      // (department not synced) falls back to showing everyone.
+      filterOptions: async ({ data }) => {
+        const orgUnitPath = (data as { orgUnitPath?: string })?.orgUnitPath
+        if (!orgUnitPath) return true
+        const members = await listUsersInOu(orgUnitPath)
+        return { email: { in: members.map((u) => u.primaryEmail) } }
+      },
       admin: {
         description: 'Department head / manager — must already belong to this department.',
       },
