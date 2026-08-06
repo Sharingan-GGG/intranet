@@ -116,6 +116,19 @@ export const Events: React.FC<{ groups: EventGroup[]; heading?: string }> = ({
                           <span style={{ fontWeight: 700 }}>{ev.endLabel}</span>
                         </>
                       )}
+                      {ev.buttonLabel && ev.buttonUrl && (
+                        <>
+                          {' · '}
+                          <a
+                            href={ev.buttonUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontWeight: 700, color: 'var(--il-accent)' }}
+                          >
+                            {ev.buttonLabel}
+                          </a>
+                        </>
+                      )}
                     </div>
                   </div>
                 )

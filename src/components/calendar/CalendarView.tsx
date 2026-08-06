@@ -382,6 +382,26 @@ export const CalendarView: React.FC<{ events: CalendarEvent[] }> = ({ events }) 
                       {ev.description}
                     </span>
                   )}
+                  {ev.buttonLabel && ev.buttonUrl && (
+                    <a
+                      href={ev.buttonUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        alignSelf: 'flex-start',
+                        marginTop: 6,
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        color: '#fff',
+                        background: 'var(--il-accent)',
+                        padding: '7px 14px',
+                        borderRadius: 999,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {ev.buttonLabel}
+                    </a>
+                  )}
                 </div>
               )
             })}

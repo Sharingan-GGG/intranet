@@ -9,6 +9,7 @@ import * as migration_20260806_110000_quick_links_department_hasmany from './202
 import * as migration_20260806_102822_add_permissions_excluded_pages from './20260806_102822_add_permissions_excluded_pages';
 import * as migration_20260806_113000_quick_links_group_template from './20260806_113000_quick_links_group_template';
 import * as migration_20260806_120000_add_posts_expiry_date from './20260806_120000_add_posts_expiry_date';
+import * as migration_20260806_130000_add_events_button_fields from './20260806_130000_add_events_button_fields';
 
 export const migrations = [
   {
@@ -65,5 +66,10 @@ export const migrations = [
     up: migration_20260806_120000_add_posts_expiry_date.up,
     down: migration_20260806_120000_add_posts_expiry_date.down,
     name: '20260806_120000_add_posts_expiry_date',
+  },
+  {
+    up: migration_20260806_130000_add_events_button_fields.up,
+    down: migration_20260806_130000_add_events_button_fields.down,
+    name: '20260806_130000_add_events_button_fields',
   },
 ];

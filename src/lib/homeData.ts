@@ -483,6 +483,8 @@ export async function getEventGroups(): Promise<EventGroup[]> {
       loc: d.location ?? '—',
       endLabel,
       slug: d.slug ?? undefined,
+      buttonLabel: d.buttonLabel,
+      buttonUrl: d.buttonUrl,
     }
 
     const last = groups[groups.length - 1]
@@ -518,6 +520,8 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
         description: d.description ?? null,
         dateISO,
         slug: d.slug ?? undefined,
+        buttonLabel: d.buttonLabel,
+        buttonUrl: d.buttonUrl,
       })),
     )
     .sort((a, b) => a.dateISO.localeCompare(b.dateISO))

@@ -177,6 +177,33 @@ export const Events: CollectionConfig = {
       type: 'textarea',
     },
     {
+      type: 'row',
+      fields: [
+        {
+          name: 'buttonLabel',
+          type: 'text',
+          label: 'Button label',
+          admin: {
+            width: '50%',
+            description: 'e.g. "RSVP" or "Register". Leave blank to hide the button.',
+          },
+        },
+        {
+          name: 'buttonUrl',
+          type: 'text',
+          label: 'Button URL',
+          admin: {
+            width: '50%',
+            description: 'Where the button links to.',
+          },
+          validate: (value: unknown, { siblingData }: { siblingData: { buttonLabel?: string | null } }) => {
+            if (siblingData?.buttonLabel && !value) return 'Please set a URL for the button.'
+            return true
+          },
+        },
+      ],
+    },
+    {
       name: 'slug',
       type: 'text',
       index: true,

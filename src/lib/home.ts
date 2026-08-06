@@ -47,6 +47,9 @@ export type EventItem = {
   endLabel?: string
   /** Slug linking to the event's detail page, when sourced from the CMS. */
   slug?: string
+  /** Optional CTA button, e.g. "RSVP" linking to a registration form. */
+  buttonLabel?: string | null
+  buttonUrl?: string | null
 }
 
 export type EventGroup = {
@@ -71,6 +74,9 @@ export type CalendarEvent = {
   dateISO: string
   /** Slug linking to the event's detail page, when sourced from the CMS. */
   slug?: string
+  /** Optional CTA button, e.g. "RSVP" linking to a registration form. */
+  buttonLabel?: string | null
+  buttonUrl?: string | null
 }
 
 export type NewsCard = {

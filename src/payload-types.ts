@@ -1322,6 +1322,14 @@ export interface Event {
   location?: string | null;
   description?: string | null;
   /**
+   * e.g. "RSVP" or "Register". Leave blank to hide the button.
+   */
+  buttonLabel?: string | null;
+  /**
+   * Where the button links to.
+   */
+  buttonUrl?: string | null;
+  /**
    * URL for the event detail page. Auto-generated from the title if left blank.
    */
   slug?: string | null;
@@ -2142,6 +2150,8 @@ export interface EventsSelect<T extends boolean = true> {
   repeatFrequency?: T;
   location?: T;
   description?: T;
+  buttonLabel?: T;
+  buttonUrl?: T;
   slug?: T;
   updatedAt?: T;
   createdAt?: T;
