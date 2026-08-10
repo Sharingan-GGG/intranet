@@ -43,6 +43,8 @@ type SnapshotApiOk = {
   pnr_json?: unknown
   pnr_p3_soap?: string | null
   pnr_p4_soap?: string | null
+  /** Present when found === false: whether the PNR is still in pnr_queue. */
+  in_queue?: boolean
 }
 
 async function fetchSnapshotJson(
@@ -104,9 +106,14 @@ async function fetchPnrDetailWithStep(
   setStep: (s: string) => void
 ): Promise<PnrDetailResult> {
   setStep("Loading Supabase snapshot…")
-  let snapshot = toSnapshot(await fetchSnapshotJson(pnr, brand, signal))
+  const snapshotRes = await fetchSnapshotJson(pnr, brand, signal)
+  let snapshot = toSnapshot(snapshotRes)
 
-  if (!snapshot) {
+  // Only fall back to a live Sabre fetch if the PNR is still queued. If it's
+  // gone from pnr_queue (deleted), re-fetching would silently resurrect it.
+  const deleted = snapshotRes != null && snapshotRes.found === false && snapshotRes.in_queue === false
+
+  if (!snapshot && !deleted) {
     setStep("Fetching live PNR from Sabre…")
     const fetched = await fetchFromSabre(pnr, brand, signal).catch(() => false)
     if (fetched) {
@@ -142,7 +149,9 @@ async function fetchPnrDetailWithStep(
     pnrData = parsePnrJsonFromSnapshotData(snapshot.pnr_json)
     if (!pnrData) jsonError = "PNR JSON snapshot empty or invalid"
   } else {
-    jsonError = "No PNR data in Supabase and live Sabre fetch failed"
+    jsonError = deleted
+      ? "This PNR was removed from the queue"
+      : "No PNR data in Supabase and live Sabre fetch failed"
   }
 
   // —— Tickets (P4 stored in pnr_ticket) ——

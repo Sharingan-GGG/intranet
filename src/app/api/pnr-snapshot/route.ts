@@ -47,10 +47,20 @@ export async function GET(req: NextRequest) {
   if (histErr)
     return NextResponse.json({ error: histErr.message }, { status: 500 })
   if (!hist?.id) {
+    // No stored snapshot. Only worth a live Sabre fetch if the PNR is still
+    // queued — otherwise it was deleted (or never queued) and re-fetching
+    // would resurrect it.
+    const { data: queueRow } = await db
+      .from("pnr_queue")
+      .select("pnr")
+      .eq("pnr", pnr)
+      .maybeSingle()
+
     return NextResponse.json({
       found: false,
       pnr,
       brand_filter: brand || null,
+      in_queue: !!queueRow,
     })
   }
 
