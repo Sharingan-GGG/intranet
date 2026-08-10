@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import { createAuthServerClient } from '@/lib/auth/supabase-server'
 import { getUserOrgUnit } from '@/lib/google-admin'
+import { getServerSideURL } from '@/utilities/getURL'
 
 /**
  * Completes the Supabase Google sign-in and makes sure the person has a Payload user.
@@ -22,7 +23,11 @@ const loginRedirect = (origin: string, error: string, existing?: string) => {
 }
 
 export async function GET(request: Request) {
-  const { origin, searchParams } = new URL(request.url)
+  // Not request.url's origin: behind the cPanel/LiteSpeed reverse proxy, Node only sees the
+  // internal localhost bind address, not the public Host header, which would otherwise bounce
+  // a completed sign-in to http://localhost:3000 instead of the real domain.
+  const origin = getServerSideURL()
+  const { searchParams } = new URL(request.url)
   const next = searchParams.get('next')
   const code = searchParams.get('code')
 
