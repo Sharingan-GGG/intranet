@@ -4,12 +4,15 @@ import { getSQLiteDb } from "./db"
 
 export function getBrandByCode(code: string): number | null {
   const db = getSQLiteDb()
+  if (!db) return null
   const row = db.prepare("SELECT id FROM brands WHERE code = ?").get(code) as { id: number } | undefined
   return row?.id ?? null
 }
 
 export function setBrand(id: number, code: string) {
-  getSQLiteDb().prepare("INSERT OR REPLACE INTO brands (id, code) VALUES (?, ?)").run(id, code)
+  const db = getSQLiteDb()
+  if (!db) return
+  db.prepare("INSERT OR REPLACE INTO brands (id, code) VALUES (?, ?)").run(id, code)
 }
 
 // ----- role_permissions -----
@@ -18,6 +21,7 @@ export function getRolePermissionsFromSQLite(
   role: string
 ): Array<{ action: string; allowed: boolean }> | null {
   const db = getSQLiteDb()
+  if (!db) return null
   const cached = db
     .prepare("SELECT 1 FROM cache_meta WHERE tbl = 'role_permissions' AND key = ?")
     .get(role)
@@ -34,6 +38,7 @@ export function setRolePermissions(
   rows: Array<{ id: string; action: string; allowed: boolean }>
 ) {
   const db = getSQLiteDb()
+  if (!db) return
   const insertPerm = db.prepare(
     "INSERT OR REPLACE INTO role_permissions (id, role, action, allowed) VALUES (?, ?, ?, ?)"
   )
@@ -49,6 +54,7 @@ export function setRolePermissions(
 
 export function invalidateRolePermissions() {
   const db = getSQLiteDb()
+  if (!db) return
   db.prepare("DELETE FROM role_permissions").run()
   db.prepare("DELETE FROM cache_meta WHERE tbl = 'role_permissions'").run()
 }
@@ -57,6 +63,7 @@ export function invalidateRolePermissions() {
 
 export function getDepartmentPageAccessFromSQLite(departmentId: string): string[] | null {
   const db = getSQLiteDb()
+  if (!db) return null
   const cached = db
     .prepare("SELECT 1 FROM cache_meta WHERE tbl = 'department_page_access' AND key = ?")
     .get(departmentId)
@@ -70,6 +77,7 @@ export function getDepartmentPageAccessFromSQLite(departmentId: string): string[
 
 export function setDepartmentPageAccess(departmentId: string, pageIds: string[]) {
   const db = getSQLiteDb()
+  if (!db) return
   const insertAccess = db.prepare(
     "INSERT OR REPLACE INTO department_page_access (department_id, page_id) VALUES (?, ?)"
   )
@@ -85,6 +93,7 @@ export function setDepartmentPageAccess(departmentId: string, pageIds: string[])
 
 export function invalidateDepartmentPageAccess(departmentId?: string) {
   const db = getSQLiteDb()
+  if (!db) return
   if (departmentId) {
     db.prepare("DELETE FROM department_page_access WHERE department_id = ?").run(departmentId)
     db

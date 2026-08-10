@@ -40,8 +40,22 @@ function createDb(): Database.Database {
 }
 
 let _db: Database.Database | null = null
+// Distinct from `_db === null` (not yet opened) — set once opening has failed, so a broken
+// native binding (e.g. no better-sqlite3 build for the host's glibc) is only logged once
+// and every caller falls back to Postgres instead of crashing the request.
+let _unavailable = false
 
-export function getSQLiteDb(): Database.Database {
-  if (!_db) _db = createDb()
+/** Null when the local cache can't be opened — callers must treat that as a permanent miss. */
+export function getSQLiteDb(): Database.Database | null {
+  if (_unavailable) return null
+  if (!_db) {
+    try {
+      _db = createDb()
+    } catch (e) {
+      _unavailable = true
+      console.error("SQLite cache unavailable, falling back to Postgres for every lookup:", e)
+      return null
+    }
+  }
   return _db
 }
