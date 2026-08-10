@@ -19,7 +19,7 @@ orgUnits.sort(
   (a, b) => a.orgUnitPath.split('/').length - b.orgUnitPath.split('/').length,
 )
 
-const departmentIdByPath = new Map<string, number>()
+const departmentIdByPath = new Map<string, string>()
 
 for (const ou of orgUnits) {
   const leafName = ou.orgUnitPath.split('/').pop() ?? ou.name
