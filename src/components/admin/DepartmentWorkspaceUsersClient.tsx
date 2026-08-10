@@ -7,21 +7,26 @@ import type { WorkspaceUser } from '@/lib/google-admin'
 import { syncWorkspaceUsers } from './syncWorkspaceUsers'
 
 export function DepartmentWorkspaceUsersClient({
+  departmentId,
   orgUnitPath,
   initialUsers,
 }: {
+  departmentId: string
   orgUnitPath: string
   initialUsers: WorkspaceUser[]
 }) {
   const [users, setUsers] = useState(initialUsers)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null)
 
   const sync = async () => {
     setSyncing(true)
     setError(null)
     try {
-      setUsers(await syncWorkspaceUsers(orgUnitPath))
+      const { members, updated } = await syncWorkspaceUsers(departmentId, orgUnitPath)
+      setUsers(members)
+      setLastUpdated(updated)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -52,6 +57,13 @@ export function DepartmentWorkspaceUsersClient({
         </button>
       </div>
       {error && <p style={{ color: 'var(--theme-error-500)' }}>{error}</p>}
+      {lastUpdated !== null && !error && (
+        <p style={{ color: 'var(--theme-success-500)' }}>
+          {lastUpdated > 0
+            ? `Updated ${lastUpdated} user${lastUpdated === 1 ? '' : 's'}' department assignment.`
+            : 'Everyone already matches this department.'}
+        </p>
+      )}
       {users.length > 0 && (
         <div style={{ height: 260, overflowY: 'auto', border: '1px solid var(--theme-elevation-100)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>

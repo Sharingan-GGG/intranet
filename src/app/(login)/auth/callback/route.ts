@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import { createAuthServerClient } from '@/lib/auth/supabase-server'
+import { getUserOrgUnit } from '@/lib/google-admin'
 
 /**
  * Completes the Supabase Google sign-in and makes sure the person has a Payload user.
@@ -52,11 +53,13 @@ export async function GET(request: Request) {
     where: { email: { equals: email } },
   })
 
-  if (!docs[0]) {
+  let user = docs[0]
+
+  if (!user) {
     // First sign-in for a new staff member. Mirrors what payload-authjs did: create the
     // record with the lowest privilege and let an admin raise it.
     const metadata = data.user?.user_metadata ?? {}
-    await payload.create({
+    user = await payload.create({
       collection: 'users',
       data: {
         name:
@@ -72,6 +75,37 @@ export async function GET(request: Request) {
       },
       overrideAccess: true,
     })
+  }
+
+  // Keep the user's department in step with their Workspace OU on every sign-in, not just
+  // the first — an admin moving someone's OU should not require a manual Payload edit.
+  // Never let a Directory API hiccup block sign-in.
+  try {
+    const orgUnitPath = await getUserOrgUnit(email)
+    if (orgUnitPath) {
+      const { docs: departments } = await payload.find({
+        collection: 'departments',
+        depth: 0,
+        limit: 1,
+        overrideAccess: true,
+        pagination: false,
+        where: { orgUnitPath: { equals: orgUnitPath } },
+      })
+      const department = departments[0]
+      const currentDepartment =
+        typeof user.department === 'object' ? user.department?.id : user.department
+
+      if (department && currentDepartment !== department.id) {
+        await payload.update({
+          collection: 'users',
+          id: user.id,
+          data: { department: department.id },
+          overrideAccess: true,
+        })
+      }
+    }
+  } catch (syncError) {
+    console.error('Failed to sync department from Workspace OU:', syncError)
   }
 
   // Only same-site paths, so `next` cannot be used to bounce a signed-in user off-site.

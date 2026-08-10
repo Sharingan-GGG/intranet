@@ -116,3 +116,19 @@ export async function listUsersInOu(orgUnitPath: string): Promise<WorkspaceUser[
 
   return users
 }
+
+/** Looks up a single Workspace user's current OU by email. Returns null if not found. */
+export async function getUserOrgUnit(email: string): Promise<string | null> {
+  const token = await getAdminAccessToken()
+  const res = await fetch(
+    `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}?fields=orgUnitPath`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+  )
+  if (res.status === 404) return null
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Directory API error ${res.status}: ${detail.slice(0, 200)}`)
+  }
+  const json = (await res.json()) as { orgUnitPath?: string }
+  return json.orgUnitPath ?? null
+}

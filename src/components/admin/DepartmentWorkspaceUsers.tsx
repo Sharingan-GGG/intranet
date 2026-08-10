@@ -6,11 +6,18 @@ import { DepartmentWorkspaceUsersClient } from './DepartmentWorkspaceUsersClient
 
 export async function DepartmentWorkspaceUsers({ data }: UIFieldServerProps) {
   const orgUnitPath = data?.orgUnitPath as string | undefined
-  if (!orgUnitPath) return null
+  const departmentId = data?.id as string | undefined
+  if (!orgUnitPath || !departmentId) return null
 
   try {
     const users = await listUsersInOu(orgUnitPath)
-    return <DepartmentWorkspaceUsersClient orgUnitPath={orgUnitPath} initialUsers={users} />
+    return (
+      <DepartmentWorkspaceUsersClient
+        departmentId={departmentId}
+        orgUnitPath={orgUnitPath}
+        initialUsers={users}
+      />
+    )
   } catch (e) {
     return (
       <div style={{ color: 'var(--theme-error-500)' }}>
