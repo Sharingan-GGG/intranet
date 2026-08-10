@@ -61,8 +61,15 @@ export const Departments: CollectionConfig = {
       filterOptions: async ({ data }) => {
         const orgUnitPath = (data as { orgUnitPath?: string })?.orgUnitPath
         if (!orgUnitPath) return true
-        const members = await listUsersInOu(orgUnitPath)
-        return { email: { in: members.map((u) => u.primaryEmail) } }
+        try {
+          const members = await listUsersInOu(orgUnitPath)
+          return { email: { in: members.map((u) => u.primaryEmail) } }
+        } catch (e) {
+          // A Directory API hiccup (or missing credentials) must not take down the whole
+          // document view — fall back to showing everyone rather than crashing the page.
+          console.error(`Failed to load Workspace users for ${orgUnitPath}:`, e)
+          return true
+        }
       },
       admin: {
         description: 'Department head / manager — must already belong to this department.',
