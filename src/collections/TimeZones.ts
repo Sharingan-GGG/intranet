@@ -10,6 +10,7 @@ const timezoneOptions = Intl.supportedValuesOf('timeZone').map((tz) => ({
 
 export const TimeZones: CollectionConfig = {
   slug: 'time-zones',
+  lockDocuments: { duration: 30 },
   access: {
     read: authenticated,
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'time-zones'),

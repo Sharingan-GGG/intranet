@@ -6,6 +6,7 @@ import { listUsersInOu } from '../lib/google-admin'
 
 export const Departments: CollectionConfig = {
   slug: 'departments',
+  lockDocuments: { duration: 30 },
   // Collection-level access control
   access: {
     // Any signed-in staff member can browse departments

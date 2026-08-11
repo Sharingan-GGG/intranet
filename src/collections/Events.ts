@@ -11,6 +11,7 @@ const slugify = (value: string): string =>
 
 export const Events: CollectionConfig = {
   slug: 'events',
+  lockDocuments: { duration: 30 },
   access: {
     read: authenticated,
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'events'),

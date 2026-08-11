@@ -5,6 +5,7 @@ import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 export const EDMs: CollectionConfig = {
   slug: 'edms',
+  lockDocuments: { duration: 30 },
   labels: {
     singular: 'EDM',
     plural: 'EDMs',

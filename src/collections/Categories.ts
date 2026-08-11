@@ -6,6 +6,7 @@ import { slugField } from 'payload'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
+  lockDocuments: { duration: 30 },
   access: {
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'categories'),
     delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'categories'),

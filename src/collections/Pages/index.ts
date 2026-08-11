@@ -32,6 +32,7 @@ import {
 
 export const Pages: CollectionConfig<'pages'> = {
   slug: 'pages',
+  lockDocuments: { duration: 30 },
   access: {
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'pages'),
     delete: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'pages'),

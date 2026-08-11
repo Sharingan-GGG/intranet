@@ -5,6 +5,7 @@ import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 export const QuickLinks: CollectionConfig = {
   slug: 'quick-links',
+  lockDocuments: { duration: 30 },
   access: {
     read: authenticated,
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'quick-links'),

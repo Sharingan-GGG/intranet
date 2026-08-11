@@ -6,6 +6,7 @@ import { supabaseStrategy } from './supabaseStrategy'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  lockDocuments: { duration: 30 },
   access: {
     // Only super-admins/admins/editors may enter the /admin panel — "user" accounts are site-only
     admin: ({ req: { user } }) =>

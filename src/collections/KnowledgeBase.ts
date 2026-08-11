@@ -5,6 +5,7 @@ import { hasAdminCollectionAccess } from '../access/departmentPermissions'
 
 export const KnowledgeBase: CollectionConfig = {
   slug: 'knowledge-base',
+  lockDocuments: { duration: 30 },
   labels: {
     singular: 'Knowledge Base Document',
     plural: 'Knowledge Base',

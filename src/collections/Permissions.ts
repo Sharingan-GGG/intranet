@@ -21,6 +21,7 @@ const pageOptions = [
 
 export const Permissions: CollectionConfig = {
   slug: 'permissions',
+  lockDocuments: { duration: 30 },
   // Permissions define which admin-panel collections and front-end pages a
   // role/department combination can access — only admins may manage them.
   access: {
