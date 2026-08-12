@@ -21,13 +21,20 @@ export async function GET() {
   try {
     const profiles = await getActiveProfiles()
 
+    // IT accounts are devs/admins testing the queue, not agents working PNRs — they'd just
+    // clutter the "Scanned by" picker for everyone else, so hide IT teammates from view except
+    // the signed-in user themselves.
+    const visible = profiles.filter(
+      (p) => p.department !== "IT" || p.id === profile.id
+    )
+
     // Super admins switch between OUs freely, so they see everyone Pre-Departure grants
     // access to. Everyone else — admin or user — is scoped to their own OU: no department
     // means no teammates to see.
     if (profile.role === "super_admin") {
-      return NextResponse.json(profiles)
+      return NextResponse.json(visible)
     }
-    const ownDepartment = profiles.filter(
+    const ownDepartment = visible.filter(
       (p) => profile.departmentId !== null && p.departmentId === profile.departmentId
     )
     return NextResponse.json(ownDepartment)

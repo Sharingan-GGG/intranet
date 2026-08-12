@@ -738,8 +738,12 @@ export function PnrWorkDashboard({
   // ─── Scanned By filter (Admin + Super Admin) ──────────────────────────────
   // Admins and Super Admins see the whole queue and can view it as any user.
   // The `user` role is scoped server-side to its own PNRs and gets no picker.
+  // Default to the logged-in user's own scans rather than the full queue —
+  // whoever is signed in via SSO is the one seeded here, not a fixed name.
   const canViewAllProfiles = role === "admin" || role === "super_admin"
-  const [scannedByFilter, setScannedByFilter] = React.useState<string>("all")
+  const [scannedByFilter, setScannedByFilter] = React.useState<string>(
+    userName ?? "all"
+  )
   const [allProfiles, setAllProfiles] = React.useState<ProfileOption[]>([])
   React.useEffect(() => {
     if (!canViewAllProfiles) return
