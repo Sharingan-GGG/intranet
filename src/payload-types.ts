@@ -2563,6 +2563,24 @@ export interface CodeBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "EmbedBlock".
+ */
+export interface EmbedBlock {
+  /**
+   * The URL to embed, e.g. a YouTube, Google Maps, or Figma embed link.
+   */
+  url: string;
+  /**
+   * A short description of the embedded content, for accessibility.
+   */
+  title: string;
+  aspectRatio?: ('16/9' | '4/3' | '1/1') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'embed';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "auth".
  */
 export interface Auth {
