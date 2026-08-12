@@ -11,8 +11,9 @@
 
 import type { DashboardPnrItem, LegacyPnrHistoryRow } from "@/lib/pnr-types"
 import { createServiceClient } from "@/lib/supabase/server"
-import { getPreDepartureUser } from "@/lib/pre-departure-user"
+import { getPreDepartureUser, type PreDepartureUser } from "@/lib/pre-departure-user"
 import { findDirectoryEntries } from "@/lib/pre-departure-directory"
+import { visibleBrands, type Brand } from "@/lib/pre-departure-route"
 
 const DEFAULT_BASE = "http://localhost/pre"
 
@@ -213,13 +214,8 @@ async function getDeletedPnrSet(): Promise<Set<string>> {
  * `user` is confined to the PNRs assigned to them. `admin` and `super_admin` see
  * the whole queue and narrow it themselves with the view-as picker.
  */
-async function getOwnerScope(): Promise<OwnerScope> {
-  const profile = await getPreDepartureUser()
-  if (!profile) return null
-
-  const admin = createServiceClient()
-
-  if (!profile || profile.role !== "user") return null
+function getOwnerScope(profile: PreDepartureUser): OwnerScope {
+  if (profile.role !== "user") return null
   return { profileId: profile.id, fullName: profile.full_name ?? null }
 }
 
@@ -266,17 +262,30 @@ export type DashboardLoadResult = DashboardApiResponse & { status: number }
 export async function loadDashboard(
   search: string
 ): Promise<DashboardLoadResult> {
+  const profile = await getPreDepartureUser()
+  if (!profile) {
+    return { ok: false, error: "Unauthorized", status: 401 }
+  }
+
   const params = new URLSearchParams(
     search.startsWith("?") ? search.slice(1) : search
   )
-  const qs = params.toString()
-  const target = `${getLegacyBaseUrl()}/fetchDatabase.php${qs ? `?${qs}` : ""}`
 
   const brand = params.get("brand") ?? undefined
   const pnrFilter = params.get("pnr") ?? undefined
   const statusFilter = params.get("status") ?? undefined
 
-  const scope = await getOwnerScope()
+  if (brand && brand !== "all" && !visibleBrands(profile.role).includes(brand as Brand)) {
+    return { ok: false, error: "Forbidden", status: 403 }
+  }
+
+  // Callers cannot self-elevate: `admin` is a display-only "view as" filter
+  // and every other query param is forwarded to the legacy bridge verbatim,
+  // scoping there stays governed by `scope` below, not by anything the client sent.
+  const qs = params.toString()
+  const target = `${getLegacyBaseUrl()}/fetchDatabase.php${qs ? `?${qs}` : ""}`
+
+  const scope = getOwnerScope(profile)
 
   // Fetch legacy items + Supabase queue items + deletion tombstones in parallel
   const [legacyResult, queueItems, deletedPnrs, foreignPnrs] =
