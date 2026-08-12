@@ -25,7 +25,16 @@ export async function Header() {
   return (
     <HeaderClient
       navItems={navItems}
-      user={user ? { name: user.name ?? null, email: user.email, roles: user.roles ?? [] } : null}
+      user={
+        user
+          ? {
+              name: user.name ?? null,
+              email: user.email,
+              roles: user.roles ?? [],
+              image: user.image ?? null,
+            }
+          : null
+      }
     />
   )
 }

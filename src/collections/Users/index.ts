@@ -32,9 +32,48 @@ export const Users: CollectionConfig = {
     strategies: [supabaseStrategy],
   },
   fields: [
+    // payload-authjs (see plugins/index.ts) wraps every user field into a "General" tab and
+    // adds an "Accounts" tab (linked OAuth accounts — unused now that Supabase Auth handles
+    // sign-in). This patches both tabs so they're hidden while looking at your own account
+    // (/admin/account or your own row in Collections > Users), decluttering the personal
+    // account screen. Admins can still open OTHER users' docs to edit name/roles/department.
+    {
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'General',
+          admin: {
+            condition: (data, _siblingData, { user }) => data?.id !== user?.id,
+          },
+          fields: [],
+        },
+        {
+          label: 'Accounts',
+          admin: {
+            condition: (data, _siblingData, { user }) => data?.id !== user?.id,
+          },
+          fields: [],
+        },
+      ],
+    },
     {
       name: 'name',
       type: 'text',
+    },
+    // payload-authjs adds this field for Auth.js's database sessions, which this project
+    // doesn't use — Supabase Auth handles sign-in, so nothing ever sets it. Repurposed as a
+    // read-only "Created Date" display, falling back to createdAt since it's otherwise always
+    // empty.
+    {
+      name: 'emailVerified',
+      type: 'date',
+      label: 'Created Date',
+      admin: {
+        readOnly: true,
+      },
+      hooks: {
+        afterRead: [({ value, data }) => value ?? data?.createdAt],
+      },
     },
     {
       name: 'roles',
@@ -62,6 +101,14 @@ export const Users: CollectionConfig = {
       relationTo: 'departments',
       admin: {
         description: 'The department this user belongs to.',
+      },
+    },
+    {
+      name: 'image',
+      type: 'text',
+      admin: {
+        description: "Synced from the user's Google Workspace profile photo on sign-in.",
+        readOnly: true,
       },
     },
   ],

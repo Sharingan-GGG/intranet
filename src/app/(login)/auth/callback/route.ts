@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import { createAuthServerClient } from '@/lib/auth/supabase-server'
-import { getUserOrgUnit } from '@/lib/google-admin'
+import { getUserOrgUnit, getUserPhoto } from '@/lib/google-admin'
+import { createServiceClient } from '@/lib/supabase/server'
 import { getServerSideURL } from '@/utilities/getURL'
 
 /**
@@ -111,6 +112,44 @@ export async function GET(request: Request) {
     }
   } catch (syncError) {
     console.error('Failed to sync department from Workspace OU:', syncError)
+  }
+
+  // Keep the user's avatar in step with their Workspace profile photo on every sign-in:
+  // stored in Supabase Storage, linked from the Supabase auth user's metadata, and mirrored
+  // onto users.image so Payload has it too. Never let a Directory API hiccup block sign-in.
+  try {
+    const photo = await getUserPhoto(email)
+    if (photo) {
+      const extension = photo.mimeType === 'image/png' ? 'png' : 'jpg'
+      const storagePath = `${data.user!.id}.${extension}`
+      const serviceClient = createServiceClient()
+
+      const { error: uploadError } = await serviceClient.storage
+        .from('avatars')
+        .upload(storagePath, photo.data, { contentType: photo.mimeType, upsert: true })
+      if (uploadError) throw uploadError
+
+      const {
+        data: { publicUrl },
+      } = serviceClient.storage.from('avatars').getPublicUrl(storagePath)
+
+      const { error: metadataError } = await serviceClient.auth.admin.updateUserById(
+        data.user!.id,
+        { user_metadata: { avatar_url: publicUrl } },
+      )
+      if (metadataError) throw metadataError
+
+      if (user.image !== publicUrl) {
+        await payload.update({
+          collection: 'users',
+          id: user.id,
+          data: { image: publicUrl },
+          overrideAccess: true,
+        })
+      }
+    }
+  } catch (avatarError) {
+    console.error('Failed to sync avatar from Workspace:', avatarError)
   }
 
   // Only same-site paths, so `next` cannot be used to bounce a signed-in user off-site.

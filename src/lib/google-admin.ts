@@ -132,3 +132,29 @@ export async function getUserOrgUnit(email: string): Promise<string | null> {
   const json = (await res.json()) as { orgUnitPath?: string }
   return json.orgUnitPath ?? null
 }
+
+/**
+ * Fetches a Workspace user's profile photo. Uses the photos.get endpoint rather than the
+ * `thumbnailPhotoUrl` field on the user resource — that URL requires its own auth dance to
+ * fetch, while this endpoint returns the image bytes directly, base64url-encoded.
+ */
+export async function getUserPhoto(
+  email: string,
+): Promise<{ data: Buffer; mimeType: string } | null> {
+  const token = await getAdminAccessToken()
+  const res = await fetch(
+    `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}/photos/thumbnail`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+  )
+  if (res.status === 404) return null
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Directory API error ${res.status}: ${detail.slice(0, 200)}`)
+  }
+  const json = (await res.json()) as { photoData?: string; mimeType?: string }
+  if (!json.photoData) return null
+  return {
+    data: Buffer.from(json.photoData, 'base64url'),
+    mimeType: json.mimeType?.toUpperCase() === 'PNG' ? 'image/png' : 'image/jpeg',
+  }
+}

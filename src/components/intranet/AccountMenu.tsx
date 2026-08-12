@@ -8,6 +8,7 @@ export type AccountUser = {
   name?: string | null
   email: string
   roles?: string[] | null
+  image?: string | null
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -89,9 +90,15 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
           cursor: 'pointer',
           fontFamily: 'inherit',
           boxShadow: 'var(--il-action-pop)',
+          overflow: 'hidden',
         }}
       >
-        {firstNameLetter(user)}
+        {user?.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          firstNameLetter(user)
+        )}
       </button>
 
       {open && (
@@ -124,9 +131,19 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
                 justifyContent: 'center',
                 fontSize: 15,
                 fontWeight: 700,
+                overflow: 'hidden',
               }}
             >
-              {firstNameLetter(user)}
+              {user?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.image}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                firstNameLetter(user)
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
               <div

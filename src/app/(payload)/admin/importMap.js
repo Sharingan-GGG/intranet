@@ -28,12 +28,15 @@ import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from 
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { RowLabel as RowLabel_ec255a65fa6fa8d1faeb09cf35284224 } from '@/Header/RowLabel'
 import { RowLabel as RowLabel_1f6ff6ff633e3695d348f4f3c58f1466 } from '@/Footer/RowLabel'
+import { UserAvatar as UserAvatar_884df6301636e55441d7a45bee6ccf07 } from '@/components/admin/UserAvatar'
+import { HideAuthFields as HideAuthFields_872425571a742b0bafac080a6e8e16a0 } from '@/components/admin/HideAuthFields'
 import { default as default_730b936cb44e7ca811301604904ddf96 } from '@/components/AdminGraphics/Icon'
 import { default as default_f804a2f22915f9d0cc2e74cde7c6072f } from '@/components/AdminGraphics/Logo'
 import { default as default_a74e412b23f0d3ee5edbb86b65b25717 } from '@/components/AdminViewWebsite'
 import { SignInButton as SignInButton_06d0cb594d8f6ba2ac35015f930c882e } from 'payload-authjs/components'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
+import { Unauthorized as Unauthorized_24700a3d736dbca0dc8004296ca93849 } from '@/components/admin/Unauthorized'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -68,11 +71,14 @@ export const importMap = {
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "@/Header/RowLabel#RowLabel": RowLabel_ec255a65fa6fa8d1faeb09cf35284224,
   "@/Footer/RowLabel#RowLabel": RowLabel_1f6ff6ff633e3695d348f4f3c58f1466,
+  "@/components/admin/UserAvatar#UserAvatar": UserAvatar_884df6301636e55441d7a45bee6ccf07,
+  "@/components/admin/HideAuthFields#HideAuthFields": HideAuthFields_872425571a742b0bafac080a6e8e16a0,
   "@/components/AdminGraphics/Icon#default": default_730b936cb44e7ca811301604904ddf96,
   "@/components/AdminGraphics/Logo#default": default_f804a2f22915f9d0cc2e74cde7c6072f,
   "@/components/AdminViewWebsite#default": default_a74e412b23f0d3ee5edbb86b65b25717,
   "payload-authjs/components#SignInButton": SignInButton_06d0cb594d8f6ba2ac35015f930c882e,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,
+  "@/components/admin/Unauthorized#Unauthorized": Unauthorized_24700a3d736dbca0dc8004296ca93849,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

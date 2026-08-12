@@ -464,6 +464,9 @@ export interface User {
   id: string;
   emailVerified?: string | null;
   name?: string | null;
+  /**
+   * Synced from the user's Google Workspace profile photo on sign-in.
+   */
   image?: string | null;
   roles: ('super-admin' | 'admin' | 'editor' | 'user')[];
   /**

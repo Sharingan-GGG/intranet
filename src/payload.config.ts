@@ -28,6 +28,9 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    avatar: {
+      Component: '@/components/admin/UserAvatar#UserAvatar',
+    },
     meta: {
       titleSuffix: '- Intranet',
       icons: [
@@ -46,6 +49,9 @@ export default buildConfig({
     components: {
       // Rendered in the admin header beside the account avatar.
       actions: ['@/components/AdminViewWebsite'],
+      // Injects CSS that hides the Users collection's Email/Change Password block everywhere
+      // it renders (both /admin/account and Collections > Users).
+      header: ['@/components/admin/HideAuthFields#HideAuthFields'],
       graphics: {
         Icon: '@/components/AdminGraphics/Icon',
         Logo: '@/components/AdminGraphics/Logo',
@@ -56,6 +62,11 @@ export default buildConfig({
       // The `BeforeDashboard` component renders the 'welcome' block that you see after logging into your admin panel.
       // Feel free to delete this at any time. Simply remove the line below.
       beforeDashboard: ['@/components/BeforeDashboard'],
+      views: {
+        unauthorized: {
+          Component: '@/components/admin/Unauthorized#Unauthorized',
+        },
+      },
     },
     importMap: {
       baseDir: path.resolve(dirname),
