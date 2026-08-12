@@ -313,6 +313,8 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
           ) && (
             <Link
               href="/admin"
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label="Admin portal"
               title="Admin portal"
               style={{

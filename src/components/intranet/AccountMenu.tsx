@@ -217,6 +217,8 @@ export const AccountMenu: React.FC<{ user: AccountUser | null }> = ({ user }) =>
               <a
                 role="menuitem"
                 href="/admin"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="il-doc-row"
                 style={{
                   display: 'flex',
