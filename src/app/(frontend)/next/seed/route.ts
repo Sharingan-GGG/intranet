@@ -12,7 +12,9 @@ export async function POST(): Promise<Response> {
   // Authenticate by passing request headers
   const { user } = await payload.auth({ headers: requestHeaders })
 
-  if (!user) {
+  // Seeding wipes and recreates all content, so it is restricted the same way the
+  // admin panel is: super-admin/admin only, not any signed-in staff account.
+  if (!user || !user.roles?.some((r) => r === 'super-admin' || r === 'admin')) {
     return new Response('Action forbidden.', { status: 403 })
   }
 
