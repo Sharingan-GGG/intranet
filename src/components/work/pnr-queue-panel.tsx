@@ -65,6 +65,14 @@ function isDepartingOverdue(dateStr: string | null | undefined): boolean {
   return d.getTime() < Date.now()
 }
 
+function resolveQueueKind(row: DashboardPnrItem, kind: QueueKind): QueueKind {
+  const statusRaw = (row.statusRaw || "").toLowerCase()
+  if (statusRaw === "exception") return "exception"
+  if (statusRaw === "pending") return "pending"
+  if (statusRaw) return "complete"
+  return kind
+}
+
 function QueueTableScroll({ children, bare }: { children: React.ReactNode; bare?: boolean }) {
   if (bare) {
     return <div className="w-full">{children}</div>
@@ -164,13 +172,7 @@ function QueueRowActions({
   const isAnyLoading = pnr in (actionLoading ?? {})
 
   // Determine actual kind from row if provided
-  const actualKind = row
-    ? ((row.statusRaw || "").toLowerCase() === "exception"
-        ? "exception"
-        : (row.statusRaw || "").toLowerCase() === "pending"
-          ? "pending"
-          : "complete")
-    : kind
+  const actualKind = row ? resolveQueueKind(row, kind) : kind
 
   if (actualKind === "exception") {
     return (
@@ -277,6 +279,7 @@ function PnrQueueRow({
 }) {
   const departing24h = isDepartingWithin24h(row.departureDate)
   const overdueRow = isDepartingOverdue(row.departureDate)
+  const statusKind = resolveQueueKind(row, kind)
 
   return (
     <>
@@ -287,18 +290,32 @@ function PnrQueueRow({
         // precedence falls out of the order rather than needing !isSelected guards on each.
         className={cn(
           "cursor-pointer border-b border-[#aaccd6]/35 transition-colors even:bg-[#aaccd6]/12 hover:bg-[#aaccd6]/30",
+          // Row color by status, Dark Mode only — Light Mode keeps the default row styling above.
+          // Exception is the flag color solid; pending/complete are a translucent "glass"
+          // blue/green applied uniformly (not just on alternating rows).
+          // The base TableRow always sets data-[state=selected]:bg-muted, which — being a
+          // variant class — wins over any plain bg-* here regardless of source order, so the
+          // selected state needs its own same-variant override to keep the status color visible.
+          statusKind === "exception" &&
+            "dark:bg-[#240E12] dark:even:bg-[#240E12] dark:hover:bg-[#240E12]/90 dark:data-[state=selected]:bg-[#240E12]/90 dark:border-[#240E12]",
+          statusKind === "pending" &&
+            "dark:bg-blue-500/15 dark:even:bg-blue-500/15 dark:backdrop-blur-sm dark:hover:bg-blue-500/25 dark:data-[state=selected]:bg-blue-500/30",
+          statusKind === "complete" &&
+            "dark:bg-emerald-500/15 dark:even:bg-emerald-500/15 dark:backdrop-blur-sm dark:hover:bg-emerald-500/25 dark:data-[state=selected]:bg-emerald-500/30",
           // Departure-date tints inform, but must never mask a selection.
           departing24h && "bg-amber-500/10 even:bg-amber-500/10",
           overdueRow && "bg-muted/40 even:bg-muted/40",
           // Ticked for a bulk action (move, approve, delete) — previously the checkbox was
           // the only indication, which made a multi-row selection hard to keep track of.
           isChecked &&
-            "bg-primary/12 even:bg-primary/12 hover:bg-primary/20 shadow-[inset_3px_0_0_var(--primary)]",
+            "bg-primary/12 even:bg-primary/12 hover:bg-primary/20 data-[state=selected]:bg-primary/12 shadow-[inset_3px_0_0_var(--primary)]",
           // The row whose detail panel is open.
           isSelected &&
-            "bg-[#aaccd6]/35 even:bg-[#aaccd6]/35 shadow-[inset_3px_0_0_var(--primary)]",
+            "bg-[#aaccd6]/35 even:bg-[#aaccd6]/35 data-[state=selected]:bg-[#aaccd6]/35 shadow-[inset_3px_0_0_var(--primary)]",
           // Both at once: keep it clearly distinct from either state alone.
-          isChecked && isSelected && "bg-primary/25 even:bg-primary/25 hover:bg-primary/30"
+          isChecked &&
+            isSelected &&
+            "bg-primary/25 even:bg-primary/25 hover:bg-primary/30 data-[state=selected]:bg-primary/25"
         )}
         onClick={() => onSelect(row.pnr)}
       >
