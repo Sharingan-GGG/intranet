@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react'
+import React, { Fragment, Suspense } from 'react'
 
 import type { Page } from '@/payload-types'
 
@@ -37,11 +37,36 @@ const pairing: Partial<Record<HomeBlock['blockType'], { role: 'main'; gridClass:
   eventsBlock: { role: 'side' },
 }
 
+/** Approximate rendered height per block, so its streamed-in fallback doesn't shift layout. */
+const FALLBACK_HEIGHT: Partial<Record<HomeBlock['blockType'], number>> = {
+  featuredSpotlight: 330,
+  knowledgeBase: 260,
+  quickLinks: 220,
+  eventsBlock: 220,
+  newsSlider: 260,
+  edmSlider: 220,
+  timeZones: 140,
+}
+
+const HomeBlockFallback: React.FC<{ minHeight: number }> = ({ minHeight }) => (
+  <div
+    style={{ minHeight, borderRadius: 20, background: 'var(--il-border)', opacity: 0.4 }}
+    aria-hidden
+  />
+)
+
 const renderBlock = (block: HomeBlock, index: number, userName?: string) => {
   const Block = blockComponents[block.blockType] as React.FC<Record<string, unknown>> | undefined
   if (!Block) return null
   const extraProps = block.blockType === 'greetingBar' ? { userName } : {}
-  return <Block key={block.id ?? index} {...block} {...extraProps} />
+  return (
+    <Suspense
+      key={block.id ?? index}
+      fallback={<HomeBlockFallback minHeight={FALLBACK_HEIGHT[block.blockType] ?? 160} />}
+    >
+      <Block {...block} {...extraProps} />
+    </Suspense>
+  )
 }
 
 export const RenderHomeBlocks: React.FC<{

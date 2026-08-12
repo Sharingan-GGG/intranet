@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 
 import type { NewsCard } from '@/lib/home'
 
@@ -46,9 +47,7 @@ export const FeaturedSpotlight: React.FC<{ items: NewsCard[] }> = ({ items }) =>
         position: 'relative',
         borderRadius: 20,
         overflow: 'hidden',
-        background: item.imageUrl
-          ? `var(--il-grad-hero), url("${item.imageUrl}") center / cover no-repeat`
-          : 'var(--il-grad-band)',
+        background: item.imageUrl ? undefined : 'var(--il-grad-band)',
         minHeight: 330,
         display: 'flex',
         flexDirection: 'column',
@@ -56,8 +55,22 @@ export const FeaturedSpotlight: React.FC<{ items: NewsCard[] }> = ({ items }) =>
         padding: '34px 36px',
       }}
     >
+      {item.imageUrl && (
+        <Image
+          key={item.imageUrl}
+          src={item.imageUrl}
+          alt=""
+          fill
+          priority
+          sizes="(min-width: 1024px) 700px, 100vw"
+          style={{ objectFit: 'cover', zIndex: 0 }}
+        />
+      )}
+      {item.imageUrl && (
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--il-grad-hero)', zIndex: 1 }} />
+      )}
       {!item.imageUrl && <LoopMark />}
-      <div style={{ position: 'relative' }} aria-live="polite">
+      <div style={{ position: 'relative', zIndex: 2 }} aria-live="polite">
         <span
           style={{
             fontSize: 10.5,
