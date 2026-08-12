@@ -253,8 +253,8 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
             marginLeft: 'auto',
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            width: 30,
+            gap: 6,
+            padding: '0 12px',
             height: 30,
             border: '1px solid var(--il-border)',
             background: '#fff',
@@ -263,6 +263,9 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
             transition: 'all 150ms',
           }}
         >
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--il-text-body)' }}>
+            Shared Team Drive
+          </span>
           <GoogleDriveMark />
         </a>
       </div>
