@@ -1,10 +1,29 @@
 import React from 'react'
 
-const FEEDBACK_FORM_URL =
-  'https://docs.google.com/forms/d/e/1FAIpQLSe5gqLRU1kWAB_7_xqy6WxkCwmfQ5-6wVW6naKhPzClolT9lw/viewform?usp=header'
+type FeedbackCard = {
+  title: string
+  description?: string | null
+  buttonLabel: string
+  buttonUrl: string
+}
 
-// TODO: point this at the CTG Organisational Chart (PDF / Drive link)
-const ORG_CHART_URL = '#'
+// Falls back to the original copy for any 'feedback' block saved before these fields
+// existed — Payload doesn't backfill group defaults into already-stored block data.
+const DEFAULT_ORG_CHART: FeedbackCard = {
+  title: 'CTG Organisational Chart',
+  description: 'See how the Complex Travel Group teams fit together.',
+  buttonLabel: 'View',
+  buttonUrl: '#',
+}
+
+const DEFAULT_FEEDBACK_FORM: FeedbackCard = {
+  title: 'Provide Feedback',
+  description:
+    'Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.',
+  buttonLabel: 'Send',
+  buttonUrl:
+    'https://docs.google.com/forms/d/e/1FAIpQLSe5gqLRU1kWAB_7_xqy6WxkCwmfQ5-6wVW6naKhPzClolT9lw/viewform?usp=header',
+}
 
 const cardStyle: React.CSSProperties = {
   flex: '1 1 300px',
@@ -49,7 +68,26 @@ const ctaStyle: React.CSSProperties = {
   textDecoration: 'none',
 }
 
-export const Feedback: React.FC = () => (
+const FeedbackCardView: React.FC<{ card: FeedbackCard }> = ({ card }) => (
+  <div style={cardStyle}>
+    <h2 style={headingStyle}>{card.title}</h2>
+    {card.description && <div style={subStyle}>{card.description}</div>}
+    <a
+      href={card.buttonUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="il-cta il-cta-navy"
+      style={{ ...ctaStyle, marginTop: 18 }}
+    >
+      {card.buttonLabel}
+    </a>
+  </div>
+)
+
+export const Feedback: React.FC<{
+  orgChart?: FeedbackCard | null
+  feedbackForm?: FeedbackCard | null
+}> = ({ orgChart, feedbackForm }) => (
   <div
     id="support"
     className="il-support"
@@ -65,33 +103,8 @@ export const Feedback: React.FC = () => (
         justifyContent: 'center',
       }}
     >
-      <div style={cardStyle}>
-        <h2 style={headingStyle}>CTG Organisational Chart</h2>
-        <div style={subStyle}>See how the Complex Travel Group teams fit together.</div>
-        <a
-          href={ORG_CHART_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="il-cta il-cta-navy"
-          style={{ ...ctaStyle, marginTop: 18 }}
-        >
-          View
-        </a>
-      </div>
-
-      <div style={cardStyle}>
-        <h2 style={headingStyle}>Provide Feedback</h2>
-        <div style={subStyle}>Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.</div>
-        <a
-          href={FEEDBACK_FORM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="il-cta il-cta-navy"
-          style={{ ...ctaStyle, marginTop: 18 }}
-        >
-          Send
-        </a>
-      </div>
+      <FeedbackCardView card={orgChart ?? DEFAULT_ORG_CHART} />
+      <FeedbackCardView card={feedbackForm ?? DEFAULT_FEEDBACK_FORM} />
     </div>
   </div>
 )
