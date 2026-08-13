@@ -1,15 +1,13 @@
-import { headers as getHeaders } from 'next/headers'
-import { getPayload } from 'payload'
-import configPromise from '@payload-config'
 import React from 'react'
 
+import { getCachedGlobal } from '@/utilities/getGlobals'
+import { getCachedAuth } from '@/utilities/getCachedAuth'
 import { HeaderClient } from './Component.client'
 
 export async function Header() {
-  const payload = await getPayload({ config: configPromise })
   const [{ user }, header] = await Promise.all([
-    payload.auth({ headers: await getHeaders() }),
-    payload.findGlobal({ slug: 'header', depth: 1 }),
+    getCachedAuth(),
+    getCachedGlobal('header', 1)(),
   ])
 
   const navItems = (header?.navItems ?? [])
