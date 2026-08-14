@@ -4,14 +4,15 @@ import * as migration_20260805_064706_remove_department_code from './20260805_06
 import * as migration_20260805_073412_roles_permissions_department_hasmany from './20260805_073412_roles_permissions_department_hasmany';
 import * as migration_20260806_093500_permissions_role_pages_drop_roles from './20260806_093500_permissions_role_pages_drop_roles';
 import * as migration_20260806_101922_add_internal_page_routes from './20260806_101922_add_internal_page_routes';
-import * as migration_20260806_110000_quick_links_department_hasmany from './20260806_110000_quick_links_department_hasmany';
 import * as migration_20260806_102822_add_permissions_excluded_pages from './20260806_102822_add_permissions_excluded_pages';
+import * as migration_20260806_110000_quick_links_department_hasmany from './20260806_110000_quick_links_department_hasmany';
 import * as migration_20260806_113000_quick_links_group_template from './20260806_113000_quick_links_group_template';
 import * as migration_20260806_120000_add_posts_expiry_date from './20260806_120000_add_posts_expiry_date';
 import * as migration_20260806_130000_add_events_button_fields from './20260806_130000_add_events_button_fields';
 import * as migration_20260806_140000_departments_uuid_id from './20260806_140000_departments_uuid_id';
 import * as migration_20260812_150000_add_feedback_card_fields from './20260812_150000_add_feedback_card_fields';
 import * as migration_20260812_160000_add_feedback_card_fields_to_versions from './20260812_160000_add_feedback_card_fields_to_versions';
+import * as migration_20260814_024532_add_header_subitems from './20260814_024532_add_header_subitems';
 
 export const migrations = [
   {
@@ -32,7 +33,7 @@ export const migrations = [
   {
     up: migration_20260805_073412_roles_permissions_department_hasmany.up,
     down: migration_20260805_073412_roles_permissions_department_hasmany.down,
-    name: '20260805_073412_roles_permissions_department_hasmany'
+    name: '20260805_073412_roles_permissions_department_hasmany',
   },
   {
     up: migration_20260806_093500_permissions_role_pages_drop_roles.up,
@@ -45,14 +46,14 @@ export const migrations = [
     name: '20260806_101922_add_internal_page_routes',
   },
   {
-    up: migration_20260806_110000_quick_links_department_hasmany.up,
-    down: migration_20260806_110000_quick_links_department_hasmany.down,
-    name: '20260806_110000_quick_links_department_hasmany',
-  },
-  {
     up: migration_20260806_102822_add_permissions_excluded_pages.up,
     down: migration_20260806_102822_add_permissions_excluded_pages.down,
     name: '20260806_102822_add_permissions_excluded_pages',
+  },
+  {
+    up: migration_20260806_110000_quick_links_department_hasmany.up,
+    down: migration_20260806_110000_quick_links_department_hasmany.down,
+    name: '20260806_110000_quick_links_department_hasmany',
   },
   {
     up: migration_20260806_113000_quick_links_group_template.up,
@@ -83,5 +84,10 @@ export const migrations = [
     up: migration_20260812_160000_add_feedback_card_fields_to_versions.up,
     down: migration_20260812_160000_add_feedback_card_fields_to_versions.down,
     name: '20260812_160000_add_feedback_card_fields_to_versions',
+  },
+  {
+    up: migration_20260814_024532_add_header_subitems.up,
+    down: migration_20260814_024532_add_header_subitems.down,
+    name: '20260814_024532_add_header_subitems'
   },
 ];

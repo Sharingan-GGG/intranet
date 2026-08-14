@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, Menu, X } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, Menu, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import React, { useEffect, useRef, useState } from 'react'
 
@@ -22,7 +22,12 @@ type HeaderSearchResult = SearchResult & { type: string }
 const RESULTS_PER_SCOPE = 3
 const RESULTS_TOTAL = 8
 
-export type HeaderNavItem = { label: string; href: string; newTab?: boolean }
+export type HeaderNavItem = {
+  label: string
+  href: string
+  newTab?: boolean
+  subItems?: HeaderNavItem[]
+}
 
 const isActive = (pathname: string, href: string) =>
   href === '/' ? pathname === '/' : !href.includes('#') && pathname.startsWith(href)
@@ -39,6 +44,9 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
   const [q, setQ] = useState('')
   const [focused, setFocused] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null)
+  const [openMobileSub, setOpenMobileSub] = useState<number | null>(null)
+  const navRef = useRef<HTMLElement>(null)
   const [results, setResults] = useState<HeaderSearchResult[]>([])
   const [loading, setLoading] = useState(false)
   // A Knowledge Base result with multiple links opens a link-picker pop-up instead of navigating.
@@ -48,7 +56,21 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
   // Close the mobile menu whenever navigation happens.
   useEffect(() => {
     setMenuOpen(false)
+    setOpenDropdown(null)
+    setOpenMobileSub(null)
   }, [pathname])
+
+  // Close an open desktop dropdown when clicking outside the nav.
+  useEffect(() => {
+    if (openDropdown === null) return
+    const onClick = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [openDropdown])
 
   // Debounced live search across every collection (News, Pages, Events, EDMs, Knowledge Base) in parallel.
   useEffect(() => {
@@ -124,6 +146,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
         </Link>
 
         <nav
+          ref={navRef}
           className="il-nav-desktop"
           style={{
             display: 'flex',
@@ -136,24 +159,104 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
         >
           {navItems.map((item, i) => {
             const active = isActive(pathname, item.href)
+            const hasSubItems = (item.subItems?.length ?? 0) > 0
+            const dropdownOpen = openDropdown === i
+
+            if (!hasSubItems) {
+              return (
+                <Link
+                  key={`${item.href}-${i}`}
+                  href={item.href}
+                  target={item.newTab ? '_blank' : undefined}
+                  rel={item.newTab ? 'noopener noreferrer' : undefined}
+                  className="il-nav-link"
+                  style={{
+                    color: active ? '#fff' : 'rgba(255,255,255,0.72)',
+                    fontSize: 14,
+                    fontWeight: active ? 600 : 500,
+                    padding: '8px 13px',
+                    borderRadius: 9,
+                    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  }}
+                >
+                  {item.label}
+                </Link>
+              )
+            }
+
             return (
-              <Link
-                key={`${item.href}-${i}`}
-                href={item.href}
-                target={item.newTab ? '_blank' : undefined}
-                rel={item.newTab ? 'noopener noreferrer' : undefined}
-                className="il-nav-link"
-                style={{
-                  color: active ? '#fff' : 'rgba(255,255,255,0.72)',
-                  fontSize: 14,
-                  fontWeight: active ? 600 : 500,
-                  padding: '8px 13px',
-                  borderRadius: 9,
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                }}
-              >
-                {item.label}
-              </Link>
+              <div key={`${item.href}-${i}`} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="il-nav-link"
+                  aria-haspopup="true"
+                  aria-expanded={dropdownOpen}
+                  onClick={() => setOpenDropdown(dropdownOpen ? null : i)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    color: active ? '#fff' : 'rgba(255,255,255,0.72)',
+                    fontSize: 14,
+                    fontWeight: active ? 600 : 500,
+                    padding: '8px 13px',
+                    borderRadius: 9,
+                    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {item.label}
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      transform: dropdownOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.15s',
+                    }}
+                  />
+                </button>
+                {dropdownOpen && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      marginTop: 6,
+                      minWidth: 190,
+                      background: 'var(--il-surface)',
+                      border: '1px solid var(--il-border)',
+                      borderRadius: 12,
+                      boxShadow: '0 16px 40px rgba(17,46,129,0.22)',
+                      padding: 6,
+                      zIndex: 50,
+                    }}
+                  >
+                    {item.subItems!.map((sub, si) => (
+                      <Link
+                        key={`${sub.href}-${si}`}
+                        href={sub.href}
+                        target={sub.newTab ? '_blank' : undefined}
+                        rel={sub.newTab ? 'noopener noreferrer' : undefined}
+                        role="menuitem"
+                        onClick={() => setOpenDropdown(null)}
+                        style={{
+                          display: 'block',
+                          padding: '9px 12px',
+                          borderRadius: 8,
+                          fontSize: 13.5,
+                          fontWeight: 500,
+                          color: 'var(--il-text)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {sub.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>
@@ -339,26 +442,78 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
 
         {/* Mobile nav panel (shown by .il-mobile-menu.open below 900px) */}
         <nav className={`il-mobile-menu${menuOpen ? ' open' : ''}`} aria-label="Mobile navigation">
-          {navItems.map((item) => {
+          {navItems.map((item, i) => {
             const active = isActive(pathname, item.href)
+            const hasSubItems = (item.subItems?.length ?? 0) > 0
+            const subOpen = openMobileSub === i
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                target={item.newTab ? '_blank' : undefined}
-                rel={item.newTab ? 'noopener noreferrer' : undefined}
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  color: active ? '#fff' : 'rgba(255,255,255,0.78)',
-                  fontSize: 15,
-                  fontWeight: active ? 700 : 500,
-                  padding: '11px 12px',
-                  borderRadius: 10,
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                }}
-              >
-                {item.label}
-              </Link>
+              <div key={`${item.href}-${i}`}>
+                <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                  <Link
+                    href={item.href}
+                    target={item.newTab ? '_blank' : undefined}
+                    rel={item.newTab ? 'noopener noreferrer' : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      flex: 1,
+                      color: active ? '#fff' : 'rgba(255,255,255,0.78)',
+                      fontSize: 15,
+                      fontWeight: active ? 700 : 500,
+                      padding: '11px 12px',
+                      borderRadius: 10,
+                      background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                  {hasSubItems && (
+                    <button
+                      type="button"
+                      aria-label={`Toggle ${item.label} submenu`}
+                      aria-expanded={subOpen}
+                      onClick={() => setOpenMobileSub(subOpen ? null : i)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'rgba(255,255,255,0.78)',
+                        padding: '0 12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <ChevronDown
+                        size={18}
+                        style={{
+                          transform: subOpen ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.15s',
+                        }}
+                      />
+                    </button>
+                  )}
+                </div>
+                {hasSubItems && subOpen && (
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: 16 }}>
+                    {item.subItems!.map((sub, si) => (
+                      <Link
+                        key={`${sub.href}-${si}`}
+                        href={sub.href}
+                        target={sub.newTab ? '_blank' : undefined}
+                        rel={sub.newTab ? 'noopener noreferrer' : undefined}
+                        onClick={() => setMenuOpen(false)}
+                        style={{
+                          color: 'rgba(255,255,255,0.7)',
+                          fontSize: 14,
+                          fontWeight: 500,
+                          padding: '9px 12px',
+                          borderRadius: 10,
+                        }}
+                      >
+                        {sub.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>

@@ -20,8 +20,20 @@ export const Header: GlobalConfig = {
         link({
           appearances: false,
         }),
+        {
+          name: 'subItems',
+          type: 'array',
+          label: 'Sub Menu Items',
+          fields: [
+            link({
+              appearances: false,
+            }),
+          ],
+          admin: {
+            initCollapsed: true,
+          },
+        },
       ],
-      maxRows: 6,
       admin: {
         initCollapsed: true,
         components: {
