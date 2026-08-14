@@ -13,6 +13,7 @@ import * as migration_20260806_140000_departments_uuid_id from './20260806_14000
 import * as migration_20260812_150000_add_feedback_card_fields from './20260812_150000_add_feedback_card_fields';
 import * as migration_20260812_160000_add_feedback_card_fields_to_versions from './20260812_160000_add_feedback_card_fields_to_versions';
 import * as migration_20260814_024532_add_header_subitems from './20260814_024532_add_header_subitems';
+import * as migration_20260814_044850_add_permissions_users_field from './20260814_044850_add_permissions_users_field';
 
 export const migrations = [
   {
@@ -88,6 +89,11 @@ export const migrations = [
   {
     up: migration_20260814_024532_add_header_subitems.up,
     down: migration_20260814_024532_add_header_subitems.down,
-    name: '20260814_024532_add_header_subitems'
+    name: '20260814_024532_add_header_subitems',
+  },
+  {
+    up: migration_20260814_044850_add_permissions_users_field.up,
+    down: migration_20260814_044850_add_permissions_users_field.down,
+    name: '20260814_044850_add_permissions_users_field'
   },
 ];

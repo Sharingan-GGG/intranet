@@ -5,6 +5,7 @@ import { PageRange } from '@/components/PageRange'
 import { Pagination } from '@/components/Pagination'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
+import { unstable_cache } from 'next/cache'
 import React from 'react'
 import PageClient from './page.client'
 import { PostsControls, type PostsSort } from './PostsControls'
@@ -20,6 +21,43 @@ const SORTS: Record<PostsSort, string> = {
   za: '-title',
 }
 
+/** Sub-categories of the parent `News` category — the filter tabs. Identical across every
+ * tab/sort/page click, so cache it instead of re-querying Postgres on each one. */
+const getNewsSubcategories = unstable_cache(
+  async () => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'categories',
+      where: { 'parent.slug': { equals: 'news' } },
+      sort: 'order',
+      limit: 50,
+      depth: 0,
+    })
+    return docs
+  },
+  ['posts-news-subcategories'],
+  { tags: ['collection_categories'] },
+)
+
+const getPostsPage = unstable_cache(
+  async (sortKey: PostsSort, categoryId: number | null, page: number) => {
+    const payload = await getPayload({ config: configPromise })
+    const where: Where | undefined = categoryId ? { categories: { in: [categoryId] } } : undefined
+
+    return payload.find({
+      collection: 'posts',
+      depth: 1,
+      limit: 12,
+      page,
+      overrideAccess: false,
+      sort: SORTS[sortKey],
+      where,
+    })
+  },
+  ['posts-page'],
+  { tags: ['collection_posts'] },
+)
+
 type Args = {
   searchParams: Promise<{
     sort?: string
@@ -33,34 +71,9 @@ export default async function Page({ searchParams: searchParamsPromise }: Args) 
   const sort: PostsSort = sortParam && sortParam in SORTS ? (sortParam as PostsSort) : 'newest'
   const page = Math.max(1, Number(pageParam) || 1)
 
-  const payload = await getPayload({ config: configPromise })
-
-  // Sub-categories of the parent `News` category — the filter tabs.
-  const { docs: subcategories } = await payload.find({
-    collection: 'categories',
-    where: { 'parent.slug': { equals: 'news' } },
-    sort: 'order',
-    limit: 50,
-    depth: 0,
-  })
-
+  const subcategories = await getNewsSubcategories()
   const activeCategory = subcategories.find((c) => c.slug === category)
-
-  let where: Where | undefined
-  if (activeCategory) {
-    where = { categories: { in: [activeCategory.id] } }
-  }
-
-  const posts = await payload.find({
-    collection: 'posts',
-    depth: 1,
-    limit: 12,
-    page,
-    overrideAccess: false,
-    sort: SORTS[sort],
-    where,
-  })
-
+  const posts = await getPostsPage(sort, activeCategory?.id ?? null, page)
   const cards = posts.docs.map(postToNewsCard)
 
   // Query string (without `page`) so pagination keeps the active filters.

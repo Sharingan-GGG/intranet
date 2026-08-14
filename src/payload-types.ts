@@ -1402,6 +1402,10 @@ export interface Permission {
    */
   department?: (string | Department)[] | null;
   /**
+   * Specific user(s) this rule applies to, overriding the role/department result — e.g. two users sharing a role and department who need different page access. Leave empty for a role/department-wide rule.
+   */
+  users?: (string | User)[] | null;
+  /**
    * Admin-panel collections this rule grants access to. Use "All" for every collection.
    */
   adminCollections?:
@@ -2229,6 +2233,7 @@ export interface PermissionsSelect<T extends boolean = true> {
   name?: T;
   role?: T;
   department?: T;
+  users?: T;
   adminCollections?: T;
   pages?: T;
   excludedPages?: T;

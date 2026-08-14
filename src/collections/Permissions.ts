@@ -23,7 +23,8 @@ export const Permissions: CollectionConfig = {
   slug: 'permissions',
   lockDocuments: { duration: 30 },
   // Permissions define which admin-panel collections and front-end pages a
-  // role/department combination can access — only admins may manage them.
+  // role/department combination (optionally narrowed to specific users) can
+  // access — only admins may manage them.
   access: {
     read: authenticated,
     create: isAdmin,
@@ -32,7 +33,7 @@ export const Permissions: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'role', 'department', 'adminCollections', 'pages'],
+    defaultColumns: ['name', 'role', 'department', 'users', 'adminCollections', 'pages'],
     group: 'Organization',
   },
   fields: [
@@ -66,6 +67,16 @@ export const Permissions: CollectionConfig = {
       hasMany: true,
       admin: {
         description: 'Department(s) this rule applies to. Leave empty to apply to every department.',
+      },
+    },
+    {
+      name: 'users',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      admin: {
+        description:
+          'Specific user(s) this rule applies to, overriding the role/department result — e.g. two users sharing a role and department who need different page access. Leave empty for a role/department-wide rule.',
       },
     },
     {

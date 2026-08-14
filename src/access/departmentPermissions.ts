@@ -22,16 +22,21 @@ export interface ResolvedAccess {
   deptPages: Set<string>
   /** Subset of `excludedPages` excluded by a rule that names this user's department specifically. */
   deptExcludedPages: Set<string>
+  /** Subset of `pages` granted by a rule that names this user specifically. */
+  userPages: Set<string>
+  /** Subset of `excludedPages` excluded by a rule that names this user specifically. */
+  userExcludedPages: Set<string>
 }
 
 /**
- * Loads Permission docs matching the user's role tier and department
- * (a Permission with no department applies globally), and unions their
+ * Loads Permission docs matching the user's role tier and (department or user)
+ * (a Permission with no department/users applies globally), and unions their
  * adminCollections/pages/excludedPages into resolved sets.
  *
- * Pages/excludedPages are tracked twice — once unioned across every matching rule, and once
- * restricted to rules that name this user's department specifically. hasPageAccess needs the
- * split so a department's explicit grant can override a department-less default exclude.
+ * Pages/excludedPages are tracked three times — unioned across every matching rule, restricted to
+ * rules that name this user's department specifically, and restricted to rules that name this
+ * user specifically. hasPageAccess needs the split so a user-scoped rule can override a
+ * department-scoped one, which can in turn override a department-less default.
  */
 export async function resolveUserPermissions(
   payload: Payload,
@@ -43,11 +48,14 @@ export async function resolveUserPermissions(
     deptPages: new Set(),
     excludedPages: new Set(),
     pages: new Set(),
+    userExcludedPages: new Set(),
+    userPages: new Set(),
   }
   const tier = getRoleTier(user)
   if (!tier) return empty
 
   const deptId = typeof user?.department === 'object' ? user?.department?.id : user?.department
+  const userId = user?.id
 
   const { docs } = await payload.find({
     collection: 'permissions',
@@ -56,7 +64,11 @@ export async function resolveUserPermissions(
     pagination: false,
     where: {
       role: { contains: tier },
-      or: [{ department: { exists: false } }, ...(deptId ? [{ department: { contains: deptId } }] : [])],
+      or: [
+        { department: { exists: false }, users: { exists: false } },
+        ...(deptId ? [{ department: { contains: deptId } }] : []),
+        ...(userId ? [{ users: { contains: userId } }] : []),
+      ],
     },
   })
 
@@ -65,19 +77,32 @@ export async function resolveUserPermissions(
   const excludedPages = new Set<string>()
   const deptPages = new Set<string>()
   const deptExcludedPages = new Set<string>()
+  const userPages = new Set<string>()
+  const userExcludedPages = new Set<string>()
   for (const doc of docs) {
-    const scoped = (doc.department ?? []).length > 0
+    const userScoped = (doc.users ?? []).length > 0
+    const deptScoped = (doc.department ?? []).length > 0
     ;(doc.adminCollections ?? []).forEach((c) => adminCollections.add(c))
     ;(doc.pages ?? []).forEach((p) => {
       pages.add(p)
-      if (scoped) deptPages.add(p)
+      if (deptScoped) deptPages.add(p)
+      if (userScoped) userPages.add(p)
     })
     ;(doc.excludedPages ?? []).forEach((p) => {
       excludedPages.add(p)
-      if (scoped) deptExcludedPages.add(p)
+      if (deptScoped) deptExcludedPages.add(p)
+      if (userScoped) userExcludedPages.add(p)
     })
   }
-  return { adminCollections, deptExcludedPages, deptPages, excludedPages, pages }
+  return {
+    adminCollections,
+    deptExcludedPages,
+    deptPages,
+    excludedPages,
+    pages,
+    userExcludedPages,
+    userPages,
+  }
 }
 
 /** True if the resolved set grants `key`, honoring the 'all' sentinel. */
@@ -105,11 +130,12 @@ export async function hasAdminCollectionAccess(
 /**
  * Front-end helper: does this user see this homepage block / route?
  *
- * Precedence, most specific wins: a department-scoped exclude beats a department-scoped
- * grant, which beats a department-less (global) exclude, which beats the super-admin/admin
- * bypass, which beats a department-less grant. Without this ordering, a global "exclude X by
- * default" rule would permanently defeat the department rule meant to grant X back —
- * "all pages except X, but department Y still gets X" couldn't be expressed otherwise.
+ * Precedence, most specific wins: a user-scoped exclude beats a user-scoped grant, which beats
+ * a department-scoped exclude, which beats a department-scoped grant, which beats a
+ * department-less (global) exclude, which beats the super-admin/admin bypass, which beats a
+ * department-less grant. Without this ordering, a global "exclude X by default" rule would
+ * permanently defeat the department/user rule meant to grant X back — "all pages except X, but
+ * this department/user still gets X" couldn't be expressed otherwise.
  */
 export async function hasPageAccess(
   payload: Payload,
@@ -119,10 +145,16 @@ export async function hasPageAccess(
   const tier = getRoleTier(user)
   if (!tier) return false
 
-  const { deptExcludedPages, deptPages, excludedPages, pages } = await resolveUserPermissions(
-    payload,
-    user,
-  )
+  const {
+    deptExcludedPages,
+    deptPages,
+    excludedPages,
+    pages,
+    userExcludedPages,
+    userPages,
+  } = await resolveUserPermissions(payload, user)
+  if (grants(userExcludedPages, pageKey)) return false
+  if (grants(userPages, pageKey)) return true
   if (grants(deptExcludedPages, pageKey)) return false
   if (grants(deptPages, pageKey)) return true
   if (grants(excludedPages, pageKey)) return false
