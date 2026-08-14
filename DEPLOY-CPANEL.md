@@ -14,6 +14,15 @@ App root on server: `/home/complextravel/public_html/intranet` (also the subdoma
 
 ## Redeploying an update
 ```bash
+# 0. If this change added/edited a file in src/migrations/, apply it to production BEFORE
+#    restarting Passenger (step 4) — production is a separate Postgres/Supabase project from
+#    local/dev/staging (see .env.production's POSTGRES_URL). `payload migrate` only runs
+#    migrations not yet recorded in production's own payload_migrations table, and every
+#    migration in this repo is plain schema DDL (ALTER TABLE/CREATE TABLE, no data), so this
+#    only ever applies the new change — nothing else. Check the migration's up() first though:
+#    if it does more than raw DDL (e.g. a data backfill via the payload/req args), that runs too.
+env $(grep -v '^#' .env.production | xargs) pnpm payload migrate
+
 # 1. Locally (NEXT_PUBLIC_SERVER_URL in .env must be https://intranet.complextravel.net)
 pnpm build
 

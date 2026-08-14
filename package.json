@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "build:staging": "cross-env NODE_OPTIONS=--no-deprecation node scripts/build-staging.mjs",
     "db:export": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/db-export.ts",
     "db:import": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/db-import.ts",
     "db:push": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/db-push.ts",
