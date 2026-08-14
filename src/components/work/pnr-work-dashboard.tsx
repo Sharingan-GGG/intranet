@@ -892,7 +892,11 @@ export function PnrWorkDashboard({
       const res = await fetch("/api/pnr-queue/delete-selected", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pnrs: pnrsToDelete }),
+        body: JSON.stringify({
+          pnrs: pnrsToDelete,
+          actingAsName:
+            canViewAllProfiles && scannedByFilter !== "all" ? scannedByFilter : undefined,
+        }),
       })
       const json = (await res.json().catch(() => null)) as {
         success?: boolean
@@ -987,7 +991,13 @@ export function PnrWorkDashboard({
     const res = await fetch("/api/pnr-queue/move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pnrs: pnrsToMove, toBrand, toProfileId }),
+      body: JSON.stringify({
+        pnrs: pnrsToMove,
+        toBrand,
+        toProfileId,
+        actingAsName:
+          canViewAllProfiles && scannedByFilter !== "all" ? scannedByFilter : undefined,
+      }),
     })
     const json = (await res.json().catch(() => null)) as {
       success?: boolean
@@ -1245,6 +1255,7 @@ export function PnrWorkDashboard({
     }
 
     void queryClient.invalidateQueries({ queryKey: ["pnr-queue"] })
+    void queryClient.invalidateQueries({ queryKey: ["pnr-detail"] })
 
     parts.push(`${fetchedCount} Fetched from Sabre`)
     if (failedCount > 0) parts.push(`${failedCount} Failed`)

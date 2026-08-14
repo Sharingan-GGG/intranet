@@ -9,19 +9,22 @@ import {
   getSheetIdByTitle,
   deleteSheetRowsByIndex,
   appendToSheetTab,
+  updateSheetRows,
 } from "@/lib/google-sheets"
 import { ensureBrandId } from "@/lib/supabase/ensure-brand"
+import { findDirectoryEntry } from "@/lib/pre-departure-directory"
 import {
   DEFAULT_MARKED,
   queueStatusToSheetStatus,
   refreshSheetRows,
+  resolveSheetRowIndices,
 } from "@/lib/sheet-sync"
-import { findDirectoryEntry } from "@/lib/pre-departure-directory"
 
 type MoveBody = {
   pnrs: string[]
   toBrand: string
   toProfileId?: string | null
+  actingAsName?: string | null
 }
 
 type QueuePreRow = {
@@ -64,6 +67,13 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
     const toBrand = String(body?.toBrand ?? "").trim()
     const toProfileId = body?.toProfileId ? String(body.toProfileId).trim() : null
+    // Admins/super admins can browse the queue "as" another profile via the header
+    // filter. When they act while filtered to someone else, the sheet should credit
+    // that selected profile, not the admin's own login — only the mover's role is
+    // trusted for this, never a client-declared role.
+    const isPrivileged = profile.role === "admin" || profile.role === "super_admin"
+    const actingAsName =
+      isPrivileged && body?.actingAsName ? String(body.actingAsName).trim() : ""
 
     if (pnrs.length === 0 || !toBrand) {
       return NextResponse.json(
@@ -102,11 +112,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolve Transfer To user's full_name for Scanned By (col H)
-    let scannedByName = ""
+    // Scanned By (col H): the "Transfer To" pick in the Move dialog, falling back to
+    // whoever performed the move (or the profile a privileged user is acting as) only
+    // when "No change" was selected — never the stale value already in the sheet.
+    let scannedByName = actingAsName || profile?.full_name || profile?.email || ""
     if (toProfileId) {
       const toProfile = await findDirectoryEntry(toProfileId)
-      scannedByName = toProfile?.full_name ?? toProfile?.email ?? ""
+      scannedByName = toProfile?.full_name ?? toProfile?.email ?? scannedByName
     }
 
     // `brand` and `brand_id` are two independent columns. A trigger backfills the
@@ -184,6 +196,25 @@ export async function POST(req: NextRequest) {
     // Google Sheets sync — best-effort, errors non-fatal
     const sheetErrors: string[] = []
     if (movedCount > 0) {
+      // Same-brand moves (owner reassignment with no tab change) never hit the
+      // delete/append path below, so their rows would never pick up the new
+      // Scanned By. Update column H on the existing row in place instead.
+      const samePnrs = pnrs.filter((pnr) => preRowMap.get(pnr)?.brand === toBrand)
+      if (samePnrs.length > 0) {
+        try {
+          const indices = await resolveSheetRowIndices(toBrand, samePnrs)
+          const entries = samePnrs
+            .map((pnr) => indices.get(pnr))
+            .filter((i): i is number => i != null)
+            .map((rowIndex) => ({ rowIndex, scannedBy: scannedByName }))
+          if (entries.length > 0) await updateSheetRows(toBrand, entries)
+        } catch (e) {
+          sheetErrors.push(
+            `Update Scanned By in ${toBrand}: ${e instanceof Error ? e.message : String(e)}`
+          )
+        }
+      }
+
       // Group PNRs by source brand; skip same-brand moves
       const byFromBrand = new Map<string, string[]>()
       for (const pnr of pnrs) {
@@ -251,7 +282,7 @@ export async function POST(req: NextRequest) {
               historyStatusMap.get(pnr) ?? DEFAULT_MARKED,    // E: Marked = pnr_history.status
               pnrType,                                        // F: Type = pnr_history.pnr_type
               sheetStatus,                                    // G: Status from queue_status
-              scannedByName || sheet?.scanned_by || "",       // H: Scanned By
+              scannedByName,                                   // H: Scanned By
             ]
           })
           await appendToSheetTab(toBrand, appendRows)

@@ -12,6 +12,7 @@ import { refreshSheetRows, resolveSheetRowIndices } from "@/lib/sheet-sync"
 
 type DeleteSelectedBody = {
   pnrs: string[]
+  actingAsName?: string | null
 }
 
 type QueueRow = {
@@ -75,7 +76,14 @@ export async function POST(req: NextRequest) {
     month: "2-digit",
     year: "numeric",
   })
-  const deletedBy = profile?.full_name ?? profile?.email ?? profile.email ?? profile.id
+  // Admins/super admins can browse the queue "as" another profile via the header
+  // filter. When they delete while filtered to someone else, the Done tab should
+  // credit that selected profile, not the admin's own login — only the deleter's
+  // own role is trusted for this, never a client-declared role.
+  const isPrivileged = profile.role === "admin" || profile.role === "super_admin"
+  const actingAsName =
+    isPrivileged && body?.actingAsName ? String(body.actingAsName).trim() : ""
+  const deletedBy = actingAsName || profile?.full_name || profile?.email || profile.id
 
   const errors: string[] = []
 
