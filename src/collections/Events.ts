@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { hasAdminCollectionAccess } from '../access/departmentPermissions'
+import { makeRevalidateCollectionTags } from '../utilities/revalidateCollectionTag'
 
 const slugify = (value: string): string =>
   value
@@ -12,6 +13,7 @@ const slugify = (value: string): string =>
 export const Events: CollectionConfig = {
   slug: 'events',
   lockDocuments: { duration: 30 },
+  hooks: makeRevalidateCollectionTags('collection_events'),
   access: {
     read: authenticated,
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'events'),

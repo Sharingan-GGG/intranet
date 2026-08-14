@@ -1,5 +1,6 @@
 import { headers as getHeaders } from 'next/headers'
 import { getPayload } from 'payload'
+import { unstable_cache } from 'next/cache'
 import configPromise from '@payload-config'
 
 import type { Category, Media, Post } from '@/payload-types'
@@ -141,61 +142,73 @@ async function newsCategoryIds(
 }
 
 /** Latest CTG news — posts in the `News` category or any of its sub-categories. */
-export async function getNews(): Promise<NewsCard[]> {
-  const payload = await getPayload({ config: configPromise })
-  const catIds = await newsCategoryIds(payload)
-  if (catIds.length === 0) return NEWS
+export const getNews = unstable_cache(
+  async (): Promise<NewsCard[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const catIds = await newsCategoryIds(payload)
+    if (catIds.length === 0) return NEWS
 
-  const { docs } = await payload.find({
-    collection: 'posts',
-    where: { categories: { in: catIds } },
-    sort: '-publishedAt',
-    limit: 12,
-    depth: 1,
-  })
-  if (docs.length === 0) return NEWS
+    const { docs } = await payload.find({
+      collection: 'posts',
+      where: { categories: { in: catIds } },
+      sort: '-publishedAt',
+      limit: 12,
+      depth: 1,
+    })
+    if (docs.length === 0) return NEWS
 
-  return docs.map(postToNewsCard)
-}
+    return docs.map(postToNewsCard)
+  },
+  ['home-news'],
+  { tags: ['collection_posts', 'collection_categories'] },
+)
 
 /** All sub-categories of the parent `EDMs` category — the tabs in the Latest EDMs section. */
-export async function getEdmCategories(): Promise<string[]> {
-  const payload = await getPayload({ config: configPromise })
-  const { docs } = await payload.find({
-    collection: 'categories',
-    where: { 'parent.slug': { equals: 'edms' } },
-    sort: 'order',
-    limit: 50,
-    depth: 0,
-  })
-  return docs.map((d) => d.title)
-}
+export const getEdmCategories = unstable_cache(
+  async (): Promise<string[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'categories',
+      where: { 'parent.slug': { equals: 'edms' } },
+      sort: 'order',
+      limit: 50,
+      depth: 0,
+    })
+    return docs.map((d) => d.title)
+  },
+  ['home-edm-categories'],
+  { tags: ['collection_categories'] },
+)
 
 /** Latest EDMs — docs in the `edms` collection; kicker is the EDM sub-category. */
-export async function getEdms(): Promise<EdmCard[]> {
-  const payload = await getPayload({ config: configPromise })
+export const getEdms = unstable_cache(
+  async (): Promise<EdmCard[]> => {
+    const payload = await getPayload({ config: configPromise })
 
-  const { docs } = await payload.find({
-    collection: 'edms',
-    sort: '-createdAt',
-    limit: 24,
-    depth: 1,
-  })
-  if (docs.length === 0) return EDMS
+    const { docs } = await payload.find({
+      collection: 'edms',
+      sort: '-createdAt',
+      limit: 24,
+      depth: 1,
+    })
+    if (docs.length === 0) return EDMS
 
-  return docs.map((d, i) => {
-    const category = typeof d.category === 'object' && d.category ? d.category.title : 'EDMs'
-    return {
-      kicker: category,
-      title: d.title,
-      sent: edmSentLabel(d.dateSent ?? d.createdAt),
-      description: d.description ?? null,
-      img: gradient(i),
-      imageUrl: mediaUrl(d.image),
-      href: d.url,
-    }
-  })
-}
+    return docs.map((d, i) => {
+      const category = typeof d.category === 'object' && d.category ? d.category.title : 'EDMs'
+      return {
+        kicker: category,
+        title: d.title,
+        sent: edmSentLabel(d.dateSent ?? d.createdAt),
+        description: d.description ?? null,
+        img: gradient(i),
+        imageUrl: mediaUrl(d.image),
+        href: d.url,
+      }
+    })
+  },
+  ['home-edms'],
+  { tags: ['collection_edms'] },
+)
 
 /**
  * Featured spotlight — posts with the `featured` checkbox ticked, ordered by
@@ -204,116 +217,140 @@ export async function getEdms(): Promise<EdmCard[]> {
  * NULLs first on an ascending column, which would float the unordered posts
  * to the top.
  */
-export async function getFeaturedNews(): Promise<NewsCard[]> {
-  const payload = await getPayload({ config: configPromise })
-  const { docs } = await payload.find({
-    collection: 'posts',
-    where: { featured: { equals: true } },
-    sort: '-publishedAt',
-    limit: 50,
-    depth: 1,
-  })
-  if (docs.length === 0) return FEATURED_NEWS
+export const getFeaturedNews = unstable_cache(
+  async (): Promise<NewsCard[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'posts',
+      where: { featured: { equals: true } },
+      sort: '-publishedAt',
+      limit: 50,
+      depth: 1,
+    })
+    if (docs.length === 0) return FEATURED_NEWS
 
-  // Sort by order before capping, so a post given an explicit order is never
-  // dropped by the cap in favour of a newer unordered one.
-  const ordered = [...docs]
-    .sort((a, b) => (a.featuredOrder ?? Infinity) - (b.featuredOrder ?? Infinity))
-    .slice(0, 6)
+    // Sort by order before capping, so a post given an explicit order is never
+    // dropped by the cap in favour of a newer unordered one.
+    const ordered = [...docs]
+      .sort((a, b) => (a.featuredOrder ?? Infinity) - (b.featuredOrder ?? Infinity))
+      .slice(0, 6)
 
-  return ordered.map((d, i) => ({
-    kicker: categoryKicker(d, 'Company'),
-    title: d.title,
-    excerpt: postExcerpt(d),
-    date: d.publishedAt ? dayMonthYear.format(new Date(d.publishedAt)) : '',
-    img: gradient(i),
-    imageUrl: mediaUrl(d.heroImage),
-    href: `/posts/${d.slug}`,
-    featured: true,
-  }))
-}
+    return ordered.map((d, i) => ({
+      kicker: categoryKicker(d, 'Company'),
+      title: d.title,
+      excerpt: postExcerpt(d),
+      date: d.publishedAt ? dayMonthYear.format(new Date(d.publishedAt)) : '',
+      img: gradient(i),
+      imageUrl: mediaUrl(d.heroImage),
+      href: `/posts/${d.slug}`,
+      featured: true,
+    }))
+  },
+  ['home-featured-news'],
+  { tags: ['collection_posts'] },
+)
+
+const getQuickLinksForDept = unstable_cache(
+  async (deptId: string | null): Promise<QuickLink[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'quick-links',
+      sort: 'order',
+      limit: 100,
+      depth: 1,
+      where: {
+        or: [{ department: { exists: false } }, ...(deptId ? [{ department: { contains: deptId } }] : [])],
+      },
+    })
+
+    if (docs.length === 0) return QUICK_LINKS
+
+    return docs.flatMap((group) =>
+      (group.links ?? []).map((l) => ({
+        label: l.label,
+        href: l.link,
+        icon: mediaUrl(l.image) ?? '/ctg-icon.png',
+      })),
+    )
+  },
+  ['home-quick-links'],
+  { tags: ['collection_quick-links'] },
+)
 
 export async function getQuickLinks(): Promise<QuickLink[]> {
   const payload = await getPayload({ config: configPromise })
   const { user } = await payload.auth({ headers: await getHeaders() })
   const deptId = typeof user?.department === 'object' ? user?.department?.id : user?.department
-
-  const { docs } = await payload.find({
-    collection: 'quick-links',
-    sort: 'order',
-    limit: 100,
-    depth: 1,
-    where: {
-      or: [{ department: { exists: false } }, ...(deptId ? [{ department: { contains: deptId } }] : [])],
-    },
-  })
-
-  if (docs.length === 0) return QUICK_LINKS
-
-  return docs.flatMap((group) =>
-    (group.links ?? []).map((l) => ({
-      label: l.label,
-      href: l.link,
-      icon: mediaUrl(l.image) ?? '/ctg-icon.png',
-    })),
-  )
+  return getQuickLinksForDept(deptId ?? null)
 }
 
-export async function getOffices(): Promise<OfficeZone[]> {
-  const payload = await getPayload({ config: configPromise })
-  const { docs } = await payload.find({
-    collection: 'time-zones',
-    sort: 'order',
-    pagination: false,
-  })
+export const getOffices = unstable_cache(
+  async (): Promise<OfficeZone[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'time-zones',
+      sort: 'order',
+      pagination: false,
+    })
 
-  if (docs.length === 0) return OFFICES
+    if (docs.length === 0) return OFFICES
 
-  return docs.map((d) => ({ city: d.label, tz: d.timezone }))
-}
+    return docs.map((d) => ({ city: d.label, tz: d.timezone }))
+  },
+  ['home-offices'],
+  { tags: ['collection_time-zones'] },
+)
 
 /** All sub-categories of the parent `Knowledge Base` category — the tabs in the KB section. */
-export async function getKbCategories(): Promise<string[]> {
-  const payload = await getPayload({ config: configPromise })
-  const { docs } = await payload.find({
-    collection: 'categories',
-    where: { 'parent.slug': { equals: 'knowledge-base' } },
-    sort: 'order',
-    limit: 50,
-    depth: 0,
-  })
-  return docs.map((d) => d.title)
-}
+export const getKbCategories = unstable_cache(
+  async (): Promise<string[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'categories',
+      where: { 'parent.slug': { equals: 'knowledge-base' } },
+      sort: 'order',
+      limit: 50,
+      depth: 0,
+    })
+    return docs.map((d) => d.title)
+  },
+  ['home-kb-categories'],
+  { tags: ['collection_categories'] },
+)
 
-export async function getKbDocs(): Promise<KbDoc[]> {
-  const payload = await getPayload({ config: configPromise })
-  const { docs } = await payload.find({
-    collection: 'knowledge-base',
-    sort: '-updatedAt',
-    limit: 100,
-    depth: 1,
-  })
+export const getKbDocs = unstable_cache(
+  async (): Promise<KbDoc[]> => {
+    const payload = await getPayload({ config: configPromise })
+    const { docs } = await payload.find({
+      collection: 'knowledge-base',
+      sort: '-updatedAt',
+      limit: 100,
+      depth: 1,
+    })
 
-  if (docs.length === 0) return DOCUMENTS
+    if (docs.length === 0) return DOCUMENTS
 
-  const dayMonth = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' })
+    const dayMonth = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' })
 
-  // Older records were saved without a protocol, which the browser treats as a relative path.
-  const absolute = (url: string): string => (/^https?:\/\//i.test(url) ? url : `https://${url}`)
+    // Older records were saved without a protocol, which the browser treats as a relative path.
+    const absolute = (url: string): string => (/^https?:\/\//i.test(url) ? url : `https://${url}`)
 
-  return docs.map((d) => {
-    const links = (d.links ?? []).map((l) => ({ label: l.label ?? null, url: absolute(l.url) }))
-    return {
-      title: d.title,
-      description: d.description ?? undefined,
-      ext: d.fileType as DocExt,
-      category: typeof d.category === 'object' && d.category ? d.category.title : String(d.category),
-      updated: dayMonth.format(new Date(d.updatedAt)),
-      href: mediaUrl(d.file) ?? links[0]?.url ?? '#',
-      links,
-    }
-  })
-}
+    return docs.map((d) => {
+      const links = (d.links ?? []).map((l) => ({ label: l.label ?? null, url: absolute(l.url) }))
+      return {
+        title: d.title,
+        description: d.description ?? undefined,
+        ext: d.fileType as DocExt,
+        category: typeof d.category === 'object' && d.category ? d.category.title : String(d.category),
+        updated: dayMonth.format(new Date(d.updatedAt)),
+        href: mediaUrl(d.file) ?? links[0]?.url ?? '#',
+        links,
+      }
+    })
+  },
+  ['home-kb-docs'],
+  { tags: ['collection_knowledge-base'] },
+)
 
 /** Event `time` is stored as an ISO datetime (time-only picker); older records may hold free text. */
 const formatEventTime = (time: string | null | undefined): string => {
@@ -429,7 +466,10 @@ const recurrenceHorizon = (): Date => {
   return h
 }
 
-export async function getEventGroups(): Promise<EventGroup[]> {
+// Occurrence expansion is relative to "today", so beyond tag invalidation on
+// edits, also time out every 5 min to keep the upcoming-events window rolling forward.
+export const getEventGroups = unstable_cache(
+  async (): Promise<EventGroup[]> => {
   const payload = await getPayload({ config: configPromise })
 
   const startOfToday = new Date()
@@ -495,34 +535,41 @@ export async function getEventGroups(): Promise<EventGroup[]> {
     }
   }
   return groups
-}
+  },
+  ['home-event-groups'],
+  { tags: ['collection_events'], revalidate: 300 },
+)
 
 /** All events (past and future) for the full-page calendar. */
-export async function getCalendarEvents(): Promise<CalendarEvent[]> {
-  const payload = await getPayload({ config: configPromise })
+export const getCalendarEvents = unstable_cache(
+  async (): Promise<CalendarEvent[]> => {
+    const payload = await getPayload({ config: configPromise })
 
-  const { docs } = await payload.find({
-    collection: 'events',
-    sort: 'date',
-    limit: 500,
-    pagination: false,
-  })
+    const { docs } = await payload.find({
+      collection: 'events',
+      sort: 'date',
+      limit: 500,
+      pagination: false,
+    })
 
-  const horizon = recurrenceHorizon()
-  return docs
-    .flatMap((d) =>
-      expandOccurrences(d, horizon).map((dateISO) => ({
-        title: d.title,
-        tag: eventTag(d.category),
-        time: formatEventTime(d.time),
-        timeISO: d.time ?? null,
-        loc: d.location ?? '—',
-        description: d.description ?? null,
-        dateISO,
-        slug: d.slug ?? undefined,
-        buttonLabel: d.buttonLabel,
-        buttonUrl: d.buttonUrl,
-      })),
-    )
-    .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
-}
+    const horizon = recurrenceHorizon()
+    return docs
+      .flatMap((d) =>
+        expandOccurrences(d, horizon).map((dateISO) => ({
+          title: d.title,
+          tag: eventTag(d.category),
+          time: formatEventTime(d.time),
+          timeISO: d.time ?? null,
+          loc: d.location ?? '—',
+          description: d.description ?? null,
+          dateISO,
+          slug: d.slug ?? undefined,
+          buttonLabel: d.buttonLabel,
+          buttonUrl: d.buttonUrl,
+        })),
+      )
+      .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
+  },
+  ['home-calendar-events'],
+  { tags: ['collection_events'], revalidate: 300 },
+)

@@ -4,7 +4,9 @@ import React from 'react'
 import { getCalendarEvents } from '@/lib/homeData'
 import { CalendarView } from '@/components/calendar/CalendarView'
 
-export const dynamic = 'force-dynamic'
+// Events are collection-wide (no per-user data) and cached in getCalendarEvents
+// via unstable_cache; no need to force a fresh render on every request.
+export const revalidate = 300
 
 export default async function CalendarPage() {
   const events = await getCalendarEvents()

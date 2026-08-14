@@ -2,10 +2,12 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { hasAdminCollectionAccess } from '../access/departmentPermissions'
+import { makeRevalidateCollectionTags } from '../utilities/revalidateCollectionTag'
 
 export const KnowledgeBase: CollectionConfig = {
   slug: 'knowledge-base',
   lockDocuments: { duration: 30 },
+  hooks: makeRevalidateCollectionTags('collection_knowledge-base'),
   labels: {
     singular: 'Knowledge Base Document',
     plural: 'Knowledge Base',

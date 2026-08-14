@@ -2,10 +2,12 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { hasAdminCollectionAccess } from '../access/departmentPermissions'
+import { makeRevalidateCollectionTags } from '../utilities/revalidateCollectionTag'
 
 export const EDMs: CollectionConfig = {
   slug: 'edms',
   lockDocuments: { duration: 30 },
+  hooks: makeRevalidateCollectionTags('collection_edms'),
   labels: {
     singular: 'EDM',
     plural: 'EDMs',

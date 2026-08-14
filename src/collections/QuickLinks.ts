@@ -2,10 +2,12 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { hasAdminCollectionAccess } from '../access/departmentPermissions'
+import { makeRevalidateCollectionTags } from '../utilities/revalidateCollectionTag'
 
 export const QuickLinks: CollectionConfig = {
   slug: 'quick-links',
   lockDocuments: { duration: 30 },
+  hooks: makeRevalidateCollectionTags('collection_quick-links'),
   access: {
     read: authenticated,
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'quick-links'),

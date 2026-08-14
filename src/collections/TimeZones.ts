@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
 import { hasAdminCollectionAccess } from '../access/departmentPermissions'
+import { makeRevalidateCollectionTags } from '../utilities/revalidateCollectionTag'
 
 const timezoneOptions = Intl.supportedValuesOf('timeZone').map((tz) => ({
   label: tz.replace(/_/g, ' '),
@@ -11,6 +12,7 @@ const timezoneOptions = Intl.supportedValuesOf('timeZone').map((tz) => ({
 export const TimeZones: CollectionConfig = {
   slug: 'time-zones',
   lockDocuments: { duration: 30 },
+  hooks: makeRevalidateCollectionTags('collection_time-zones'),
   access: {
     read: authenticated,
     create: ({ req }) => hasAdminCollectionAccess(req.payload, req.user, 'time-zones'),

@@ -20,6 +20,9 @@ import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { populateAuthors } from './hooks/populateAuthors'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
 import { scheduleExpiry } from './hooks/scheduleExpiry'
+import { makeRevalidateCollectionTags } from '../../utilities/revalidateCollectionTag'
+
+const revalidatePostsTag = makeRevalidateCollectionTags('collection_posts')
 
 import {
   MetaDescriptionField,
@@ -268,9 +271,9 @@ export const Posts: CollectionConfig<'posts'> = {
     slugField(),
   ],
   hooks: {
-    afterChange: [revalidatePost, scheduleExpiry],
+    afterChange: [revalidatePost, scheduleExpiry, ...revalidatePostsTag.afterChange],
     afterRead: [populateAuthors],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, ...revalidatePostsTag.afterDelete],
   },
   versions: {
     drafts: {
