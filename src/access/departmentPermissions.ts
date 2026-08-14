@@ -33,6 +33,10 @@ export interface ResolvedAccess {
  * (a Permission with no department/users applies globally), and unions their
  * adminCollections/pages/excludedPages into resolved sets.
  *
+ * A rule with `users` set matches ONLY those users — its `department` (if any) is just
+ * metadata for narrowing the admin picker, not an independent department-wide grant.
+ * Otherwise "override for two specific people" would silently grant their whole department too.
+ *
  * Pages/excludedPages are tracked three times — unioned across every matching rule, restricted to
  * rules that name this user's department specifically, and restricted to rules that name this
  * user specifically. hasPageAccess needs the split so a user-scoped rule can override a
@@ -66,7 +70,11 @@ export async function resolveUserPermissions(
       role: { contains: tier },
       or: [
         { department: { exists: false }, users: { exists: false } },
-        ...(deptId ? [{ department: { contains: deptId } }] : []),
+        // A rule with `users` set applies ONLY to those users — department on the
+        // same rule is just context for narrowing the admin picker, not an
+        // additional department-wide grant. Otherwise everyone in the department(s)
+        // would get in too, defeating the "override for specific people" purpose.
+        ...(deptId ? [{ department: { contains: deptId }, users: { exists: false } }] : []),
         ...(userId ? [{ users: { contains: userId } }] : []),
       ],
     },
@@ -81,7 +89,10 @@ export async function resolveUserPermissions(
   const userExcludedPages = new Set<string>()
   for (const doc of docs) {
     const userScoped = (doc.users ?? []).length > 0
-    const deptScoped = (doc.department ?? []).length > 0
+    // A `users`-scoped rule is only ever returned via the users match above (never via
+    // department), so its department field is descriptive, not a separate grant — don't
+    // double-count it as dept-scoped too.
+    const deptScoped = !userScoped && (doc.department ?? []).length > 0
     ;(doc.adminCollections ?? []).forEach((c) => adminCollections.add(c))
     ;(doc.pages ?? []).forEach((p) => {
       pages.add(p)

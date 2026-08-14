@@ -1,12 +1,17 @@
 import type { Metadata } from "next"
+import { headers as nextHeaders } from "next/headers"
 import { redirect } from "next/navigation"
 import {
   HydrationBoundary,
   QueryClient,
   dehydrate,
 } from "@tanstack/react-query"
+import { getPayload } from "payload"
+import configPromise from "@payload-config"
 
 import { WorkPageShell } from "@/components/work/work-page-shell"
+import { Button } from "@/components/ui/button"
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { loadDashboard } from "@/lib/pnr-dashboard-data"
 import {
   DEFAULT_PNR_QUEUE_FILTERS,
@@ -21,6 +26,7 @@ import {
 import { getPreDepartureUser } from "@/lib/pre-departure-user"
 import { createServiceClient } from "@/lib/supabase/server"
 import { getRolePermissions } from "@/lib/permissions-server"
+import { hasPageAccess } from "@/access/departmentPermissions"
 
 // The queue changes on every scan, move and delete, and is scoped per user — so this
 // page must be rendered per request and never cached or prerendered.
@@ -50,6 +56,30 @@ export default async function PreDeparturePage({ params }: Args) {
   const profile = await getPreDepartureUser()
 
   if (!profile) redirect("/login")
+
+  // The role tiers below only vary what someone sees *inside* the module (brands, tabs,
+  // actions) — they have no department/specific-user concept. Whether someone gets in at
+  // all is decided by the Permissions collection's "route:pre-departure" rule instead,
+  // so department/user scoping only needs to exist in one place.
+  const payload = await getPayload({ config: configPromise })
+  const { user } = await payload.auth({ headers: await nextHeaders() })
+  if (!(await hasPageAccess(payload, user, "route:pre-departure"))) {
+    return (
+      <div className="flex h-svh min-h-0 flex-col items-center justify-center gap-4 bg-background p-6">
+        <Card className="max-w-md text-center">
+          <CardHeader>
+            <CardTitle>Access denied</CardTitle>
+            <CardDescription>You don&apos;t have permission to view Pre Departure.</CardDescription>
+          </CardHeader>
+          <CardFooter className="justify-center">
+            <Button asChild>
+              <a href="/">Back to home</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
 
   const admin = createServiceClient()
 
