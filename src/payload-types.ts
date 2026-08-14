@@ -1402,7 +1402,7 @@ export interface Permission {
    */
   department?: (string | Department)[] | null;
   /**
-   * Specific user(s) this rule applies to, overriding the role/department result — e.g. two users sharing a role and department who need different page access. Leave empty for a role/department-wide rule.
+   * Specific user(s) this rule applies to, overriding the role/department result — e.g. two users sharing a role and department who need different page access. Leave empty for a role/department-wide rule. Filtered to the department(s) selected above.
    */
   users?: (string | User)[] | null;
   /**

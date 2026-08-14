@@ -74,9 +74,17 @@ export const Permissions: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       hasMany: true,
+      // Narrow the picker to users in the department(s) selected above — a
+      // per-user override only makes sense within the rule's own department scope.
+      // With no department selected (rule applies to every department), show everyone.
+      filterOptions: ({ siblingData }) => {
+        const departments = (siblingData as { department?: (number | { id: number })[] })?.department ?? []
+        const departmentIds = departments.map((d) => (typeof d === 'object' && d !== null ? d.id : d)).filter(Boolean)
+        return departmentIds.length > 0 ? { department: { in: departmentIds } } : true
+      },
       admin: {
         description:
-          'Specific user(s) this rule applies to, overriding the role/department result — e.g. two users sharing a role and department who need different page access. Leave empty for a role/department-wide rule.',
+          'Specific user(s) this rule applies to, overriding the role/department result — e.g. two users sharing a role and department who need different page access. Leave empty for a role/department-wide rule. Filtered to the department(s) selected above.',
       },
     },
     {
