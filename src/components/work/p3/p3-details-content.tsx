@@ -35,7 +35,12 @@ function P3TableShell({
           ) : null}
         </div>
       ) : null}
-      <div className="max-h-[min(20rem,40vh)] min-h-0 w-full max-w-full min-w-0 overflow-auto overscroll-x-contain rounded-md border">
+      <div
+        className={cn(
+          "min-h-0 w-full max-w-full min-w-0 overflow-auto overscroll-x-contain rounded-md border",
+          className === "p3-pnr-information" ? "" : "max-h-[min(20rem,40vh)]",
+        )}
+      >
         <div className="w-full min-w-0 p-0">{children}</div>
       </div>
     </div>
