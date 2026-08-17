@@ -20,15 +20,20 @@ App root on server: `/home/complextravel/public_html/intranet` (also the subdoma
 #    migrations not yet recorded in production's own payload_migrations table, and every
 #    migration in this repo is plain schema DDL (ALTER TABLE/CREATE TABLE, no data), so this
 #    only ever applies the new change — nothing else. Check the migration's up() first though:
-#    if it does more than raw DDL (e.g. a data backfill via the payload/req args), that runs too.
-env $(grep -v '^#' .env.production | xargs) pnpm payload migrate
+#    if it does more than raw DDL (e.g. a data backfill via the payload/req args), that runs also.
+#    Apply to staging first and verify before running here. Use the guarded command below, not
+#    a raw `env $(grep...)` — staging and production share the same pooler hostname, so the
+#    guard's confirmation prompt (which prints the resolved Supabase project ref) is what
+#    catches a copy-paste into the wrong env. See scripts/migrate-guard.mjs.
+pnpm migrate:production:status   # review what's pending first
+pnpm migrate:production          # then apply
 
 # 1. Locally (NEXT_PUBLIC_SERVER_URL in .env must be https://intranet.complextravel.net)
 pnpm build
 
 # 2. Upload (never include intranet.db or .env — live versions rule)
 rsync -az -e "ssh -i ~/.ssh/intranet_ssh" \
-  --exclude node_modules --exclude .git --exclude '.next/cache' \
+  --exclude node_modules --exclude .git --exclude '.next/cache' --exclude '.next/dev' \
   .next public server.cjs package.json next.config.ts redirects.ts tsconfig.json \
   complextravel@13.236.149.83:~/public_html/intranet/
 

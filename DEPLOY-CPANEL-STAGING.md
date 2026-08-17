@@ -30,7 +30,7 @@ pnpm build
 
 # 2. Upload (never include .env — the live version rules)
 rsync -az -e "ssh -i ~/.ssh/intranet_ssh" \
-  --exclude node_modules --exclude .git --exclude '.next/cache' \
+  --exclude node_modules --exclude .git --exclude '.next/cache' --exclude '.next/dev' \
   .next public server.cjs package.json next.config.ts redirects.ts tsconfig.json \
   complextravel@13.236.149.83:~/public_html/intranet_staging/
 
@@ -74,8 +74,12 @@ Symptom if stale: 500s with `Failed to load external module <name>-<hash>` in
 Staging runs on its own Supabase project (`mckqcwpnaouqrfnoxils`), separate from both production and
 local dev's Docker stack. Useful commands (via the Supabase CLI, linked with `supabase link --project-ref
 mckqcwpnaouqrfnoxils`):
-- `payload migrate:status` / `payload migrate` (with `POSTGRES_URL` pointed at staging) — apply pending
-  Payload schema migrations. Do this **before** deploying code that depends on a new migration.
+- `pnpm migrate:staging:status` / `pnpm migrate:staging` — apply pending Payload schema migrations.
+  Do this **before** deploying code that depends on a new migration. These wrap `payload migrate*`
+  in `scripts/migrate-guard.mjs`, which resolves the Supabase project ref from the env file and
+  requires typing the env name to confirm — use these instead of exporting `POSTGRES_URL` by hand,
+  since staging and production share the same pooler hostname and only the ref in the connection
+  string tells them apart.
 - `supabase config push` — push local `supabase/config.toml` auth/API settings (e.g. Google provider,
   redirect URLs, exposed schemas) to the linked project. Push from a temporary copy of `supabase/config.toml`
   with staging-specific values (`site_url`, `additional_redirect_urls`, `redirect_uri` pointed at
