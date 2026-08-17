@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.permissions_excluded_pages_id_seq AS integer;

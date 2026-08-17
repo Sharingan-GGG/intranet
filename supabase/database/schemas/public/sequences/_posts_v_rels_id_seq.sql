@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._posts_v_rels_id_seq AS integer;

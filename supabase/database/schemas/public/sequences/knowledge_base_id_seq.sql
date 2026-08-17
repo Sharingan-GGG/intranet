@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.knowledge_base_id_seq AS integer;

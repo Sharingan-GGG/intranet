@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.categories_id_seq AS integer;

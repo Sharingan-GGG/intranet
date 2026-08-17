@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.payload_preferences_rels_id_seq AS integer;

@@ -1,18 +1,13 @@
+import Script from 'next/script'
 import React from 'react'
 
 import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types'
 
 export const InitTheme: React.FC = () => {
-  // React 19 warns about any <script> in a component's render output, even one
-  // that only ever renders server-side. Returning null on the client keeps the
-  // script out of client reconciliation entirely — it still ships in the
-  // server HTML and executes before hydration.
-  if (typeof window !== 'undefined') {
-    return null
-  }
-
   return (
-    <script
+    <Script
+      id="theme-script"
+      strategy="beforeInteractive"
       dangerouslySetInnerHTML={{
         __html: `
   (function () {
@@ -60,7 +55,6 @@ export const InitTheme: React.FC = () => {
   })();
   `,
       }}
-      id="theme-script"
     />
   )
 }

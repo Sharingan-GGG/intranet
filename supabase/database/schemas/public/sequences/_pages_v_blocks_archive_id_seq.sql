@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_blocks_archive_id_seq AS integer;

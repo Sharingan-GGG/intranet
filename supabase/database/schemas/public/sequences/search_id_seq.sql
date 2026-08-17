@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.search_id_seq AS integer;

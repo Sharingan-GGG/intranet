@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.redirects_rels_id_seq AS integer;

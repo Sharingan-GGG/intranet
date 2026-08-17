@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._posts_v_version_populated_authors_id_seq AS integer;

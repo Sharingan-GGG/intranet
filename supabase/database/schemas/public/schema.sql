@@ -1,0 +1,5 @@
+GRANT CREATE ON SCHEMA public TO PUBLIC;
+
+GRANT CREATE ON SCHEMA public TO postgres;
+
+GRANT ALL ON SCHEMA public TO payload_app;

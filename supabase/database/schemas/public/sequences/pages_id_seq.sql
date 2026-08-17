@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.pages_id_seq AS integer;

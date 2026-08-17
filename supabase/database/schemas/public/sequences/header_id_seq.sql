@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.header_id_seq AS integer;

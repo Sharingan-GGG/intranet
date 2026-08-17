@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_blocks_content_columns_id_seq AS integer;

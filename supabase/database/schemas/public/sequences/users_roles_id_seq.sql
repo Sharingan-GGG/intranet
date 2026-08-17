@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.users_roles_id_seq AS integer;

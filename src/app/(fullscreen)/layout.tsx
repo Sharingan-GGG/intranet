@@ -28,8 +28,8 @@ export default function FullscreenLayout({ children }: { children: React.ReactNo
       lang="en"
       suppressHydrationWarning
     >
+      <InitTheme />
       <head>
-        <InitTheme />
         <link href="/ctg-icon.png" rel="icon" type="image/png" sizes="100x100" />
         <link href="/ctg-icon.ico" rel="icon" sizes="any" />
         <link href="/ctg-icon.png" rel="apple-touch-icon" />

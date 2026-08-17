@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_blocks_quick_links_id_seq AS integer;

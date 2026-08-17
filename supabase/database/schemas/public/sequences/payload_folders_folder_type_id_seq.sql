@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.payload_folders_folder_type_id_seq AS integer;

@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_blocks_media_block_id_seq AS integer;

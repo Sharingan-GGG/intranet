@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.permissions_rels_id_seq AS integer;

@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.events_id_seq AS integer;

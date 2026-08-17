@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_version_hero_links_id_seq AS integer;

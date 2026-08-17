@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.media_id_seq AS integer;

@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.payload_locked_documents_id_seq AS integer;

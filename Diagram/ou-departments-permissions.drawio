@@ -1,68 +1,68 @@
 <mxfile host="app.diagrams.net" modified="2026-08-06T00:00:00.000Z" agent="claude-code" version="24.7.5" type="device">
-  <diagram id="ou-permissions" name="OU / Departments / Permissions">
-    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1160" math="0" shadow="0">
+  <diagram id="ou-permissions" name="Departments &amp; Access, Explained">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1200" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
         <!-- Google Workspace source -->
-        <mxCell id="gws" value="&lt;b&gt;Google Workspace&lt;/b&gt;&lt;br&gt;Admin SDK Directory API&lt;br&gt;OUs + users per OU&lt;br&gt;&lt;i&gt;src/lib/google-admin.ts&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="60" y="40" width="260" height="90" as="geometry" />
+        <mxCell id="gws" value="&lt;b&gt;Google Workspace&lt;/b&gt;&lt;br&gt;Your company's teams already live here.&lt;br&gt;We read that structure automatically —&lt;br&gt;nobody has to re-type it." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="40" width="260" height="100" as="geometry" />
         </mxCell>
 
-        <!-- Roles removed note -->
-        <mxCell id="rolesNote" value="&lt;b&gt;Roles collection — removed&lt;/b&gt;&lt;br&gt;Was purely decorative (Role ↔ Department,&lt;br&gt;Role ↔ Permission) — never read at runtime.&lt;br&gt;Folded into &lt;b&gt;Users.roles&lt;/b&gt; +&lt;br&gt;&lt;b&gt;Permissions.role&lt;/b&gt;." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1080" y="40" width="280" height="110" as="geometry" />
+        <!-- Simplification note -->
+        <mxCell id="rolesNote" value="&lt;b&gt;One less list to manage&lt;/b&gt;&lt;br&gt;Job levels used to be their own&lt;br&gt;separate list. Now each person&lt;br&gt;just has a job level, and each&lt;br&gt;access rule names the job&lt;br&gt;level(s) it applies to." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="40" width="280" height="120" as="geometry" />
         </mxCell>
 
         <!-- Departments -->
-        <mxCell id="departments" value="&lt;b&gt;Departments&lt;/b&gt; (collection)&lt;br&gt;&lt;br&gt;name&lt;br&gt;orgUnitPath — unique, Google OU path&lt;br&gt;description&lt;br&gt;lead → Users, filtered to users&lt;br&gt;&amp;nbsp;&amp;nbsp;already in this department&lt;br&gt;parent → Departments (self-ref hierarchy)&lt;br&gt;workspaceUsers — live OU members, UI-only&lt;br&gt;&lt;br&gt;access: read=authenticated, write=isAdmin" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="60" y="200" width="300" height="220" as="geometry" />
+        <mxCell id="departments" value="&lt;b&gt;Departments&lt;/b&gt;&lt;br&gt;&lt;br&gt;Each team on the org chart has:&lt;br&gt;• A name&lt;br&gt;• The matching Google team, so&lt;br&gt;&amp;nbsp;&amp;nbsp;membership stays up to date&lt;br&gt;&amp;nbsp;&amp;nbsp;on its own&lt;br&gt;• A team lead&lt;br&gt;• A parent team, for teams that&lt;br&gt;&amp;nbsp;&amp;nbsp;sit under a bigger one&lt;br&gt;&lt;br&gt;Anyone signed in can see this list.&lt;br&gt;Only admins can change it." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="200" width="300" height="260" as="geometry" />
         </mxCell>
 
         <!-- Users -->
-        <mxCell id="users" value="&lt;b&gt;Users&lt;/b&gt; (collection)&lt;br&gt;&lt;br&gt;roles (hasMany, saveToJWT):&lt;br&gt;&amp;nbsp;&amp;nbsp;super-admin / admin / editor / user&lt;br&gt;department → Departments (single)&lt;br&gt;&lt;br&gt;access.admin: super-admin/admin/editor&lt;br&gt;update: isAdminOrSelf" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="440" y="220" width="300" height="180" as="geometry" />
+        <mxCell id="users" value="&lt;b&gt;People&lt;/b&gt;&lt;br&gt;(everyone with a login)&lt;br&gt;&lt;br&gt;Each person has:&lt;br&gt;• A job level — Super Admin,&lt;br&gt;&amp;nbsp;&amp;nbsp;Admin, Editor, or Staff&lt;br&gt;• One department&lt;br&gt;&lt;br&gt;Admins — and the person&lt;br&gt;themselves — can update this." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="220" width="300" height="200" as="geometry" />
         </mxCell>
 
         <!-- Permissions -->
-        <mxCell id="permissions" value="&lt;b&gt;Permissions&lt;/b&gt; (collection)&lt;br&gt;&lt;br&gt;role (hasMany): super-admin/admin/editor/user&lt;br&gt;department (hasMany) — empty = global&lt;br&gt;users (hasMany) — specific override,&lt;br&gt;&amp;nbsp;&amp;nbsp;picker filtered to the department(s) above&lt;br&gt;adminCollections (select) — Payload collections&lt;br&gt;pages (select) — home:* blocks + route:*&lt;br&gt;excludedPages (select) — always wins&lt;br&gt;category, description&lt;br&gt;&lt;br&gt;access: read=authenticated, write=isAdmin" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="860" y="200" width="320" height="240" as="geometry" />
+        <mxCell id="permissions" value="&lt;b&gt;Access Rules&lt;/b&gt;&lt;br&gt;&lt;br&gt;Each rule says who it's for and&lt;br&gt;what it unlocks:&lt;br&gt;• Job level(s) it applies to&lt;br&gt;• Department(s) — leave blank&lt;br&gt;&amp;nbsp;&amp;nbsp;for a company-wide rule&lt;br&gt;• OR specific people — for a&lt;br&gt;&amp;nbsp;&amp;nbsp;one-off exception&lt;br&gt;• Which admin sections it opens&lt;br&gt;• Which pages/sections it shows&lt;br&gt;• Anything to specifically hide&lt;br&gt;&lt;br&gt;Only admins can create these." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="860" y="200" width="320" height="280" as="geometry" />
         </mxCell>
 
         <!-- Resolver -->
-        <mxCell id="resolver" value="&lt;b&gt;src/access/departmentPermissions.ts&lt;/b&gt;&lt;br&gt;&lt;br&gt;getRoleTier(user)&lt;br&gt;&amp;nbsp;&amp;nbsp;highest of super-admin &amp;gt; admin &amp;gt; editor &amp;gt; user&lt;br&gt;resolveUserPermissions(payload, user):&lt;br&gt;&amp;nbsp;&amp;nbsp;find Permissions where role contains tier AND&lt;br&gt;&amp;nbsp;&amp;nbsp;(global (no dept/users) OR (dept contains user's&lt;br&gt;&amp;nbsp;&amp;nbsp;dept AND users empty) OR users contains user)&lt;br&gt;&amp;nbsp;&amp;nbsp;— a rule with users set matches ONLY those users;&lt;br&gt;&amp;nbsp;&amp;nbsp;its department is picker-narrowing, not a grant&lt;br&gt;&amp;nbsp;&amp;nbsp;→ adminCollections (unioned, no precedence) +&lt;br&gt;&amp;nbsp;&amp;nbsp;pages/excludedPages, each tracked as global /&lt;br&gt;&amp;nbsp;&amp;nbsp;dept-scoped / user-scoped&lt;br&gt;&lt;br&gt;hasAdminCollectionAccess(payload, user, slug)&lt;br&gt;hasPageAccess(payload, user, pageKey):&lt;br&gt;&amp;nbsp;&amp;nbsp;user-exclude &amp;gt; user-grant &amp;gt; dept-exclude &amp;gt;&lt;br&gt;&amp;nbsp;&amp;nbsp;dept-grant &amp;gt; global-exclude &amp;gt; admin bypass &amp;gt;&lt;br&gt;&amp;nbsp;&amp;nbsp;global-grant" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="440" y="480" width="420" height="290" as="geometry" />
+        <mxCell id="resolver" value="&lt;b&gt;How access gets decided&lt;/b&gt;&lt;br&gt;&lt;br&gt;1. Find every rule that matches this&lt;br&gt;&amp;nbsp;&amp;nbsp;person's job level, and that applies&lt;br&gt;&amp;nbsp;&amp;nbsp;company-wide, to their department,&lt;br&gt;&amp;nbsp;&amp;nbsp;or to them by name.&lt;br&gt;2. A rule naming them personally&lt;br&gt;&amp;nbsp;&amp;nbsp;always wins — their department no&lt;br&gt;&amp;nbsp;&amp;nbsp;longer matters for that rule.&lt;br&gt;3. Combine what all matching rules&lt;br&gt;&amp;nbsp;&amp;nbsp;unlock, and note anything blocked.&lt;br&gt;&lt;br&gt;Most specific wins: a rule about one&lt;br&gt;person beats one about their&lt;br&gt;department, which beats a&lt;br&gt;company-wide rule." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="500" width="420" height="300" as="geometry" />
         </mxCell>
 
         <!-- Admin enforcement -->
-        <mxCell id="adminEnforcement" value="&lt;b&gt;Admin-panel collections&lt;/b&gt;&lt;br&gt;Categories, Posts, Pages, Media,&lt;br&gt;EDMs, Events, KnowledgeBase,&lt;br&gt;QuickLinks, TimeZones&lt;br&gt;&lt;br&gt;create/update/delete → hasAdminCollectionAccess(slug)&lt;br&gt;super-admin/admin bypass everything&lt;br&gt;editor/user need a matching Permission&lt;br&gt;(scoped to their department)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="80" y="780" width="380" height="210" as="geometry" />
+        <mxCell id="adminEnforcement" value="&lt;b&gt;Inside the admin panel&lt;/b&gt;&lt;br&gt;Sections like Posts, Events, Media,&lt;br&gt;Categories, EDMs, Knowledge Base,&lt;br&gt;Quick Links, Time Zones&lt;br&gt;&lt;br&gt;Super Admins and Admins can&lt;br&gt;always get in.&lt;br&gt;Editors and Staff need a rule that&lt;br&gt;specifically unlocks that section&lt;br&gt;for them." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="820" width="380" height="220" as="geometry" />
         </mxCell>
 
         <!-- Front-end enforcement -->
-        <mxCell id="frontendEnforcement" value="&lt;b&gt;Front-end&lt;/b&gt;&lt;br&gt;Homepage blocks (home:*): quickLinks, knowledgeBase,&lt;br&gt;eventsBlock, edmSlider, newsSlider, timeZones,&lt;br&gt;featuredSpotlight — filtered in RenderHomeBlocks&lt;br&gt;Routes (route:*): calendar, posts, search,&lt;br&gt;seat-scanner — selectable, still visibility-only&lt;br&gt;(shows/hides the homepage link), not route-guarded&lt;br&gt;&lt;br&gt;route:pre-departure — the ONE route-guarded page:&lt;br&gt;pre-departure/[brand]/[[...view]]/page.tsx calls&lt;br&gt;hasPageAccess(payload, user, 'route:pre-departure')&lt;br&gt;right after the login check ⇒ denied users see an&lt;br&gt;inline &amp;quot;Access denied&amp;quot; card, not a silent redirect&lt;br&gt;&lt;br&gt;hasPageAccess(pageKey) via resolveUserPermissions&lt;br&gt;in page.tsx — no Permission rows yet ⇒ show-all&lt;br&gt;excludedPages always wins, even over bypass" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="560" y="780" width="420" height="300" as="geometry" />
+        <mxCell id="frontendEnforcement" value="&lt;b&gt;On the website&lt;/b&gt;&lt;br&gt;Controls which homepage sections&lt;br&gt;show (Quick Links, Knowledge Base,&lt;br&gt;Events, News, etc.) and which page&lt;br&gt;links appear.&lt;br&gt;&lt;br&gt;Pre Departure is the one page&lt;br&gt;that's actually locked — everywhere&lt;br&gt;else just hides the link if you're&lt;br&gt;not meant to see it; the page is&lt;br&gt;still reachable by typing the URL.&lt;br&gt;Blocked from Pre Departure? You'll&lt;br&gt;see a clear &amp;quot;Access denied&amp;quot;&lt;br&gt;message, not a silent redirect." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="820" width="420" height="280" as="geometry" />
         </mxCell>
 
         <!-- Edges -->
-        <mxCell id="e1" value="scripts/sync-ous.ts&lt;br&gt;upserts by orgUnitPath" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="gws" target="departments">
+        <mxCell id="e1" value="kept in sync automatically" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="gws" target="departments">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e2" value="user.department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="departments" target="users">
+        <mxCell id="e2" value="tells us their department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="departments" target="users">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e3" value="department (optional scope)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="departments" target="permissions">
+        <mxCell id="e3" value="a rule can target a department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="departments" target="permissions">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e4" value="role tier + department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="users" target="resolver">
+        <mxCell id="e4" value="job level + department" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="users" target="resolver">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e8" value="users (optional, specific override)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="users" target="permissions">
+        <mxCell id="e8" value="or a rule can target specific people" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="users" target="permissions">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -70,11 +70,11 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e6" value="hasAdminCollectionAccess" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="resolver" target="adminEnforcement">
+        <mxCell id="e6" value="controls the admin panel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="resolver" target="adminEnforcement">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e7" value="hasPageAccess" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="resolver" target="frontendEnforcement">
+        <mxCell id="e7" value="controls the website" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;" edge="1" parent="1" source="resolver" target="frontendEnforcement">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 

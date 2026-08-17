@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_blocks_events_block_id_seq AS integer;

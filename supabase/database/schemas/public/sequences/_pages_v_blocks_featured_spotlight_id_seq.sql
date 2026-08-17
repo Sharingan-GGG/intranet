@@ -1,0 +1,1 @@
+CREATE SEQUENCE public._pages_v_blocks_featured_spotlight_id_seq AS integer;

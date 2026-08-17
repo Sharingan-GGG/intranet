@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.footer_id_seq AS integer;

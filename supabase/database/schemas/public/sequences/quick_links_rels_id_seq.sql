@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.quick_links_rels_id_seq AS integer;

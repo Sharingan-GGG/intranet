@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.users_rels_id_seq AS integer;

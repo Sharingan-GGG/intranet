@@ -5,6 +5,11 @@ const path = require('path')
 process.chdir(__dirname)
 process.env.NODE_ENV = 'production'
 
+// This host has no IPv6 route. Node's default DNS result order can non-deterministically
+// return an IPv6 address for the Supabase pooler hostname (it round-robins across many nodes),
+// causing ENETUNREACH. Force IPv4 so Postgres connections always resolve to a reachable address.
+require('dns').setDefaultResultOrder('ipv4first')
+
 const next = require('next')
 const { createServer } = require('http')
 

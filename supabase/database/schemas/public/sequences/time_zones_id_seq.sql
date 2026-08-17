@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.time_zones_id_seq AS integer;
