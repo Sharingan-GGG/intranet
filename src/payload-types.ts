@@ -752,24 +752,18 @@ export interface EdmSliderBlock {
  * via the `definition` "FeedbackBlock".
  */
 export interface FeedbackBlock {
-  orgChart: {
-    title: string;
-    description?: string | null;
-    buttonLabel: string;
-    /**
-     * External URL (https://…) or internal path (/page) the button opens.
-     */
-    buttonUrl: string;
-  };
-  feedbackForm: {
-    title: string;
-    description?: string | null;
-    buttonLabel: string;
-    /**
-     * External URL (https://…) or internal path (/page) the button opens.
-     */
-    buttonUrl: string;
-  };
+  cards?:
+    | {
+        title: string;
+        description?: string | null;
+        buttonLabel: string;
+        /**
+         * External URL (https://…) or internal path (/page) the button opens.
+         */
+        buttonUrl: string;
+        id?: string | null;
+      }[]
+    | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'feedback';
@@ -1957,21 +1951,14 @@ export interface EdmSliderBlockSelect<T extends boolean = true> {
  * via the `definition` "FeedbackBlock_select".
  */
 export interface FeedbackBlockSelect<T extends boolean = true> {
-  orgChart?:
+  cards?:
     | T
     | {
         title?: T;
         description?: T;
         buttonLabel?: T;
         buttonUrl?: T;
-      };
-  feedbackForm?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        buttonLabel?: T;
-        buttonUrl?: T;
+        id?: T;
       };
   id?: T;
   blockName?: T;

@@ -7,27 +7,26 @@ type FeedbackCard = {
   buttonUrl: string
 }
 
-// Falls back to the original copy for any 'feedback' block saved before these fields
-// existed — Payload doesn't backfill group defaults into already-stored block data.
-const DEFAULT_ORG_CHART: FeedbackCard = {
-  title: 'CTG Organisational Chart',
-  description: 'See how the Complex Travel Group teams fit together.',
-  buttonLabel: 'View',
-  buttonUrl: '#',
-}
-
-const DEFAULT_FEEDBACK_FORM: FeedbackCard = {
-  title: 'Provide Feedback',
-  description:
-    'Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.',
-  buttonLabel: 'Send',
-  buttonUrl:
-    'https://docs.google.com/forms/d/e/1FAIpQLSe5gqLRU1kWAB_7_xqy6WxkCwmfQ5-6wVW6naKhPzClolT9lw/viewform?usp=header',
-}
+// Falls back to the original two cards for any 'feedback' block saved before
+// the array field existed — Payload doesn't backfill old group data into it.
+const DEFAULT_CARDS: FeedbackCard[] = [
+  {
+    title: 'CTG Organisational Chart',
+    description: 'See how the Complex Travel Group teams fit together.',
+    buttonLabel: 'View',
+    buttonUrl: '#',
+  },
+  {
+    title: 'Provide Feedback',
+    description:
+      'Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.',
+    buttonLabel: 'Send',
+    buttonUrl:
+      'https://docs.google.com/forms/d/e/1FAIpQLSe5gqLRU1kWAB_7_xqy6WxkCwmfQ5-6wVW6naKhPzClolT9lw/viewform?usp=header',
+  },
+]
 
 const cardStyle: React.CSSProperties = {
-  flex: '1 1 300px',
-  maxWidth: 620,
   background: '#fff',
   border: '1px solid var(--il-border)',
   borderRadius: 20,
@@ -84,27 +83,29 @@ const FeedbackCardView: React.FC<{ card: FeedbackCard }> = ({ card }) => (
   </div>
 )
 
-export const Feedback: React.FC<{
-  orgChart?: FeedbackCard | null
-  feedbackForm?: FeedbackCard | null
-}> = ({ orgChart, feedbackForm }) => (
-  <div
-    id="support"
-    className="il-support"
-    style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 14px', scrollMarginTop: 82 }}
-  >
+export const Feedback: React.FC<{ cards?: FeedbackCard[] | null }> = ({ cards }) => {
+  const items = cards?.length ? cards : DEFAULT_CARDS
+
+  return (
     <div
-      style={{
-        width: 1000,
-        maxWidth: '100%',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 20,
-        justifyContent: 'center',
-      }}
+      id="support"
+      className="il-support"
+      style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 14px', scrollMarginTop: 82 }}
     >
-      <FeedbackCardView card={orgChart ?? DEFAULT_ORG_CHART} />
-      <FeedbackCardView card={feedbackForm ?? DEFAULT_FEEDBACK_FORM} />
+      <div
+        className="il-feedback-grid"
+        style={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 420px))',
+          justifyContent: 'center',
+          gap: 20,
+        }}
+      >
+        {items.map((card, idx) => (
+          <FeedbackCardView key={`${card.title}-${idx}`} card={card} />
+        ))}
+      </div>
     </div>
-  </div>
-)
+  )
+}
