@@ -389,7 +389,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
               textDecoration: 'none',
             }}
           >
-            More
+            Navigator Search
           </a>
         </div>
       )}
