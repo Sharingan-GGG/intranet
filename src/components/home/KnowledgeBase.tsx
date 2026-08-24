@@ -174,6 +174,10 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
     [documents, cat, query],
   )
 
+  const KB_ALL_LIMIT = 12
+  const visibleDocs = cat === 'All' ? docs.slice(0, KB_ALL_LIMIT) : docs
+  const hasMore = cat === 'All'
+
   return (
     <div
       id="knowledge-base"
@@ -271,7 +275,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
       </div>
 
       <div className="il-kb-docs" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 18px' }}>
-        {docs.map((d, idx) => {
+        {visibleDocs.map((d, idx) => {
           const [bg, fg] = EXT_STYLE[d.ext]
           const multiLink = (d.links?.length ?? 0) > 1
           const rowStyle: React.CSSProperties = {
@@ -364,6 +368,31 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
           </div>
         )}
       </div>
+
+      {hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+          <a
+            href="https://chat.google.com/app/chat/kyGnTiAAAAE"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '7px 16px',
+              border: '1px solid var(--il-border)',
+              background: '#fff',
+              color: 'var(--il-text-body)',
+              borderRadius: 999,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              textDecoration: 'none',
+            }}
+          >
+            More
+          </a>
+        </div>
+      )}
 
       {linksDoc && <LinksModal doc={linksDoc} onClose={() => setLinksDoc(null)} />}
     </div>
