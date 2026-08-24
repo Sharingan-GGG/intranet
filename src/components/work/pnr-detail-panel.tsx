@@ -196,6 +196,7 @@ type Props = {
     onRetry?: () => void
   ) => void
   onCloseModal?: () => void
+  userName?: string
 }
 
 export function PnrDetailPanel({
@@ -216,7 +217,9 @@ export function PnrDetailPanel({
   onDetailTabChange,
   onShowModal,
   onCloseModal,
+  userName,
 }: Props) {
+  const isAdmin = role === "admin" || role === "super_admin"
   const ticketParserUnavailable = React.useMemo(() => {
     if (ticketFetchFailed) return true
     if (tickets && tickets.length > 0)
@@ -743,6 +746,8 @@ export function PnrDetailPanel({
           ) : (
             <PnrNotesTab
               pnr={selectedPnr}
+              userName={userName ?? "Unknown"}
+              isAdmin={isAdmin}
               onShowModal={onShowModal}
               onCloseModal={onCloseModal}
             />
@@ -756,6 +761,8 @@ export function PnrDetailPanel({
             <PnrReportItTab
               pnr={selectedPnr}
               brand={brand}
+              userName={userName ?? "Unknown"}
+              isAdmin={isAdmin}
               onShowModal={onShowModal}
               onCloseModal={onCloseModal}
             />

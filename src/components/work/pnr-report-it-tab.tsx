@@ -18,10 +18,6 @@ import type { ReportItRow } from "@/lib/supabase/database.types"
 import { formatAdlDateTime } from "@/lib/datetime-adl"
 import { cn } from "@/lib/utils"
 
-// "admin" is the only role that can change status
-const ADMIN_ROLE = "admin"
-const ALL_USERS = ["admin", "Charlotte", "Alishia", "Emma", "Jodie"] as const
-
 type Status = "Reported" | "Pending" | "Done"
 type FlagResponse = { flag: ReportItRow | null; history: ReportItRow[] }
 
@@ -175,11 +171,15 @@ function StatusPill({ status }: { status: string | null }) {
 export function PnrReportItTab({
   pnr,
   brand,
+  userName,
+  isAdmin,
   onShowModal,
   onCloseModal,
 }: {
   pnr: string
   brand?: string
+  userName: string
+  isAdmin: boolean
   onShowModal?: (
     operation: string,
     status: OperationStatus,
@@ -190,10 +190,7 @@ export function PnrReportItTab({
   onCloseModal?: () => void
 }) {
   const qc = useQueryClient()
-  const [selectedUser, setSelectedUser] = React.useState<string>(ALL_USERS[0])
   const [reason, setReason] = React.useState("")
-
-  const isAdmin = selectedUser === ADMIN_ROLE
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["report-it-flag", pnr],
@@ -282,31 +279,6 @@ export function PnrReportItTab({
 
   return (
     <div className="space-y-4">
-      {/* User selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          Logged in as:
-        </span>
-        <div className="flex flex-wrap gap-1">
-          {ALL_USERS.map((u) => (
-            <button
-              key={u}
-              type="button"
-              onClick={() => setSelectedUser(u)}
-              className={cn(
-                "inline-flex h-5 items-center rounded-full border px-2 text-[10px] font-medium transition-colors",
-                selectedUser === u
-                  ? "border-primary bg-primary/10 text-primary dark:text-white"
-                  : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
-                u === ADMIN_ROLE && "font-bold"
-              )}
-            >
-              {u === ADMIN_ROLE ? "Admin" : u}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Active flag */}
       {flag && activeStatus ? (
         <div className="space-y-3 rounded-lg border p-4">
@@ -386,7 +358,7 @@ export function PnrReportItTab({
             onClick={() =>
               submitMutation.mutate({
                 pnr,
-                reported_by: selectedUser,
+                reported_by: userName,
                 reason: reason || undefined,
               })
             }

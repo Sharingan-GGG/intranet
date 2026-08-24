@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { formatAdlDateTime } from "@/lib/datetime-adl"
-import { cn } from "@/lib/utils"
 import {
   useNotesForPnr,
   useCreateNote,
@@ -16,15 +15,14 @@ import {
 } from "@/hooks/use-pnr-notes"
 import type { OperationStatus } from "@/components/ui/operation-modal"
 
-const ADMIN_ROLE = "admin"
-const ALL_USERS = ["admin", "Charlotte", "Alishia", "Emma", "Jodie"] as const
-
 function formatNoteDate(iso: string): string {
   return formatAdlDateTime(iso)
 }
 
 export interface PnrNotesTabProps {
   pnr: string
+  userName: string
+  isAdmin: boolean
   onShowModal?: (
     operation: string,
     status: OperationStatus,
@@ -37,13 +35,12 @@ export interface PnrNotesTabProps {
 
 export function PnrNotesTab({
   pnr,
+  userName,
+  isAdmin,
   onShowModal,
   onCloseModal,
 }: PnrNotesTabProps) {
   const [noteText, setNoteText] = React.useState("")
-  const [adminName, setAdminName] = React.useState<string>(ALL_USERS[0])
-
-  const isAdmin = adminName === ADMIN_ROLE
 
   const { data: notes = [], isLoading, error } = useNotesForPnr(pnr)
 
@@ -77,7 +74,7 @@ export function PnrNotesTab({
     const trimmed = noteText.trim()
     if (!trimmed) return
     addNote(
-      { pnr, admin_name: adminName, note: trimmed },
+      { pnr, admin_name: userName, note: trimmed },
       {
         onSuccess: () => {
           setNoteText("")
@@ -114,28 +111,6 @@ export function PnrNotesTab({
     <div className="space-y-4">
       {/* Add note form */}
       <div className="space-y-2 rounded-lg border bg-card p-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">
-            Logged in as:
-          </span>
-          <div className="flex flex-wrap gap-1">
-            {ALL_USERS.map((a) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => setAdminName(a)}
-                className={cn(
-                  "inline-flex h-5 items-center rounded-full border px-2 text-[10px] font-medium transition-colors",
-                  adminName === a
-                    ? "border-primary bg-primary/10 text-primary dark:text-white"
-                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                )}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-        </div>
         <Textarea
           placeholder={`Write a note for PNR ${pnr}…`}
           value={noteText}
@@ -195,7 +170,7 @@ export function PnrNotesTab({
                     {formatNoteDate(n.Created_at)}
                   </span>
                 </div>
-                {(isAdmin || n.Note_By === adminName) && (
+                {(isAdmin || n.Note_By === userName) && (
                   <Button
                     type="button"
                     size="icon"

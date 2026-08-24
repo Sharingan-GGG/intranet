@@ -741,8 +741,12 @@ export function PnrWorkDashboard({
   // Default to the logged-in user's own scans rather than the full queue —
   // whoever is signed in via SSO is the one seeded here, not a fixed name.
   const canViewAllProfiles = role === "admin" || role === "super_admin"
+  // Deep-linking straight to a PNR (e.g. a shared URL) shouldn't default the
+  // filter to "my own scans" — that silently hides the PNR from the queue
+  // list because its scannedBy won't match. Only default to "me" when
+  // landing on the queue with no specific PNR requested.
   const [scannedByFilter, setScannedByFilter] = React.useState<string>(
-    userName ?? "all"
+    route.pnr ? "all" : userName ?? "all"
   )
   const [allProfiles, setAllProfiles] = React.useState<ProfileOption[]>([])
   React.useEffect(() => {
@@ -818,6 +822,14 @@ export function PnrWorkDashboard({
     }
     setSelectedPnr(pnr)
     syncRoute({ pnr })
+  }
+
+  // Switching whose scans you're viewing invalidates whatever PNR was open —
+  // it likely doesn't belong to the newly selected user, so drop it instead
+  // of leaving a stale detail panel open that the queue filter will fight with.
+  function handleScannedByFilterChange(value: string) {
+    setScannedByFilter(value)
+    handleSelectPnr(null)
   }
 
   function handleDetailTabChange(tab: string) {
@@ -1467,6 +1479,7 @@ export function PnrWorkDashboard({
     onShowModal: showOperationModal,
     onCloseModal: closeOperationModal,
     role,
+    userName,
   }
 
   return (
@@ -1609,7 +1622,7 @@ export function PnrWorkDashboard({
 
         {/* User — Admins and Super Admins get a picker of all profiles to filter by Scanned By */}
         {canViewAllProfiles ? (
-          <Select value={scannedByFilter} onValueChange={setScannedByFilter}>
+          <Select value={scannedByFilter} onValueChange={handleScannedByFilterChange}>
             <SelectTrigger className="h-auto w-auto shrink-0 gap-2 whitespace-nowrap rounded-lg border-transparent bg-transparent px-2.5 py-1.5 text-sm font-medium text-white shadow-none transition-colors hover:bg-white/10 *:data-[slot=select-value]:text-white [&_svg:not([class*='text-'])]:text-[#AACCD6]">
               <span className="inline-grid size-7 shrink-0 place-items-center rounded-full bg-[#AACCD6] text-center text-xs font-bold leading-none text-primary">
                 {(scannedByFilter === "all" ? (userName ?? "?") : scannedByFilter)
