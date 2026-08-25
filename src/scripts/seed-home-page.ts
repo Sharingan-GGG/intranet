@@ -23,20 +23,22 @@ const layout: Page['layout'] = [
   { blockType: 'edmSlider', limit: 12 },
   {
     blockType: 'feedback',
-    orgChart: {
-      title: 'CTG Organisational Chart',
-      description: 'See how the Complex Travel Group teams fit together.',
-      buttonLabel: 'View',
-      buttonUrl: '#',
-    },
-    feedbackForm: {
-      title: 'Provide Feedback',
-      description:
-        'Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.',
-      buttonLabel: 'Send',
-      buttonUrl:
-        'https://docs.google.com/forms/d/e/1FAIpQLSe5gqLRU1kWAB_7_xqy6WxkCwmfQ5-6wVW6naKhPzClolT9lw/viewform?usp=header',
-    },
+    cards: [
+      {
+        title: 'CTG Organisational Chart',
+        description: 'See how the Complex Travel Group teams fit together.',
+        buttonLabel: 'View',
+        buttonUrl: '#',
+      },
+      {
+        title: 'Provide Feedback',
+        description:
+          'Submit your feedback or ideas for improvement across the organisation. Not limited to Intranet only - think big or think small. We want to hear it.',
+        buttonLabel: 'Send',
+        buttonUrl:
+          'https://docs.google.com/forms/d/e/1FAIpQLSe5gqLRU1kWAB_7_xqy6WxkCwmfQ5-6wVW6naKhPzClolT9lw/viewform?usp=header',
+      },
+    ],
   },
 ]
 

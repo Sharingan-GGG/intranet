@@ -69,6 +69,17 @@ Symptom if stale: 500s with `Failed to load external module <name>-<hash>` in
 - Manual smoke test on the server:
   `cd ~/public_html/intranet_staging && PORT=3112 /opt/cpanel/ea-nodejs22/bin/node server.cjs`
   (use a different port than production's manual smoke test so both can run at once)
+- **Mitigation: admin collection list renders empty / stderr.log shows `relation "..." does not exist`** —
+  a schema migration under `src/migrations/` was applied locally but never run against this environment's
+  Supabase project (this happened 2026-08-24 with `20260824_022450_add_feedback_cards_array`: the Pages
+  admin list came back empty because Postgres queries on `pages`/`_pages_v` referenced tables the migration
+  hadn't created yet here). Fix:
+  ```bash
+  pnpm migrate:staging:status   # confirm which migration(s) are pending ("No" in the Ran column)
+  pnpm migrate:staging          # apply them
+  ```
+  No rebuild/redeploy needed to fix this — it's a DB-only fix. Verify by re-checking `stderr.log` for the
+  `relation ... does not exist` error and reloading the affected admin collection page.
 
 ## Database (Supabase) — schema/data changes
 Staging runs on its own Supabase project (`mckqcwpnaouqrfnoxils`), separate from both production and
@@ -87,6 +98,16 @@ mckqcwpnaouqrfnoxils`):
   local Docker dev and must not be pushed as-is.
 - The `pre_departure` schema (PNR queue, department page access, etc.) isn't part of Payload's migrations —
   changes to it are applied by hand via `psql`/the Supabase SQL editor and aren't tracked by `payload migrate`.
+  Rollout order for a feature that changes this schema: write/test the SQL against local, then run the exact
+  same SQL against staging's project (`mckqcwpnaouqrfnoxils`) here, verify, then run it again against
+  production (`qpnyysjakayualiqtvyf`, see [DEPLOY-CPANEL.md](./DEPLOY-CPANEL.md)) — there's no ledger for this
+  schema, so each environment's SQL history is only what you've manually run against it. Since there's no
+  automatic sync, track what's been applied where yourself (e.g. note it in the PR/commit).
+- `payload migrate` never overrides existing data — it only runs the DDL/DML written in migration files not
+  yet recorded in that environment's own `payload_migrations` table. Running it against staging then
+  production applies the same schema structure to each; it does not copy data between environments, and
+  each environment keeps its own rows. The one exception is if a migration's `up()` itself contains a data
+  transform (e.g. a backfill) — that code runs against whatever data already exists in that environment.
 
 Google OAuth redirect URI (already configured): `https://mckqcwpnaouqrfnoxils.supabase.co/auth/v1/callback`
 is registered in Google Cloud Console's Authorized redirect URIs — this is Supabase Auth's own callback,

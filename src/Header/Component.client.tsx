@@ -177,6 +177,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                     padding: '8px 13px',
                     borderRadius: 9,
                     background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    textDecoration: 'none',
                   }}
                 >
                   {item.label}
@@ -249,6 +250,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                           fontWeight: 500,
                           color: 'var(--il-text)',
                           whiteSpace: 'nowrap',
+                          textDecoration: 'none',
                         }}
                       >
                         {sub.label}
@@ -463,6 +465,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                       padding: '11px 12px',
                       borderRadius: 10,
                       background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                      textDecoration: 'none',
                     }}
                   >
                     {item.label}
@@ -506,6 +509,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ navItems = [], user 
                           fontWeight: 500,
                           padding: '9px 12px',
                           borderRadius: 10,
+                          textDecoration: 'none',
                         }}
                       >
                         {sub.label}
