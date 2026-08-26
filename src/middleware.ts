@@ -85,6 +85,16 @@ export default async function middleware(req: NextRequest) {
   const hasSession = Boolean(data?.claims) || req.cookies.has('payload-token')
 
   if (hasSession) {
+    // Auth.js/NextAuth cookies are leftover cruft from before the Supabase Auth
+    // migration — payload-authjs stays installed (see auth.ts), but nothing signs
+    // in through it anymore, so nobody ever clears these. Left alone they sit in a
+    // long-lived browser profile forever while Supabase keeps adding cookies on
+    // top, eventually tipping the Cookie header past nginx's header buffer limit.
+    for (const cookie of req.cookies.getAll()) {
+      if (/^(__Secure-|__Host-)?authjs\./.test(cookie.name)) {
+        response.cookies.delete(cookie.name)
+      }
+    }
     return response
   }
 
