@@ -91,11 +91,11 @@ async function getSupabaseQueueItems(
     statusFilter === "pending"
       ? ["pending"]
       : statusFilter === "exception"
-        ? ["exception"]
+        ? ["exception", "failed"]
         : statusFilter === "done"
           ? ["done"]
           : statusFilter === "all" || !statusFilter
-            ? (["pending", "exception", "done"] as const)
+            ? (["pending", "exception", "failed", "done"] as const)
             : null
 
   if (!statusesToFetch) return []
@@ -137,7 +137,7 @@ async function getSupabaseQueueItems(
 
     return rows.map((row) => {
       const statusRaw =
-        row.queue_status === "exception"
+        row.queue_status === "exception" || row.queue_status === "failed"
           ? "exception"
           : row.queue_status === "done"
             ? "done"

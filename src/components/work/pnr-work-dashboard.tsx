@@ -657,6 +657,21 @@ function MovePnrDialog({
   )
 }
 
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<void>
+) {
+  let next = 0
+  async function runNext(): Promise<void> {
+    const i = next++
+    if (i >= items.length) return
+    await worker(items[i], i)
+    return runNext()
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runNext))
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 /**
@@ -1241,15 +1256,17 @@ export function PnrWorkDashboard({
       return
     }
 
-    // Sequential Sabre fetch for each newly imported PNR
+    // Sabre fetch for each newly imported PNR, up to 3 in flight at once.
+    // Fully sequential fetching is what made 30+ PNR batches slow enough to
+    // time out even though each individual PNR fetch succeeds on its own.
     let fetchedCount = 0
     let failedCount = 0
-    for (let i = 0; i < pnrsToFetch.length; i++) {
-      const pnr = pnrsToFetch[i]
+    let completedCount = 0
+    await runWithConcurrency(pnrsToFetch, 3, async (pnr) => {
       showOperationModal(
         "Scan Sheet",
         "pending",
-        `Fetching ${i + 1} / ${pnrsToFetch.length}: ${pnr}`,
+        `Fetching ${completedCount + 1} / ${pnrsToFetch.length}: ${pnr}`,
         undefined,
         undefined,
         false
@@ -1263,8 +1280,10 @@ export function PnrWorkDashboard({
         fetchedCount++
       } catch {
         failedCount++
+      } finally {
+        completedCount++
       }
-    }
+    })
 
     void queryClient.invalidateQueries({ queryKey: ["pnr-queue"] })
     void queryClient.invalidateQueries({ queryKey: ["pnr-detail"] })

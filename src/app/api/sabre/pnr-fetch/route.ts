@@ -32,6 +32,19 @@ import {
 } from "@/lib/supabase/pnr-queue-metadata"
 import { updateSheetRows } from "@/lib/google-sheets"
 
+export const maxDuration = 60
+
+const FETCH_BUDGET_MS = 45_000
+
+function withDeadline<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} exceeded ${ms}ms budget`)), ms)
+    ),
+  ])
+}
+
 type StepRecord = {
   name: string
   status: "pending" | "success" | "error"
@@ -41,6 +54,7 @@ type StepRecord = {
 
 export async function POST(req: Request) {
   const steps: StepRecord[] = []
+  let pnr = ""
 
   try {
     const body = (await req.json()) as {
@@ -49,7 +63,7 @@ export async function POST(req: Request) {
       includeP3?: boolean
       includeP4?: boolean
     }
-    const pnr = String(body.pnr ?? "")
+    pnr = String(body.pnr ?? "")
       .trim()
       .toUpperCase()
     const brand = body.brand ?? "SABRE"
@@ -79,6 +93,14 @@ export async function POST(req: Request) {
       )
     }
 
+    let jsonData: Record<string, unknown> = {}
+    let p3Data: P3ProcessModel | null = null
+    let p3Xml: string | null = null
+    let p4Data: unknown = null
+    let p4Xml: string | null = null
+
+    await withDeadline(
+      (async () => {
     steps.push({ name: "JSON Token", status: "pending" })
     const t1 = Date.now()
     const jsonTokenResult = await fetchJsonToken(config)
@@ -90,7 +112,6 @@ export async function POST(req: Request) {
 
     steps.push({ name: "JSON GetBooking", status: "pending" })
     const t2 = Date.now()
-    let jsonData: Record<string, unknown>
     try {
       jsonData = await fetchJsonPnr(
         pnr,
@@ -116,17 +137,9 @@ export async function POST(req: Request) {
       Boolean(config.soapUrl?.trim()) &&
       (wantP3 || (wantP4 && ticketNumbers.length > 0))
 
-    let p3Data: P3ProcessModel | null = null
-    let p3Xml: string | null = null
-    let p4Data: unknown = null
-    let p4Xml: string | null = null
-
     if (needSoap) {
       if (!config.soapUrl) {
-        return NextResponse.json(
-          { error: "Sabre SOAP not configured (SABRE_SOAP_BASE_URL)" },
-          { status: 500 }
-        )
+        throw new Error("Sabre SOAP not configured (SABRE_SOAP_BASE_URL)")
       }
 
       steps.push({ name: "SOAP Token", status: "pending" })
@@ -287,6 +300,10 @@ export async function POST(req: Request) {
         }
       }
     }
+      })(),
+      FETCH_BUDGET_MS,
+      "Sabre PNR fetch"
+    )
 
     steps.push({ name: "Save Supabase", status: "pending" })
     const tSave = Date.now()
@@ -320,6 +337,19 @@ export async function POST(req: Request) {
         ...steps[steps.length - 1]!,
         status: "error",
         error: errorMsg,
+      }
+    }
+
+    if (pnr) {
+      try {
+        const supabase = createServiceClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from("pnr_queue")
+          .update({ queue_status: "failed", processed_at: new Date().toISOString() })
+          .eq("pnr", pnr)
+      } catch (markErr) {
+        console.error("[SABRE] Failed to mark pnr_queue as failed:", markErr)
       }
     }
 
