@@ -277,6 +277,12 @@ export async function reconcileBrandSheet(
     if (queuedAnywhere.has(key) || tombstoned.has(key) || noFlight.has(key)) {
       return false
     }
+    // A blank column E, or "Error/ReScan" (a fetch that hasn't succeeded yet), means
+    // the row is queued for a fetch retry — that's the normal "not saved until it
+    // succeeds" state, not drift to recover. Only a row previously marked SYNCED/etc.
+    // that lost its queue row is genuine drift.
+    const marked = s.marked?.trim()
+    if (!marked || marked === "Error/ReScan") return false
     if (seenInSheet.has(key)) return false
     seenInSheet.add(key)
     return true

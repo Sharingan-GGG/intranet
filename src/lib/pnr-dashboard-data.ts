@@ -89,13 +89,13 @@ async function getSupabaseQueueItems(
   // Supabase queue items are the "sheet-import" workflow; we only merge the statuses the UI is asking for.
   const statusesToFetch =
     statusFilter === "pending"
-      ? ["pending"]
+      ? ["pending", "no-flight"]
       : statusFilter === "exception"
         ? ["exception", "failed"]
         : statusFilter === "done"
           ? ["done"]
           : statusFilter === "all" || !statusFilter
-            ? (["pending", "exception", "failed", "done"] as const)
+            ? (["pending", "no-flight", "exception", "failed", "done"] as const)
             : null
 
   if (!statusesToFetch) return []

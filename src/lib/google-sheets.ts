@@ -202,6 +202,17 @@ export function markSheetRowsDuplicated(
   )
 }
 
+export function markSheetRowsError(
+  brand: string,
+  rowIndices: number[],
+  scannedBy: string
+): Promise<void> {
+  return updateSheetRows(
+    brand,
+    rowIndices.map((i) => ({ rowIndex: i, colE: "Error/ReScan", scannedBy }))
+  )
+}
+
 export function markSheetRowsNoFlight(
   brand: string,
   rowIndices: number[],

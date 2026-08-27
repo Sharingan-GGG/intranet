@@ -1244,15 +1244,28 @@ export function PnrWorkDashboard({
 
     void queryClient.invalidateQueries({ queryKey: ["pnr-queue"] })
 
-    const parts: string[] = [`${importData.imported} SYNCED`]
-    if (importData.already_in_queue && importData.already_in_queue > 0)
-      parts.push(`${importData.already_in_queue} DUPLICATED`)
-    if (importData.no_flight && importData.no_flight > 0)
-      parts.push(`${importData.no_flight} No Flight`)
+    // `imported` only counts rows recovered from sheet/queue drift — a PNR pulled
+    // fresh from the sheet isn't saved anywhere yet, only fetched below.
+    const parts: string[] = []
+    if (importData.imported > 0) parts.push(`${importData.imported} recovered`)
+    if (importData.already_in_queue && importData.already_in_queue > 0) {
+      const list = (importData.already_in_queue_pnrs ?? []).join(", ")
+      parts.push(
+        `${importData.already_in_queue} DUPLICATED${list ? ` (${list})` : ""}`
+      )
+    }
+    if (importData.no_flight && importData.no_flight > 0) {
+      const list = (importData.no_flight_pnrs ?? []).join(", ")
+      parts.push(`${importData.no_flight} No Flight${list ? ` (${list})` : ""}`)
+    }
 
     const pnrsToFetch = importData.pnrs ?? []
     if (pnrsToFetch.length === 0) {
-      showOperationModal("Scan Sheet", "success", parts.join(" · "))
+      showOperationModal(
+        "Scan Sheet",
+        parts.length > 0 ? "success" : "error",
+        parts.length > 0 ? parts.join(" · ") : "Nothing new to import"
+      )
       return
     }
 
@@ -1260,26 +1273,30 @@ export function PnrWorkDashboard({
     // Fully sequential fetching is what made 30+ PNR batches slow enough to
     // time out even though each individual PNR fetch succeeds on its own.
     let fetchedCount = 0
-    let failedCount = 0
+    const failedPnrs: string[] = []
     let completedCount = 0
-    await runWithConcurrency(pnrsToFetch, 3, async (pnr) => {
+    await runWithConcurrency(pnrsToFetch, 3, async (row) => {
       showOperationModal(
         "Scan Sheet",
         "pending",
-        `Fetching ${completedCount + 1} / ${pnrsToFetch.length}: ${pnr}`,
+        `Fetching ${completedCount + 1} / ${pnrsToFetch.length}: ${row.pnr}`,
         undefined,
         undefined,
         false
       )
       try {
         await sabreFetch.mutateAsync({
-          pnr,
+          pnr: row.pnr,
           brand: scanBrand,
           includeP3: true,
+          client_name: row.client_name,
+          departure_date: row.departure_date,
+          consultant_name: row.consultant_name,
+          sheet_row: row.sheet_row,
         })
         fetchedCount++
       } catch {
-        failedCount++
+        failedPnrs.push(row.pnr)
       } finally {
         completedCount++
       }
@@ -1289,10 +1306,12 @@ export function PnrWorkDashboard({
     void queryClient.invalidateQueries({ queryKey: ["pnr-detail"] })
 
     parts.push(`${fetchedCount} Fetched from Sabre`)
-    if (failedCount > 0) parts.push(`${failedCount} Failed`)
+    if (failedPnrs.length > 0) {
+      parts.push(`${failedPnrs.length} Failed (${failedPnrs.join(", ")})`)
+    }
     showOperationModal(
       "Scan Sheet",
-      fetchedCount > 0 || importData.imported === 0 ? "success" : "error",
+      fetchedCount > 0 ? "success" : "error",
       parts.join(" · ")
     )
   }

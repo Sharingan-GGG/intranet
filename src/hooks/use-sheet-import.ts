@@ -3,15 +3,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
+export type SheetImportPnrToFetch = {
+  pnr: string
+  client_name: string | null
+  departure_date: string | null
+  consultant_name: string | null
+  sheet_row: number
+}
+
 type SheetImportResponse = {
   success: boolean
+  /** Rows recovered from sheet/queue drift — not the count of PNRs queued for fetch. */
   imported: number
   skipped: number
   already_synced?: number
   already_in_queue?: number
+  already_in_queue_pnrs?: string[]
   no_flight?: number
+  no_flight_pnrs?: string[]
   total: number
-  pnrs?: string[]
+  /** Queued for fetch — nothing is saved for these until the fetch succeeds. */
+  pnrs?: SheetImportPnrToFetch[]
   error?: string
   /** Reconcile pass: sheet rows that were missing from Supabase. */
   recovered_to_db?: number
@@ -58,17 +70,19 @@ export function useSheetImport() {
         })
       }
 
-      if (data.imported === 0) {
+      const queuedCount = data.pnrs?.length ?? 0
+      if (queuedCount === 0 && data.imported === 0) {
         toast.info(`No new PNRs to import from ${brand}`, {
           description: descParts.length > 0 ? descParts.join(" · ") : undefined,
         })
+      } else if (queuedCount > 0) {
+        toast.info(`${queuedCount} PNR${queuedCount === 1 ? "" : "s"} queued for Sabre fetch from ${brand}`, {
+          description: descParts.length > 0 ? descParts.join(" · ") : undefined,
+        })
       } else {
-        toast.success(
-          `${data.imported} SYNCED from ${brand}`,
-          {
-            description: descParts.length > 0 ? descParts.join(" · ") : undefined,
-          }
-        )
+        toast.success(`${data.imported} recovered from ${brand}`, {
+          description: descParts.length > 0 ? descParts.join(" · ") : undefined,
+        })
       }
     },
     onError: (err, brand) => {

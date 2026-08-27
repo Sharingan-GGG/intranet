@@ -30,7 +30,8 @@ import {
   recordInitialScanOutcome,
   upsertPnrQueueWorkflowAfterScan,
 } from "@/lib/supabase/pnr-queue-metadata"
-import { updateSheetRows } from "@/lib/google-sheets"
+import { markSheetRowsError, updateSheetRows } from "@/lib/google-sheets"
+import { getPreDepartureUser } from "@/lib/pre-departure-user"
 
 export const maxDuration = 60
 
@@ -55,6 +56,9 @@ type StepRecord = {
 export async function POST(req: Request) {
   const steps: StepRecord[] = []
   let pnr = ""
+  let sheetRow: number | null = null
+  let brandForSheetWrite = ""
+  let scannedBy = ""
 
   try {
     const body = (await req.json()) as {
@@ -62,13 +66,22 @@ export async function POST(req: Request) {
       brand?: string
       includeP3?: boolean
       includeP4?: boolean
+      // Only set when this fetch comes straight from a sheet import — that flow no
+      // longer saves anything until the fetch actually resolves, so this is the only
+      // place these values exist until then.
+      client_name?: string | null
+      departure_date?: string | null
+      consultant_name?: string | null
+      sheet_row?: number | null
     }
     pnr = String(body.pnr ?? "")
       .trim()
       .toUpperCase()
     const brand = body.brand ?? "SABRE"
+    brandForSheetWrite = brand
     const includeP3 = body.includeP3
     const includeP4 = body.includeP4
+    sheetRow = body.sheet_row ?? null
 
     if (!/^[A-Z0-9]{6}$/.test(pnr)) {
       return NextResponse.json(
@@ -76,6 +89,14 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+
+    const profile = await getPreDepartureUser()
+    if (!profile) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    scannedBy =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (profile as any)?.full_name ?? profile.email ?? profile.id
 
     const creds = sabreSoapCredentialsFromEnv()
     const config: SabrePlatformConfig = {
@@ -316,6 +337,14 @@ export async function POST(req: Request) {
       p4Xml,
       p4Data,
       steps,
+      sheetMeta: {
+        client_name: body.client_name ?? null,
+        departure_date: body.departure_date ?? null,
+        consultant_name: body.consultant_name ?? null,
+      },
+      sheetRow,
+      addedBy: profile.id,
+      scannedBy,
     })
     steps[steps.length - 1] = {
       name: "Save Supabase",
@@ -351,6 +380,15 @@ export async function POST(req: Request) {
       } catch (markErr) {
         console.error("[SABRE] Failed to mark pnr_queue as failed:", markErr)
       }
+    }
+
+    // A fetch straight from a sheet import never got a pnr_queue row (nothing is
+    // saved until it succeeds), so the sheet's own "Error/ReScan" marker is the only
+    // trace of the failure — and what makes the next "Scan Sheet" run retry it.
+    if (pnr && sheetRow && brandForSheetWrite) {
+      markSheetRowsError(brandForSheetWrite, [sheetRow], scannedBy).catch(
+        (markErr) => console.error("[SABRE] Failed to mark sheet row as error:", markErr)
+      )
     }
 
     return NextResponse.json(
@@ -397,6 +435,10 @@ async function persistSabrePnrScan({
   p4Xml,
   p4Data,
   steps,
+  sheetMeta,
+  sheetRow,
+  addedBy,
+  scannedBy,
 }: {
   pnr: string
   brand: string
@@ -406,6 +448,16 @@ async function persistSabrePnrScan({
   p4Xml: string | null
   p4Data: unknown
   steps: StepRecord[]
+  // Only meaningful for a PNR the queue has never seen — a fetch straight from a
+  // sheet import, which no longer pre-saves this metadata anywhere.
+  sheetMeta: {
+    client_name: string | null
+    departure_date: string | null
+    consultant_name: string | null
+  }
+  sheetRow: number | null
+  addedBy: string
+  scannedBy: string
 }) {
   const supabase = createServiceClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -431,7 +483,10 @@ async function persistSabrePnrScan({
     .eq("pnr", pnr)
     .maybeSingle()
 
-  const queueMeta = await fetchPnrQueueMetadata(db, pnr, brandId)
+  const queueMeta = (await fetchPnrQueueMetadata(db, pnr, brandId)) ?? {
+    ...sheetMeta,
+    pnr_type: null,
+  }
   const meta = mergeSheetMetadataForHistory(queueMeta, prevHist, jsonData)
 
   const { data: historyRow, error: historyError } = await db
@@ -515,7 +570,19 @@ async function persistSabrePnrScan({
     queueStatus: workflow,
     processedAt: now,
     meta,
+    sheetRow,
+    addedBy,
   })
+
+  // Clear a tombstone for a re-imported PNR so it reappears in the dashboard.
+  // Harmless no-op when the PNR was never deleted.
+  db.from("pnr_deletions")
+    .delete()
+    .eq("pnr", pnr)
+    .then()
+    .catch((e: unknown) =>
+      console.error("[pnr-fetch] Failed to clear pnr_deletions:", e)
+    )
 
   // Freeze this verdict for the monthly Queue Health rate. Must follow the upsert
   // above, which creates the queue row for a PNR the queue has not seen and whose
@@ -525,7 +592,9 @@ async function persistSabrePnrScan({
     await recordInitialScanOutcome(db, {
       pnr,
       brandId,
-      verdict: workflow,
+      // `pnr_scan_outcomes.verdict` only allows pending/exception — a no-flight PNR
+      // isn't an exception, so it counts as a green (pending) outcome for this stat.
+      verdict: workflow === "exception" ? "exception" : "pending",
       decidedAt: now,
       consultantName: meta.consultant_name,
     })
@@ -533,21 +602,28 @@ async function persistSabrePnrScan({
     console.error("[pnr-fetch] Failed to record scan outcome:", e)
   }
 
-  // Write pnr_type back to col F when the queue row has a sheet_row reference.
-  // Fire-and-forget so sheet latency never blocks the scan response.
-  if (meta.pnr_type) {
-    const { data: queueRow } = await db
-      .from("pnr_queue")
-      .select("sheet_row, brand")
-      .eq("pnr", pnr)
-      .maybeSingle()
-    if (queueRow?.sheet_row && queueRow?.brand) {
-      updateSheetRows(queueRow.brand, [
-        { rowIndex: queueRow.sheet_row, colF: meta.pnr_type },
-      ]).catch((e: unknown) =>
-        console.error("[pnr-fetch] Failed to write pnr_type to sheet:", e)
-      )
-    }
+  // Reflect the scan outcome on the sheet row (marked, type, status) once the queue
+  // row actually has one — a first-time insert only gets `sheet_row` when this fetch
+  // came from a sheet import (see `sheetRow` above); a resync's row already has it if
+  // it was ever sheet-imported. Fire-and-forget so sheet latency never blocks the
+  // scan response.
+  const { data: queueRow } = await db
+    .from("pnr_queue")
+    .select("sheet_row, brand")
+    .eq("pnr", pnr)
+    .maybeSingle()
+  if (queueRow?.sheet_row && queueRow?.brand) {
+    updateSheetRows(queueRow.brand, [
+      {
+        rowIndex: queueRow.sheet_row,
+        colE: workflow === "no-flight" ? "No Flight" : "SYNCED",
+        colF: meta.pnr_type || undefined,
+        colG: "Processing",
+        scannedBy,
+      },
+    ]).catch((e: unknown) =>
+      console.error("[pnr-fetch] Failed to write scan outcome to sheet:", e)
+    )
   }
 }
 

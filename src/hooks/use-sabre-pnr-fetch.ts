@@ -25,6 +25,12 @@ export type SabrePnrFetchParams = {
   brand?: string
   includeP3?: boolean
   includeP4?: boolean
+  // Only set for a fetch straight from a sheet import — nothing is saved for that
+  // PNR until this fetch resolves, so this is the only place this metadata exists.
+  client_name?: string | null
+  departure_date?: string | null
+  consultant_name?: string | null
+  sheet_row?: number | null
 }
 
 export function useSabrePnrFetch() {

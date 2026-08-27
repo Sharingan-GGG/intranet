@@ -6,7 +6,6 @@ import { getRolePermissions, isAllowed } from "@/lib/permissions-server"
 import { getSheetRows, updateSheetRows } from "@/lib/google-sheets"
 import { type ReconcileResult, reconcileBrandSheet } from "@/lib/sheet-sync"
 import { ensureBrandId } from "@/lib/supabase/ensure-brand"
-import { upsertPnrHistoryFromSheetRow } from "@/lib/supabase/pnr-queue-metadata"
 
 /**
  * Close any residual drift between the brand tab and `pnr_queue` after the import
@@ -101,8 +100,12 @@ export async function POST(req: NextRequest) {
   const db = supabase as any
   const actor = { profileId: profile?.id ?? null, scannedBy }
 
-  // Filter: only rows where column E (marked) is empty — not yet processed
-  const unsynced = rows.filter((r) => !r.marked?.trim())
+  // Filter: rows where column E (marked) is empty (not yet processed) or flags a
+  // fetch that previously failed — those are retried on every "Scan Sheet" run
+  // until they actually succeed, since nothing is saved for them until then.
+  const unsynced = rows.filter(
+    (r) => !r.marked?.trim() || r.marked.trim() === "Error/ReScan"
+  )
   const alreadySyncedCount = rows.length - unsynced.length
 
   if (unsynced.length === 0) {
@@ -157,7 +160,11 @@ export async function POST(req: NextRequest) {
   const skippedCount =
     alreadySyncedCount + noFlightRows.length + alreadyInQueueRows.length
 
-  // Fire-and-forget: write all sheet updates in one batchUpdate
+  // Nothing is written to Supabase or the sheet for `toImport` rows here — that only
+  // happens once `/api/sabre/pnr-fetch` actually resolves each one (SYNCED + type/
+  // status on success, "Error/ReScan" on failure), so a fetch that never succeeds
+  // leaves no trace and gets retried on the next "Scan Sheet" run. Known no-flight
+  // and duplicate rows never reach a fetch at all, so those are still marked now.
   const sheetEntries = [
     ...noFlightRows.map((r) => ({
       rowIndex: r.rowIndex,
@@ -169,23 +176,15 @@ export async function POST(req: NextRequest) {
       colE: "DUPLICATED",
       scannedBy,
     })),
-    ...toImport.map((r) => ({
-      rowIndex: r.rowIndex,
-      colE: "SYNCED",
-      colF: r.pnr_type || undefined,
-      colG: "Processing",
-      scannedBy,
-    })),
   ]
 
-  if (toImport.length === 0) {
-    // Nothing to insert — write sheet updates, then reconcile any residual drift.
-    if (sheetEntries.length > 0) {
-      await updateSheetRows(brand, sheetEntries).catch((e) =>
-        console.error("[sheet-import] Failed to update sheet rows:", e)
-      )
-    }
+  if (sheetEntries.length > 0) {
+    await updateSheetRows(brand, sheetEntries).catch((e) =>
+      console.error("[sheet-import] Failed to update sheet rows:", e)
+    )
+  }
 
+  if (toImport.length === 0) {
     const sync = await runReconcile(db, brand, actor)
     return NextResponse.json({
       success: true,
@@ -193,7 +192,9 @@ export async function POST(req: NextRequest) {
       skipped: skippedCount,
       already_synced: alreadySyncedCount,
       already_in_queue: alreadyInQueueRows.length,
+      already_in_queue_pnrs: alreadyInQueueRows.map((r) => r.pnr),
       no_flight: noFlightRows.length,
+      no_flight_pnrs: noFlightRows.map((r) => r.pnr),
       total: rows.length,
       recovered_to_db: sync.importedToDb.length,
       restored_to_sheet: sync.restoredToSheet.length,
@@ -203,74 +204,27 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const queueRows = toImport.map((r) => ({
-    pnr: r.pnr,
-    brand_id: brandId,
-    queue_status: "pending",
-    client_name: r.client_name || null,
-    departure_date: r.departure_date || null,
-    consultant_name: r.consultant_name || null,
-    pnr_type: r.pnr_type || null,
-    added_by: profile?.id ?? null,
-    sheet_row: r.rowIndex,
-  }))
-
-  const { error: insertError } = await db
-    .from("pnr_queue")
-    .upsert(queueRows, { onConflict: "pnr" })
-
-  if (insertError) {
-    return NextResponse.json(
-      { success: false, error: insertError.message },
-      { status: 500 }
-    )
-  }
-
-  // Clear tombstones for any re-imported PNRs so they reappear in the dashboard.
-  const importedPnrs = toImport.map((r) => r.pnr)
-  db.from("pnr_deletions").delete().in("pnr", importedPnrs).then().catch(
-    (e: unknown) => console.error("[sheet-import] Failed to clear pnr_deletions:", e)
-  )
-
-  try {
-    await Promise.all(
-      toImport.map((r) =>
-        upsertPnrHistoryFromSheetRow(db, r.pnr, brandId, {
-          client_name: r.client_name,
-          departure_date: r.departure_date,
-          consultant_name: r.consultant_name,
-          pnr_type: r.pnr_type,
-        })
-      )
-    )
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.error("[sheet-import] pnr_history mirror failed:", msg)
-    return NextResponse.json(
-      { success: false, error: `Queue saved but history sync failed: ${msg}` },
-      { status: 500 }
-    )
-  }
-
-  // Write all status + scanned_by updates to the sheet before reconciling, so the
-  // reconcile pass reads the tab in its final state.
-  if (sheetEntries.length > 0) {
-    await updateSheetRows(brand, sheetEntries).catch((e) =>
-      console.error("[sheet-import] Failed to update sheet rows:", e)
-    )
-  }
-
   const sync = await runReconcile(db, brand, actor)
 
   return NextResponse.json({
     success: true,
-    imported: toImport.length + sync.importedToDb.length,
+    imported: sync.importedToDb.length,
     skipped: skippedCount,
     already_synced: alreadySyncedCount,
     already_in_queue: alreadyInQueueRows.length,
+    already_in_queue_pnrs: alreadyInQueueRows.map((r) => r.pnr),
     no_flight: noFlightRows.length,
+    no_flight_pnrs: noFlightRows.map((r) => r.pnr),
     total: rows.length,
-    pnrs: [...toImport.map((r) => r.pnr), ...sync.importedToDb],
+    // Queued for fetch — not yet saved anywhere. The client fetches each of these
+    // via /api/sabre/pnr-fetch, which is what actually persists them on success.
+    pnrs: toImport.map((r) => ({
+      pnr: r.pnr,
+      client_name: r.client_name || null,
+      departure_date: r.departure_date || null,
+      consultant_name: r.consultant_name || null,
+      sheet_row: r.rowIndex,
+    })),
     recovered_to_db: sync.importedToDb.length,
     restored_to_sheet: sync.restoredToSheet.length,
     metadata_updated: sync.metadataUpdated.length,

@@ -153,8 +153,8 @@ export async function upsertPnrHistoryFromSheetRow(
   if (error) throw new Error(`pnr_history insert: ${error.message}`)
 }
 
-/** Dashboard buckets: pending vs exception (see pnr_queue migration). */
-export type PnrQueueWorkflowStatus = "pending" | "exception"
+/** Dashboard buckets: pending, exception, or no-flight (see pnr_queue migration). */
+export type PnrQueueWorkflowStatus = "pending" | "exception" | "no-flight"
 
 /**
  * After Sabre Scan PNR: set `queue_status` from operational total (green → pending, red → exception).
@@ -177,10 +177,14 @@ export async function upsertPnrQueueWorkflowAfterScan(
     queueStatus: PnrQueueWorkflowStatus
     processedAt: string
     meta: PnrSheetMetadata
+    // Set only for a PNR the queue has never seen (a first-time scan straight from a
+    // sheet import, which no longer pre-creates the row) — never touched on update,
+    // same reasoning as brandId above.
+    sheetRow?: number | null
+    addedBy?: string | null
   }
 ): Promise<void> {
-  const normalizedStatus: PnrQueueWorkflowStatus =
-    args.queueStatus === "exception" ? "exception" : "pending"
+  const normalizedStatus = args.queueStatus
 
   const { data: existing } = await db
     .from("pnr_queue")
@@ -216,6 +220,8 @@ export async function upsertPnrQueueWorkflowAfterScan(
     brand_id: args.brandId,
     queue_status: normalizedStatus,
     processed_at: args.processedAt,
+    sheet_row: args.sheetRow ?? null,
+    added_by: args.addedBy ?? null,
     ...metaPatch,
   })
   if (error) throw new Error(`pnr_queue workflow insert: ${error.message}`)
@@ -241,7 +247,9 @@ export async function recordInitialScanOutcome(
   args: {
     pnr: string
     brandId: number
-    verdict: PnrQueueWorkflowStatus
+    // `pnr_scan_outcomes_verdict_check` only allows these two — no-flight is not an
+    // exception, so callers fold it into "pending" before calling this.
+    verdict: "pending" | "exception"
     decidedAt: string
     consultantName: string | null
   }

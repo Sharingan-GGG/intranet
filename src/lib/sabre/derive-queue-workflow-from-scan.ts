@@ -24,6 +24,9 @@ export function deriveQueueWorkflowStatusFromScan(args: {
   const pnrData = parsePnrJsonFromSnapshotData(args.jsonData)
   if (!pnrData) return "exception"
 
+  const flights = (args.jsonData as { flights?: unknown }).flights
+  if (!Array.isArray(flights) || flights.length === 0) return "no-flight"
+
   const p3Skipped = shouldSkipP3Fetch(pnrData)
   let p3Result = null
   if (!p3Skipped) {
