@@ -10,7 +10,13 @@ type DraftBody = {
 }
 
 const N8N_WEBHOOK_URL =
-  "https://n8n.srv1421859.hstgr.cloud/webhook/3e94d9e1-cecf-42b3-9a2b-3394687b46c6"
+  "https://n8n.srv1421859.hstgr.cloud/webhook/f236bfc3-5c25-48b9-99b4-d46dd2a81aef"
+
+// The n8n draft workflow runs browser automation and can take a while — this route
+// stays open for the whole thing (it awaits n8n's response with no inner timeout),
+// so the platform's own function timeout has to be raised to match, or Vercel kills
+// the request before n8n ever replies.
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   const profile = await getPreDepartureUser()
