@@ -1,5 +1,6 @@
 import mysql from "mysql2/promise"
 import type { BookingClass, FlightRow, FlightSegment, FlightsResponse, RouteOption } from "./types"
+import { lastCacheBoundaryMs } from "./cache-window"
 
 /* ── Connection pool ── */
 let pool: mysql.Pool | null = null
@@ -187,19 +188,12 @@ function buildResponse(flights: FlightRow[]): FlightsResponse {
   }
 }
 
-/* ── Server-side in-memory cache (expires at 6 AM daily) ── */
+/* ── Server-side in-memory cache (expires at the daily boundary) ── */
 let serverCache: { data: FlightsResponse; cachedAt: number } | null = null
-
-function last6AMTimestamp(): number {
-  const now = new Date()
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0, 0)
-  if (now < d) d.setDate(d.getDate() - 1)
-  return d.getTime()
-}
 
 /* ── Public API ── */
 export async function fetchFlightsFromDB(): Promise<FlightsResponse> {
-  if (serverCache && serverCache.cachedAt >= last6AMTimestamp()) {
+  if (serverCache && serverCache.cachedAt >= lastCacheBoundaryMs()) {
     return serverCache.data
   }
 

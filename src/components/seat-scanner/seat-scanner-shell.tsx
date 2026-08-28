@@ -11,21 +11,15 @@ function AirplaneSvg() {
     </svg>
   )
 }
+import { lastCacheBoundaryMs } from "@/lib/seat-scanner/cache-window"
 import type { FlightFilters, FlightRow } from "@/lib/seat-scanner/types"
 import type { FlightsResponse } from "@/app/api/seat-scanner/flights/route"
 import type { StopsFilter } from "./filter-header"
 import { FlightTable } from "./flight-table"
 import { useFavoriteRoutes } from "./route-multi-select"
 
-/* ── Client-side module cache (persists across re-mounts, expires at 6 AM) ── */
+/* ── Client-side module cache (persists across re-mounts) ── */
 let clientCache: { data: FlightsResponse; fetchedAt: number } | null = null
-
-function last6AMMs(): number {
-  const now = new Date()
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0, 0)
-  if (now < d) d.setDate(d.getDate() - 1)
-  return d.getTime()
-}
 
 const now = new Date()
 const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -154,8 +148,8 @@ export function SeatScannerShell() {
       }
     }
 
-    // Serve from client module cache if still valid (resets at 6 AM)
-    if (clientCache && clientCache.fetchedAt >= last6AMMs()) {
+    // Serve from client module cache if still valid (resets at the daily boundary)
+    if (clientCache && clientCache.fetchedAt >= lastCacheBoundaryMs()) {
       applyAndSet(clientCache.data)
       setLoading(false)
       return
