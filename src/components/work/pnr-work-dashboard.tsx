@@ -143,13 +143,6 @@ function DraftModal({
     return () => document.removeEventListener("keydown", handleKey)
   }, [isOpen, status, onClose])
 
-  // Auto-dismiss the success state after 15s so it doesn't sit there waiting
-  // for a click once the draft is actually done.
-  React.useEffect(() => {
-    if (!isOpen || status !== "success") return
-    const timeout = setTimeout(onClose, 15_000)
-    return () => clearTimeout(timeout)
-  }, [isOpen, status, onClose])
 
   const progressValue =
     status === "success"
@@ -1402,6 +1395,18 @@ export function PnrWorkDashboard({
         const abortController = new AbortController()
         draftAbortRef.current = abortController
         setDraftModal({ isOpen: true, status: "pending" })
+        const startedAt = Date.now()
+        const MIN_PENDING_MS = 15_000
+
+        // Always show "Creating Draft" for at least 15s before flipping to the
+        // result — n8n's draft workflow can resolve in under a second, which read
+        // as broken/instant rather than a real "creating" step.
+        async function waitOutMinimumPending() {
+          const remaining = MIN_PENDING_MS - (Date.now() - startedAt)
+          if (remaining <= 0) return
+          await new Promise((resolve) => setTimeout(resolve, remaining))
+        }
+
         try {
           const res = await fetch("/api/pnr-queue/draft", {
             method: "POST",
@@ -1409,14 +1414,18 @@ export function PnrWorkDashboard({
             body: JSON.stringify({ pnr, brand }),
             signal: abortController.signal,
           })
+          const errorJson = !res.ok
+            ? ((await res.json().catch(() => null)) as { error?: string } | null)
+            : null
+
+          await waitOutMinimumPending()
+          if (abortController.signal.aborted) return
+
           if (!res.ok) {
-            const json = (await res.json().catch(() => null)) as {
-              error?: string
-            } | null
             setDraftModal({
               isOpen: true,
               status: "error",
-              error: json?.error ?? `Draft failed (${res.status})`,
+              error: errorJson?.error ?? `Draft failed (${res.status})`,
             })
           } else {
             setDraftModal({ isOpen: true, status: "success" })
@@ -1424,6 +1433,8 @@ export function PnrWorkDashboard({
           }
         } catch (e) {
           if (e instanceof Error && e.name === "AbortError") return
+          await waitOutMinimumPending()
+          if (abortController.signal.aborted) return
           setDraftModal({
             isOpen: true,
             status: "error",
