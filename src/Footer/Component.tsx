@@ -56,7 +56,7 @@ export async function Footer() {
                 marginBottom: 13,
               }}
             >
-              Quick Links
+              Intranet Help
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
               {navItems.map(({ link, id }, i) => (
