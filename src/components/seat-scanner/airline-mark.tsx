@@ -11,6 +11,7 @@ interface AirlineMeta {
 const AIRLINES: Record<string, AirlineMeta> = {
   AC: { name: "Air Canada",          bg: "#d22630", fg: "#ffffff" },
   AY: { name: "Finnair",             bg: "#0b3d91", fg: "#ffffff" },
+  EY: { name: "Etihad Airways",      bg: "#000000", fg: "#f5c451" },
   JL: { name: "Japan Airlines",      bg: "#b51a2b", fg: "#ffffff" },
   LA: { name: "LATAM",               bg: "#0046ad", fg: "#ed1c24" },
   LH: { name: "Lufthansa",           bg: "#05164d", fg: "#f3c925" },
@@ -18,6 +19,7 @@ const AIRLINES: Record<string, AirlineMeta> = {
   NH: { name: "ANA",                 bg: "#13448f", fg: "#ffffff" },
   QF: { name: "Qantas",              bg: "#e10a0a", fg: "#ffffff" },
   SQ: { name: "Singapore Airlines",  bg: "#1a3668", fg: "#f5c451" },
+  TG: { name: "Thai Airways",        bg: "#5b2a86", fg: "#f5c451" },
   TK: { name: "Turkish Airlines",    bg: "#c70a0c", fg: "#ffffff" },
   WY: { name: "Oman Air",            bg: "#85754e", fg: "#ffffff" },
 }
