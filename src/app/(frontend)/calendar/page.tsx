@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 import { getCalendarEvents } from '@/lib/homeData'
 import { CalendarView } from '@/components/calendar/CalendarView'
@@ -14,7 +14,9 @@ export default async function CalendarPage() {
   return (
     <div className="il-root il-page">
       <main className="il-main" style={{ maxWidth: 'none' }}>
-        <CalendarView events={events} />
+        <Suspense fallback={null}>
+          <CalendarView events={events} />
+        </Suspense>
       </main>
     </div>
   )
