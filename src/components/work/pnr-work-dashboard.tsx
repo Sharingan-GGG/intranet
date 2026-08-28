@@ -143,6 +143,14 @@ function DraftModal({
     return () => document.removeEventListener("keydown", handleKey)
   }, [isOpen, status, onClose])
 
+  // Auto-dismiss the success state after 15s so it doesn't sit there waiting
+  // for a click once the draft is actually done.
+  React.useEffect(() => {
+    if (!isOpen || status !== "success") return
+    const timeout = setTimeout(onClose, 15_000)
+    return () => clearTimeout(timeout)
+  }, [isOpen, status, onClose])
+
   const progressValue =
     status === "success"
       ? 100
