@@ -160,6 +160,17 @@ export function FilterHeader({
 
   return (
     <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:gap-4">
+      {/* Home and the theme toggle lead the bar, ahead of the filters — they navigate
+          rather than filter, so they sit apart from the Routes/Range/Class controls. */}
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className="h-9 w-9 px-0" asChild>
+          <a href="/" aria-label="Home">
+            <Home className="size-4" />
+          </a>
+        </Button>
+        <ThemeToggle />
+      </div>
+
       <Field label="Routes:">
         <RouteMultiSelect
           routes={routes}
@@ -211,12 +222,6 @@ export function FilterHeader({
           <Trash2 className="size-3.5" />
           Reset
         </Button>
-        <Button variant="outline" size="sm" className="h-9 w-9 px-0" asChild>
-          <a href="/" aria-label="Home">
-            <Home className="size-4" />
-          </a>
-        </Button>
-        <ThemeToggle />
       </div>
     </div>
   )
