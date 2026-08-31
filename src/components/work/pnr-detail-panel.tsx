@@ -152,7 +152,7 @@ function StickyDetailHeader({
         <span className="ms-1 flex items-center gap-1 font-bold uppercase">
           <TabStatusDot status={tabStatuses.total} />
           {tabStatuses.total === "exception" ? (
-            <span className="text-destructive">Exception</span>
+            <span className="text-destructive">Exceptions</span>
           ) : tabStatuses.total === "warning" ? (
             <span className="text-amber-600 dark:text-amber-400">Warning</span>
           ) : (
@@ -343,7 +343,7 @@ export function PnrDetailPanel({
             ) : (
               <span className="size-2 rounded-full bg-muted" />
             )}
-            Flights Details
+            Flight Details
           </TabsTrigger>
           <TabsTrigger value="p3" className="p3-details gap-1.5 text-xs">
             {pnrData ? (

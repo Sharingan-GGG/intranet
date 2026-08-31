@@ -1786,7 +1786,7 @@ export function PnrWorkDashboard({
                         : "bg-[#10B981]/12 text-[#047857] dark:text-chart-4"
                     )}
                   >
-                    {rightTab === "pending" ? counts.pending : counts.complete} records
+                    {rightTab === "pending" ? counts.pending : counts.complete} Passed
                   </span>
                   {/* Pending / Complete toggle */}
                   <div className="queue-status-tabs flex gap-2" role="tablist">
