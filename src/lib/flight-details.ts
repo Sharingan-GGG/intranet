@@ -345,10 +345,41 @@ export function getExceptionReasons(
   return grouped
 }
 
+/** Name titles Sabre appends to the given name (e.g. "HOWARD ROBERT MR"). */
+const NAME_TITLES = new Set([
+  "MR",
+  "MRS",
+  "MS",
+  "MISS",
+  "MSTR",
+  "MASTER",
+  "MX",
+  "DR",
+  "PROF",
+  "SIR",
+  "MADAM",
+  "MDM",
+  "LADY",
+])
+
+/** Drop title tokens (MR / MS / …) from a display name, keeping word order. */
+function stripNameTitles(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((word) => !NAME_TITLES.has(word.replace(/\.$/, "").toUpperCase()))
+    .join(" ")
+    .trim()
+}
+
 export function paxLabel(t: Traveler | undefined, index: number): string {
-  const n = `${t?.givenName || ""} ${t?.surname || ""}`.trim()
+  const n = stripNameTitles(
+    `${t?.givenName || ""} ${t?.surname || ""}`.trim()
+  )
   if (n) return n
-  const alt = t && "name" in t && t.name != null ? String(t.name).trim() : ""
+  const alt =
+    t && "name" in t && t.name != null
+      ? stripNameTitles(String(t.name).trim())
+      : ""
   if (alt) return alt
   return `Passenger ${index + 1}`
 }
