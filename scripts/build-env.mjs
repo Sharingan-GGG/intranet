@@ -13,7 +13,7 @@ import { execSync } from 'child_process'
  * with no build error and no visible symptom until users could not sign in. So `.env.local`
  * is moved aside for the duration of the build, and the result is verified before it can ship.
  */
-export function buildWithEnv(envFile, { expect } = {}) {
+export function buildWithEnv(envFile, expect) {
   config({ path: envFile, override: true })
 
   const stashed = existsSync('.env.local')
@@ -35,7 +35,7 @@ export function buildWithEnv(envFile, { expect } = {}) {
       try {
         // Only what the deploy actually uploads: `.next/dev` is next-dev scratch that the
         // rsync excludes, and it routinely holds the other environment's ref.
-        return execSync(`grep -rl -- ${JSON.stringify(pattern)} .next/server .next/static --include='*.js' | grep -v '\\.map$' | wc -l`)
+        return execSync(`grep -rl --include='*.js' -- ${JSON.stringify(pattern)} .next/server .next/static | grep -v '\\.map$' | wc -l`)
           .toString().trim()
       } catch {
         return '0'

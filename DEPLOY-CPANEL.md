@@ -129,12 +129,25 @@ done
 curl -s -H "Cookie: probe=$(python3 -c "print('x'*20000)")" https://intranet.complextravel.net/login
 ```
 
-**Why it accumulates:** one Supabase SSO session is ~4.2 KB — a ~1,650 B user object (identities
+**Why it accumulates:** a Supabase SSO session *was* ~4.2 KB — a ~1,650 B user object (identities
 included), a ~1,350 B JWT that re-embeds `user_metadata`, base64 (+33%), split across `.0`/`.1`.
 Against the old 8 KB budget that left room for barely one session, so a single leftover cookie
-tipped a user over. The leftovers come from Auth.js cookies predating the Supabase migration,
+tipped a user over. Since 2026-09-01 the session is **~2.3 KB in a single unchunked cookie**:
+`cookies: { encode: 'tokens-only' }` keeps only the access and refresh tokens in the cookie and
+moves the user object to localStorage/memory (`src/lib/auth/session.ts`, set identically on all
+four clients — Supabase requires the encoding to match or they cannot read each other's
+cookies). That is ~6.9 sessions inside LiteSpeed's ceiling rather than 3.7.
+
+The leftovers that still accumulate come from Auth.js cookies predating the Supabase migration,
 `sb-*` cookies belonging to a *different* project ref, and orphaned chunks of the current
 session (see `expireStaleAuthCookies` in `src/middleware.ts`).
+
+**Do not try to shorten the cookie's 400-day lifetime via `cookieOptions: { maxAge }`** — it is
+silently ignored. `@supabase/ssr` spreads the caller's `cookieOptions` and then overwrites
+`maxAge` with its own `DEFAULT_COOKIE_OPTIONS.maxAge` on the next line (`dist/main/cookies.js`).
+Shortening it means overriding `maxAge` inside our own `setAll`, and doing so in the browser
+client too (which writes via `document.cookie` on background refreshes) or the expiry ends up
+depending on which side wrote last. Deferred as second-order at 2.3 KB.
 
 **The trap that made three earlier fixes look broken:** cookie cleanup lives in middleware, but
 a browser that has already crossed the limit is rejected upstream — no response is generated, so
