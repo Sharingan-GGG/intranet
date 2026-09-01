@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../../access/authenticated'
 import { isAdmin, isAdminFieldLevel, isAdminOrSelf } from '../../access/isAdmin'
+import { deleteSupabaseAuthUser } from './deleteSupabaseAuthUser'
 import { supabaseStrategy } from './supabaseStrategy'
 
 export const Users: CollectionConfig = {
@@ -112,5 +113,8 @@ export const Users: CollectionConfig = {
       },
     },
   ],
+  hooks: {
+    beforeDelete: [deleteSupabaseAuthUser],
+  },
   timestamps: true,
 }

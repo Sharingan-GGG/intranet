@@ -18,15 +18,15 @@ export function DepartmentWorkspaceUsersClient({
   const [users, setUsers] = useState(initialUsers)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null)
+  const [lastResult, setLastResult] = useState<{ updated: number; created: number } | null>(null)
 
   const sync = async () => {
     setSyncing(true)
     setError(null)
     try {
-      const { members, updated } = await syncWorkspaceUsers(departmentId, orgUnitPath)
+      const { members, updated, created } = await syncWorkspaceUsers(departmentId, orgUnitPath)
       setUsers(members)
-      setLastUpdated(updated)
+      setLastResult({ updated, created })
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -57,11 +57,18 @@ export function DepartmentWorkspaceUsersClient({
         </button>
       </div>
       {error && <p style={{ color: 'var(--theme-error-500)' }}>{error}</p>}
-      {lastUpdated !== null && !error && (
+      {lastResult && !error && (
         <p style={{ color: 'var(--theme-success-500)' }}>
-          {lastUpdated > 0
-            ? `Updated ${lastUpdated} user${lastUpdated === 1 ? '' : 's'}' department assignment.`
-            : 'Everyone already matches this department.'}
+          {lastResult.created === 0 && lastResult.updated === 0
+            ? 'Everyone already matches this department.'
+            : [
+                lastResult.created > 0 &&
+                  `Added ${lastResult.created} user${lastResult.created === 1 ? '' : 's'} to the Users collection.`,
+                lastResult.updated > 0 &&
+                  `Updated ${lastResult.updated} user${lastResult.updated === 1 ? '' : 's'}' department assignment.`,
+              ]
+                .filter(Boolean)
+                .join(' ')}
         </p>
       )}
       {users.length > 0 && (
