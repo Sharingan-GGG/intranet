@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+import { AUTH_COOKIE_OPTIONS } from '@/lib/auth/session'
+
 /**
  * Require a login for every page, including the landing page. Users may be authenticated
  * either via Supabase Auth (Google SSO — the route everyone uses) or via Payload's local
@@ -114,11 +116,60 @@ function orphanedSessionChunks(names: string[]): string[] {
  * cleanup never actually removed anything in production. Hence Secure is set explicitly here.
  * No Domain is set, which both matches how these were written and is what `__Host-` requires.
  */
-function expireStaleAuthCookies(req: NextRequest, response: NextResponse) {
+/**
+ * Early warning for the 400 described above.
+ *
+ * The failure is silent from the app's side: the first symptom is one person's browser being
+ * rejected upstream, with nothing in this app's logs, because the request never arrives. A
+ * header that is merely *growing* still arrives, so logging the approach gives the warning
+ * that the wedge itself cannot.
+ *
+ * The threshold is the old nginx buffer (8KB) — the ceiling has since been raised well past
+ * it at every hop, so crossing it is no longer fatal, which is exactly what makes it a useful
+ * place to start complaining. Names and sizes only; cookie values are never logged.
+ *
+ * Throttled, since a browser in this state makes the same oversized request for every asset
+ * on the page.
+ */
+const COOKIE_HEADER_WARN_BYTES = 8 * 1024
+const COOKIE_HEADER_WARN_INTERVAL_MS = 60_000
+let lastCookieWarningAt = 0
+
+function warnOnOversizedCookieHeader(req: NextRequest) {
+  const header = req.headers.get('cookie')
+  if (header === null || header.length < COOKIE_HEADER_WARN_BYTES) return
+
+  const now = Date.now()
+  if (now - lastCookieWarningAt < COOKIE_HEADER_WARN_INTERVAL_MS) return
+  lastCookieWarningAt = now
+
+  const breakdown = req.cookies
+    .getAll()
+    .map(({ name, value }) => ({ name, bytes: name.length + value.length }))
+    .sort((a, b) => b.bytes - a.bytes)
+    .map(({ name, bytes }) => `${name}=${bytes}B`)
+    .join(' ')
+
+  console.warn(`Cookie header is ${header.length}B on ${req.nextUrl.pathname}: ${breakdown}`)
+}
+
+function expireStaleAuthCookies(
+  req: NextRequest,
+  response: NextResponse,
+  justWritten: ReadonlySet<string> = new Set(),
+) {
+  warnOnOversizedCookieHeader(req)
+
   const names = req.cookies.getAll().map(({ name }) => name)
   const orphans = new Set(orphanedSessionChunks(names))
 
   for (const name of names) {
+    // A refreshed session is written onto this same response before the cleanup runs, and the
+    // request's cookies are the pre-refresh set. Expiring a name the refresh just wrote would
+    // replace the new session with a deletion — signing the user out on a request that had in
+    // fact just succeeded, and sending them back through Google to sign in again.
+    if (justWritten.has(name)) continue
+
     const isStaleAuthjs = STALE_AUTHJS_COOKIE.test(name)
     const isForeignSupabaseSession =
       currentSupabaseCookiePrefix !== null &&
@@ -160,14 +211,22 @@ export default async function middleware(req: NextRequest) {
 
   const response = NextResponse.next({ request: req })
 
+  // Names the session refresh writes onto this response, so the cleanup below can leave them
+  // alone. See the guard at the top of expireStaleAuthCookies().
+  const justWritten = new Set<string>()
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_AUTH_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_AUTH_PUBLISHABLE_KEY!,
     {
+      cookieOptions: AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll: () => req.cookies.getAll(),
         setAll: (list) => {
-          for (const { name, options, value } of list) response.cookies.set(name, value, options)
+          for (const { name, options, value } of list) {
+            response.cookies.set(name, value, options)
+            justWritten.add(name)
+          }
         },
       },
     },
@@ -179,7 +238,7 @@ export default async function middleware(req: NextRequest) {
   const hasSession = Boolean(data?.claims) || req.cookies.has('payload-token')
 
   if (hasSession) {
-    expireStaleAuthCookies(req, response)
+    expireStaleAuthCookies(req, response, justWritten)
     return response
   }
 
@@ -190,14 +249,14 @@ export default async function middleware(req: NextRequest) {
       return response
     }
     const unauthorized = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    expireStaleAuthCookies(req, unauthorized)
+    expireStaleAuthCookies(req, unauthorized, justWritten)
     return unauthorized
   }
 
   const loginUrl = new URL('/login', req.url)
   loginUrl.searchParams.set('redirect', pathname + req.nextUrl.search)
   const redirect = NextResponse.redirect(loginUrl)
-  expireStaleAuthCookies(req, redirect)
+  expireStaleAuthCookies(req, redirect, justWritten)
   return redirect
 }
 
