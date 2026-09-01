@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-import { AUTH_COOKIE_OPTIONS } from '@/lib/auth/session'
+import { AUTH_COOKIE_ENCODING } from '@/lib/auth/session'
 
 /**
  * Require a login for every page, including the landing page. Users may be authenticated
@@ -219,8 +219,8 @@ export default async function middleware(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_AUTH_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_AUTH_PUBLISHABLE_KEY!,
     {
-      cookieOptions: AUTH_COOKIE_OPTIONS,
       cookies: {
+        encode: AUTH_COOKIE_ENCODING,
         getAll: () => req.cookies.getAll(),
         setAll: (list) => {
           for (const { name, options, value } of list) {
