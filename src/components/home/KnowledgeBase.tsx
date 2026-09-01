@@ -372,7 +372,7 @@ export const KnowledgeBase: React.FC<{ documents: KbDoc[]; categories?: string[]
       {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
           <a
-            href="https://chat.google.com/app/chat/kyGnTiAAAAE"
+            href="https://chat.google.com/app/home"
             target="_blank"
             rel="noopener noreferrer"
             style={{
