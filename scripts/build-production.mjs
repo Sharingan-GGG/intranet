@@ -1,7 +1,6 @@
-import { config } from 'dotenv'
-import { spawnSync } from 'child_process'
+import { buildWithEnv } from './build-env.mjs'
 
-config({ path: '.env.production', override: true })
-
-const result = spawnSync('next', ['build'], { stdio: 'inherit', env: process.env, shell: true })
-process.exit(result.status ?? 1)
+buildWithEnv('.env.production', {
+  value: 'qpnyysjakayualiqtvyf', // production Supabase project ref
+  reject: 'mckqcwpnaouqrfnoxils', // staging — must never appear in a production bundle
+})
