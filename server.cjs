@@ -18,7 +18,11 @@ const app = next({ dev: false, dir: __dirname })
 const handle = app.getRequestHandler()
 
 app.prepare().then(() => {
-  createServer((req, res) => handle(req, res)).listen(port, () => {
+  // nginx and LiteSpeed in front of this both allow a Cookie header far larger than Node's
+  // 16KB default, and a browser that has accumulated stale Supabase/Auth.js cookies can
+  // exceed it. Without this, Node becomes the hop that rejects the request with a bare 400
+  // before Next.js middleware gets a chance to prune those cookies.
+  createServer({ maxHeaderSize: 65536 }, (req, res) => handle(req, res)).listen(port, () => {
     console.log(`Intranet ready on port ${port}`)
   })
 })

@@ -75,6 +75,38 @@ const currentSupabaseCookiePrefix = (() => {
 })()
 
 /**
+ * Chunks of the *current* project's session that no longer belong to it.
+ *
+ * @supabase/ssr stores a session either under the bare cookie name or split across `.0`,
+ * `.1`, …, and deletes the chunks it no longer needs on every write. Those deletes are
+ * silently dropped when the write happens in a Server Component (see the swallowed error in
+ * src/lib/auth/supabase-server.ts), so a session that shrinks from three chunks to two can
+ * strand `.2` in the browser forever. Unlike the two cases above, an orphan carries the
+ * current project's prefix, so it reads as live and nothing ever removes it — and at up to
+ * 3KB each, a couple of them are enough to push the Cookie header past what the edge accepts.
+ *
+ * A valid chunk set is contiguous from `.0`, so anything past the first gap is an orphan, as
+ * is every chunk when an unchunked cookie of the same name is also present. A non-contiguous
+ * set means the session is already unreadable, so clearing it costs a re-login rather than
+ * leaving the browser wedged.
+ */
+function orphanedSessionChunks(names: string[]): string[] {
+  if (currentSupabaseCookiePrefix === null) return []
+
+  const chunks = new Map<number, string>()
+  for (const name of names) {
+    const match = /^(.+)\.(\d+)$/.exec(name)
+    if (match && match[1] === currentSupabaseCookiePrefix) chunks.set(Number(match[2]), name)
+  }
+  if (chunks.size === 0) return []
+  if (names.includes(currentSupabaseCookiePrefix)) return [...chunks.values()]
+
+  let live = -1
+  while (chunks.has(live + 1)) live++
+  return [...chunks].filter(([index]) => index > live).map(([, name]) => name)
+}
+
+/**
  * A browser ignores a Set-Cookie whose name carries the `__Secure-`/`__Host-` prefix unless
  * the Secure attribute is present, and `response.cookies.delete(name)` does not send it
  * (it defaults Path=/ and an epoch Expires, nothing else). Over https that makes the delete
@@ -83,14 +115,17 @@ const currentSupabaseCookiePrefix = (() => {
  * No Domain is set, which both matches how these were written and is what `__Host-` requires.
  */
 function expireStaleAuthCookies(req: NextRequest, response: NextResponse) {
-  for (const { name } of req.cookies.getAll()) {
+  const names = req.cookies.getAll().map(({ name }) => name)
+  const orphans = new Set(orphanedSessionChunks(names))
+
+  for (const name of names) {
     const isStaleAuthjs = STALE_AUTHJS_COOKIE.test(name)
     const isForeignSupabaseSession =
       currentSupabaseCookiePrefix !== null &&
       SUPABASE_SESSION_COOKIE.test(name) &&
       !name.startsWith(currentSupabaseCookiePrefix)
 
-    if (!isStaleAuthjs && !isForeignSupabaseSession) continue
+    if (!isStaleAuthjs && !isForeignSupabaseSession && !orphans.has(name)) continue
 
     response.cookies.set(name, '', {
       expires: new Date(0),
