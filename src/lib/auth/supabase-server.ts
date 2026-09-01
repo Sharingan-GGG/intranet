@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+import { AUTH_COOKIE_OPTIONS } from './session'
+
 const URL = process.env.NEXT_PUBLIC_SUPABASE_AUTH_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_AUTH_PUBLISHABLE_KEY!
 
@@ -12,6 +14,7 @@ const KEY = process.env.NEXT_PUBLIC_SUPABASE_AUTH_PUBLISHABLE_KEY!
 export async function createAuthServerClient() {
   const store = await cookies()
   return createServerClient(URL, KEY, {
+    cookieOptions: AUTH_COOKIE_OPTIONS,
     cookies: {
       getAll: () => store.getAll(),
       setAll: (list) => {
