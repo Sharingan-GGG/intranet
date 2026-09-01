@@ -1,12 +1,16 @@
 # Deploying the Intranet — cPanel / LiteSpeed / Passenger
 
-Live at **https://intranet.complextravel.net** (behind Cloudflare).
+Live at **https://intranet.complextravel.net**. Request path is
+**Cloudflare (DNS-only/grey-clouded — responses carry no `cf-ray`) → nginx → LiteSpeed → Passenger → Node**.
+Each hop has its own limits; see "Gotcha: Cookie header too large" below before blaming the app for a 400.
 Server: `complextravel@13.236.149.83` (`server.complextravel.com.au`), SSH key `~/.ssh/intranet_ssh`.
 App root on server: `/home/complextravel/public_html/intranet` (also the subdomain's docroot).
 
 ## How it runs
 - Registered as a cPanel Passenger app named **Intranet** (`uapi PassengerApps list_applications`).
-- LiteSpeed (Apache-compatible) spawns `app.js` (ESM) → imports `server.cjs` → boots Next.js.
+- nginx reverse-proxies to LiteSpeed (Apache-compatible), which spawns `app.js` (ESM) →
+  imports `server.cjs` → boots Next.js. Both nginx and LiteSpeed can reject a request before
+  it ever reaches Next.js — which means before middleware runs.
 - Node: `/opt/cpanel/ea-nodejs22/bin/node` (v22). The nvm default (18) is too old — always
   put ea-nodejs22 on PATH for server-side npm commands.
 - Env vars come from `~/public_html/intranet/.env` on the server (Next.js loads it natively).
@@ -36,10 +40,27 @@ pnpm migrate:production          # then apply
 # See "Database (Supabase)" below for what this does/doesn't touch, and how the pre_departure
 # schema (not covered by payload migrate) rolls out separately.
 
-# 1. Locally (NEXT_PUBLIC_SERVER_URL in .env must be https://intranet.complextravel.net)
-pnpm build
+# 1. Locally — ALWAYS `build:production`, never a bare `pnpm build`.
+#    Every NEXT_PUBLIC_* is inlined into the bundle at build time, so the build command
+#    decides which Supabase project and which origin the shipped code talks to. A bare
+#    `pnpm build` resolves env the way Next does by default, which means:
+#      - .env's NEXT_PUBLIC_SERVER_URL is http://localhost:3000, and
+#      - .env.local outranks .env.production, so a local staging .env.local silently wires
+#        the production bundle to the staging Supabase project.
+#    That happened on 2026-09-01: production ran against staging's auth project for ~20
+#    minutes and signed-in users were bounced to /login. There was no build error.
+#    build:production (scripts/build-env.mjs) moves .env.local aside for the build and then
+#    greps .next/server + .next/static for the expected project ref, failing the build if the
+#    intended ref is missing or the other environment's ref is present. Look for:
+#      env check: .env.production -> qpnyysjakayualiqtvyf in N bundle(s), mckqcwpnaouqrfnoxils in 0
+#      ✓ bundle matches the intended environment
+pnpm build:production
 
 # 2. Upload (never include intranet.db or .env — live versions rule)
+#    Note there is no --delete: files removed from a build stay on the server. That is
+#    deliberate (it avoids yanking assets out from under in-flight page loads), but it means
+#    a bad build leaves contaminated chunks behind after you redeploy a good one. After
+#    fixing a bad deploy, confirm with the grep in step 5.
 rsync -az -e "ssh -i ~/.ssh/intranet_ssh" \
   --exclude node_modules --exclude .git --exclude '.next/cache' --exclude '.next/dev' \
   .next public server.cjs package.json next.config.ts redirects.ts tsconfig.json \
@@ -53,7 +74,17 @@ ssh -i ~/.ssh/intranet_ssh complextravel@13.236.149.83 \
 ssh -i ~/.ssh/intranet_ssh complextravel@13.236.149.83 'touch ~/public_html/intranet/tmp/restart.txt'
 
 # 5. Verify
-curl -s -o /dev/null -w "%{http_code}\n" https://intranet.complextravel.net/admin/login  # expect 200
+curl -s -o /dev/null -w "%{http_code}\n" https://intranet.complextravel.net/admin   # expect 200
+curl -s -o /dev/null -w "%{http_code}\n" https://intranet.complextravel.net/login   # expect 200
+# /admin/login returns 307 to /login?redirect=/admin — that is correct, not a failure.
+
+# Confirm the deployed bundle talks to the right Supabase project (catches both a mis-built
+# bundle and contaminated leftovers from a previous bad deploy — see step 2 on --delete):
+ssh -i ~/.ssh/intranet_ssh complextravel@13.236.149.83 \
+  'cd ~/public_html/intranet && \
+   printf "prod: "    && grep -rl qpnyysjakayualiqtvyf .next/server .next/static --include="*.js" | grep -v "\.map$" | wc -l && \
+   printf "staging: " && grep -rl mckqcwpnaouqrfnoxils .next/server .next/static --include="*.js" | grep -v "\.map$" | wc -l'
+# expect a non-zero prod count and staging = 0. Delete any staging-contaminated file by hand.
 ```
 
 ## Gotcha: Turbopack hashed externals
@@ -70,6 +101,64 @@ then recreate the symlinks on the server, e.g.
 (and `ln -sfn client client-<newhash>` inside `~/public_html/intranet/node_modules/@libsql`).
 Symptom if stale: 500s with `Failed to load external module <name>-<hash>` in
 `~/public_html/intranet/stderr.log`.
+
+## Gotcha: Cookie header too large (400 Bad Request, per-user)
+**Symptom:** one user gets `400 Bad Request` on *every* page of the site, including static
+assets, while everyone else is fine. Clearing that browser's cookies fixes it instantly.
+Nothing appears in `stderr.log` — the request never reaches the app.
+
+**Cause:** the browser's `Cookie:` header outgrew a limit at one of the hops in front of Node.
+Each hop caps the whole header line (splitting into more, smaller cookies does **not** help).
+Measured against production by sending padded cookies:
+
+| hop | limit | how to identify it |
+| --- | --- | --- |
+| nginx | was 8,190 B (`large_client_header_buffers 4 8k` default) — **raised to 32k** 2026-09-01 via `/etc/nginx/conf.d/large_headers.conf` | plain nginx 400 page |
+| LiteSpeed | ~15,875 B (`maxReqHeaderSize`, default and likely max 16380) | 400 page reading **"It is not a valid request!"** |
+| Node | 16 KB default — **raised to 64 KB** via `createServer({ maxHeaderSize })` in `server.cjs` | bare 400, connection closed |
+| Cloudflare | not in the path (grey-clouded) | would show `Server: cloudflare` |
+
+Find the current ceiling and the responsible hop:
+```bash
+for n in 8000 16000 24000 32000; do
+  printf "%sB -> " $n
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    -H "Cookie: probe=$(python3 -c "print('x'*$n)")" https://intranet.complextravel.net/login
+done
+# then read the error body at a failing size to see which hop wrote it:
+curl -s -H "Cookie: probe=$(python3 -c "print('x'*20000)")" https://intranet.complextravel.net/login
+```
+
+**Why it accumulates:** one Supabase SSO session is ~4.2 KB — a ~1,650 B user object (identities
+included), a ~1,350 B JWT that re-embeds `user_metadata`, base64 (+33%), split across `.0`/`.1`.
+Against the old 8 KB budget that left room for barely one session, so a single leftover cookie
+tipped a user over. The leftovers come from Auth.js cookies predating the Supabase migration,
+`sb-*` cookies belonging to a *different* project ref, and orphaned chunks of the current
+session (see `expireStaleAuthCookies` in `src/middleware.ts`).
+
+**The trap that made three earlier fixes look broken:** cookie cleanup lives in middleware, but
+a browser that has already crossed the limit is rejected upstream — no response is generated, so
+no `Set-Cookie` deletion is ever sent, and the browser keeps accumulating with nothing able to
+prune it. Every path on the host fails, so there is no page the user can load to get fixed.
+**Raising the upstream buffer is what makes the middleware cleanup reachable**; the two halves
+only work together. (Commits 48cf6bc / e496348 / c3be18c added the cleanup but were only ever
+deployed to staging — always confirm a fix is actually on production, see step 5.)
+
+**Recovering a user who is stuck right now:** they must clear site data for
+intranet.complextravel.net by hand (Chrome: lock icon → Cookies and site data → Manage →
+delete). Nothing can be done for them server-side until their request gets through.
+
+## Gotcha: SSH bans itself mid-deploy
+cPHulk/fail2ban on this box bans the source IP after repeated SSH connections — an rsync
+followed by a couple of `ssh` commands is enough, so a deploy can lock you out *between*
+uploading and restarting Passenger. Symptom is `ssh: connect to host ... port 22: Operation
+timed out` when it worked a minute earlier (`nc -z 13.236.149.83 22` to confirm). It clears on
+its own after a while. From the server's root console:
+```bash
+/usr/local/cpanel/bin/cphulk_pd --flush
+fail2ban-client set sshd unbanip <your-ip>
+```
+Batch server-side work into a single `ssh` invocation to avoid tripping it.
 
 ## Database (Supabase) — schema/data changes
 Production runs on its own Supabase project (`qpnyysjakayualiqtvyf`), separate from both staging and

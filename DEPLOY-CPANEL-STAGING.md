@@ -25,8 +25,14 @@ own domain and (if applicable) their own database so staging never touches produ
 
 ## Redeploying an update
 ```bash
-# 1. Locally (NEXT_PUBLIC_SERVER_URL in .env must be https://staging.complextravel.net)
-pnpm build
+# 1. Locally — ALWAYS `build:staging`, never a bare `pnpm build`. Every NEXT_PUBLIC_* is
+#    inlined at build time, and a bare build resolves env the way Next does by default
+#    (.env's NEXT_PUBLIC_SERVER_URL is http://localhost:3000, and .env.local outranks
+#    .env.staging), so it can ship a bundle wired to the wrong project with no build error.
+#    See the same note in DEPLOY-CPANEL.md — this bit production on 2026-09-01.
+#    build:staging (scripts/build-env.mjs) moves .env.local aside and verifies the inlined
+#    project ref, failing the build if production's ref (qpnyysjakayualiqtvyf) appears.
+pnpm build:staging
 
 # 2. Upload (never include .env — the live version rules)
 rsync -az -e "ssh -i ~/.ssh/intranet_ssh" \
