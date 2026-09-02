@@ -38,16 +38,33 @@ export async function GET(request: Request) {
   const errorDescription = searchParams.get('error_description')
   if (searchParams.get('error') || errorDescription) {
     const blockedByTrigger = errorDescription?.toLowerCase().includes('database error')
+    console.error(
+      `Sign-in rejected upstream: ${searchParams.get('error') ?? 'unknown'} — ${errorDescription ?? 'no description'}`,
+    )
     return loginRedirect(origin, blockedByTrigger ? 'AccessDenied' : 'Default')
   }
 
-  if (!code) return loginRedirect(origin, 'Default')
+  // Every branch below lands on the same opaque "Authentication failed" message, so without
+  // these lines one failure is indistinguishable from another and none of them reach a log.
+  // That is why a bug affecting half of all sign-ins stayed invisible for weeks. Log why it
+  // failed and nothing else — never the code, the tokens or any cookie value.
+  if (!code) {
+    console.error('Sign-in callback reached with neither a code nor an error')
+    return loginRedirect(origin, 'Default')
+  }
 
   const supabase = await createAuthServerClient()
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   const email = data?.user?.email?.toLowerCase()
 
-  if (error || !email) return loginRedirect(origin, 'Default')
+  if (error || !email) {
+    console.error(
+      error
+        ? `Code exchange failed: ${error.message} (code=${error.code ?? 'none'}, status=${error.status ?? 'none'})`
+        : 'Code exchange returned a session with no email',
+    )
+    return loginRedirect(origin, 'Default')
+  }
 
   const payload = await getPayload({ config })
   const { docs } = await payload.find({

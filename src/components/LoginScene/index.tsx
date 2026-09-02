@@ -118,7 +118,27 @@ export function LoginScene({ error, existing, redirect, cormorantClass }: Props)
 
   async function handleGoogleLogin() {
     setLoading(true)
-    const supabase = createAuthBrowserClient()
+
+    // Both lines below exist to protect the PKCE code verifier, and neither is redundant.
+    //
+    // signInWithOAuth writes the `sb-<ref>-auth-token-code-verifier` cookie and then navigates
+    // to Google, without taking the auth lock or awaiting the client's initialisation. If the
+    // browser still carries an expired session — the state of everyone who has come back here
+    // to log in — that initialisation concurrently fires a token refresh, gets a 400, and
+    // responds by calling _removeSession(), which deletes the verifier cookie the sign-in had
+    // just written. The round trip then returns to /auth/callback with no verifier and the
+    // exchange fails locally, without ever reaching Supabase: "Authentication failed. Please
+    // try again." A second click works because the first one's teardown already cleared the
+    // stale session, so nothing races it. Measured on production, roughly half of all sign-ins
+    // lost that race.
+    //
+    // autoRefreshToken:false stops that refresh being fired at all (_recoverAndRefresh guards
+    // on it), and the awaited local signOut clears any dead session up front, before the
+    // verifier exists — scope 'local' makes no network call. Order is load-bearing: signOut
+    // first, signInWithOAuth second.
+    const supabase = createAuthBrowserClient({ autoRefreshToken: false })
+    await supabase.auth.signOut({ scope: 'local' })
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
