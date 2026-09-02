@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import type { CookieOptions } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -211,9 +212,24 @@ export default async function middleware(req: NextRequest) {
 
   const response = NextResponse.next({ request: req })
 
-  // Names the session refresh writes onto this response, so the cleanup below can leave them
-  // alone. See the guard at the top of expireStaleAuthCookies().
-  const justWritten = new Set<string>()
+  // Cookies the Supabase client writes while it verifies the session below: the rotated pair
+  // after a successful refresh, and — just as important — the deletions supabase-js emits when
+  // a refresh is rejected and it tears the dead session down (_removeSession -> SIGNED_OUT ->
+  // @supabase/ssr's applyServerStorage -> this setAll).
+  //
+  // They are collected rather than written straight onto `response`, because two of the three
+  // branches below return a *different* NextResponse — the 401 and the /login redirect — and
+  // anything written onto `response` is discarded along with it. That is why a browser holding
+  // a dead session never got rid of it: supabase-js correctly emitted the deletion on every
+  // request, and the redirect the browser actually received never carried it, so the same
+  // doomed refresh ran again on the very next request, indefinitely, until the user managed to
+  // log in again. Replaying them onto the returned response is what makes the removal stick.
+  const sessionWrites: { name: string; options: CookieOptions; value: string }[] = []
+
+  const withSessionWrites = (target: NextResponse) => {
+    for (const { name, options, value } of sessionWrites) target.cookies.set(name, value, options)
+    return target
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_AUTH_URL!,
@@ -223,10 +239,7 @@ export default async function middleware(req: NextRequest) {
         encode: AUTH_COOKIE_ENCODING,
         getAll: () => req.cookies.getAll(),
         setAll: (list) => {
-          for (const { name, options, value } of list) {
-            response.cookies.set(name, value, options)
-            justWritten.add(name)
-          }
+          for (const { name, options, value } of list) sessionWrites.push({ name, options, value })
         },
       },
     },
@@ -237,8 +250,12 @@ export default async function middleware(req: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const hasSession = Boolean(data?.claims) || req.cookies.has('payload-token')
 
+  // Names the client just wrote, so the cleanup leaves them alone — see the guard at the top of
+  // expireStaleAuthCookies(). Derived here so it always matches what was actually captured.
+  const justWritten = new Set(sessionWrites.map(({ name }) => name))
+
   if (hasSession) {
-    expireStaleAuthCookies(req, response, justWritten)
+    expireStaleAuthCookies(req, withSessionWrites(response), justWritten)
     return response
   }
 
@@ -246,16 +263,16 @@ export default async function middleware(req: NextRequest) {
     // Cron hits /api/payload-jobs/run with an Authorization header;
     // Payload's jobs access control validates the CRON_SECRET itself.
     if (pathname.startsWith('/api/payload-jobs/') && req.headers.has('authorization')) {
-      return response
+      return withSessionWrites(response)
     }
-    const unauthorized = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const unauthorized = withSessionWrites(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
     expireStaleAuthCookies(req, unauthorized, justWritten)
     return unauthorized
   }
 
   const loginUrl = new URL('/login', req.url)
   loginUrl.searchParams.set('redirect', pathname + req.nextUrl.search)
-  const redirect = NextResponse.redirect(loginUrl)
+  const redirect = withSessionWrites(NextResponse.redirect(loginUrl))
   expireStaleAuthCookies(req, redirect, justWritten)
   return redirect
 }
