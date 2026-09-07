@@ -23,6 +23,12 @@ export const scheduleExpiry: CollectionAfterChangeHook = async ({ doc, previousD
       where: {
         and: [
           { completedAt: { exists: false } },
+          // The unpublish itself fires this hook, and the job doing it is still
+          // running at that point. Deleting it here would orphan the log row
+          // Payload writes on completion (payload_jobs_log._parent_id is a FK
+          // onto payload_jobs), failing the run with a 500 even though the post
+          // was unpublished correctly.
+          { processing: { not_equals: true } },
           { taskSlug: { equals: 'schedulePublish' } },
           { 'input.doc.value': { equals: doc.id } },
           { 'input.doc.relationTo': { equals: 'posts' } },
