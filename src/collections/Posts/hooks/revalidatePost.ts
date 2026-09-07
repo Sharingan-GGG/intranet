@@ -1,7 +1,8 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
 
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { after } from 'next/server'
+
+import { safeAfter } from '../../../utilities/safeAfter'
 
 import type { Post } from '../../../payload-types'
 
@@ -16,7 +17,7 @@ export const revalidatePost: CollectionAfterChangeHook<Post> = ({
 
       payload.logger.info(`Revalidating post at path: ${path}`)
 
-      after(() => {
+      safeAfter(() => {
         revalidatePath(path)
         revalidateTag('posts-sitemap', 'max')
       })
@@ -28,7 +29,7 @@ export const revalidatePost: CollectionAfterChangeHook<Post> = ({
 
       payload.logger.info(`Revalidating old post at path: ${oldPath}`)
 
-      after(() => {
+      safeAfter(() => {
         revalidatePath(oldPath)
         revalidateTag('posts-sitemap', 'max')
       })
@@ -41,7 +42,7 @@ export const revalidateDelete: CollectionAfterDeleteHook<Post> = ({ doc, req: { 
   if (!context.disableRevalidate) {
     const path = `/posts/${doc?.slug}`
 
-    after(() => {
+    safeAfter(() => {
       revalidatePath(path)
       revalidateTag('posts-sitemap', 'max')
     })

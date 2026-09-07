@@ -19,7 +19,7 @@ import { MediaBlock } from '../../blocks/MediaBlock/config'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { populateAuthors } from './hooks/populateAuthors'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
-import { scheduleExpiry } from './hooks/scheduleExpiry'
+import { sweepExpiredPosts } from './hooks/sweepExpiredPosts'
 import { makeRevalidateCollectionTags } from '../../utilities/revalidateCollectionTag'
 
 const revalidatePostsTag = makeRevalidateCollectionTags('collection_posts')
@@ -281,7 +281,8 @@ export const Posts: CollectionConfig<'posts'> = {
     slugField(),
   ],
   hooks: {
-    afterChange: [revalidatePost, scheduleExpiry, ...revalidatePostsTag.afterChange],
+    beforeOperation: [sweepExpiredPosts],
+    afterChange: [revalidatePost, ...revalidatePostsTag.afterChange],
     afterRead: [populateAuthors],
     afterDelete: [revalidateDelete, ...revalidatePostsTag.afterDelete],
   },

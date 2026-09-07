@@ -42,20 +42,31 @@ const getNewsSubcategories = unstable_cache(
 const getPostsPage = unstable_cache(
   async (sortKey: PostsSort, categoryId: number | null, page: number) => {
     const payload = await getPayload({ config: configPromise })
-    const where: Where | undefined = categoryId ? { categories: { in: [categoryId] } } : undefined
+    // `_status` is spelled out rather than left to access control:
+    // `authenticatedOrPublished` returns true for any logged-in user, so the
+    // filter would disappear the moment a `req` reaches this query.
+    const where: Where = {
+      and: [
+        { _status: { equals: 'published' } },
+        ...(categoryId ? [{ categories: { in: [categoryId] } }] : []),
+      ],
+    }
 
     return payload.find({
       collection: 'posts',
       depth: 1,
       limit: 12,
       page,
+      draft: false,
       overrideAccess: false,
       sort: SORTS[sortKey],
       where,
     })
   },
   ['posts-page'],
-  { tags: ['collection_posts'] },
+  // `revalidate` guarantees a real query periodically, which is what gives
+  // sweepExpiredPosts a chance to unpublish posts past their Expiry Date.
+  { tags: ['collection_posts'], revalidate: 300 },
 )
 
 type Args = {

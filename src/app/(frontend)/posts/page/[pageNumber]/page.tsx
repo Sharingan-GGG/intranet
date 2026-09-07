@@ -30,7 +30,11 @@ export default async function Page({ params: paramsPromise }: Args) {
     depth: 1,
     limit: 12,
     page: sanitizedPageNumber,
+    draft: false,
     overrideAccess: false,
+    // Explicit rather than relying on access control — see the note in
+    // ../../page.tsx.
+    where: { _status: { equals: 'published' } },
   })
 
   return (
@@ -74,6 +78,9 @@ export async function generateStaticParams() {
   const { totalDocs } = await payload.count({
     collection: 'posts',
     overrideAccess: false,
+    // Must match the listing query above, or the page count includes posts
+    // that are never rendered.
+    where: { _status: { equals: 'published' } },
   })
 
   const totalPages = Math.ceil(totalDocs / 10)

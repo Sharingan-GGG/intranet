@@ -151,7 +151,14 @@ export const getNews = unstable_cache(
 
     const { docs } = await payload.find({
       collection: 'posts',
-      where: { categories: { in: catIds } },
+      // `_status` is spelled out rather than left to access control, because
+      // `authenticatedOrPublished` returns true for any logged-in user — the
+      // filter would vanish the moment this is ever called with a `req`.
+      where: {
+        and: [{ categories: { in: catIds } }, { _status: { equals: 'published' } }],
+      },
+      draft: false,
+      overrideAccess: false,
       sort: '-publishedAt',
       limit: 12,
       depth: 1,
@@ -161,7 +168,10 @@ export const getNews = unstable_cache(
     return docs.map(postToNewsCard)
   },
   ['home-news'],
-  { tags: ['collection_posts', 'collection_categories'] },
+  // `revalidate` is what makes Expiry Dates fire: sweepExpiredPosts only runs on
+  // a real query, and a tags-only cache entry never re-queries until an editor
+  // saves something.
+  { tags: ['collection_posts', 'collection_categories'], revalidate: 300 },
 )
 
 /** All sub-categories of the parent `EDMs` category — the tabs in the Latest EDMs section. */
@@ -223,7 +233,11 @@ export const getFeaturedNews = unstable_cache(
     const payload = await getPayload({ config: configPromise })
     const { docs } = await payload.find({
       collection: 'posts',
-      where: { featured: { equals: true } },
+      where: {
+        and: [{ featured: { equals: true } }, { _status: { equals: 'published' } }],
+      },
+      draft: false,
+      overrideAccess: false,
       sort: '-publishedAt',
       limit: 50,
       depth: 1,
@@ -248,7 +262,9 @@ export const getFeaturedNews = unstable_cache(
     }))
   },
   ['home-featured-news'],
-  { tags: ['collection_posts'] },
+  // See getNews — `revalidate` is what guarantees the expiry sweep gets a query
+  // to run on.
+  { tags: ['collection_posts'], revalidate: 300 },
 )
 
 const getQuickLinksForDept = unstable_cache(

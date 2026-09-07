@@ -157,9 +157,10 @@ export default buildConfig({
         const secret = process.env.CRON_SECRET
         if (!secret) return false
 
-        // If there is no logged in user, then check
-        // for the Vercel Cron secret to be present as an
-        // Authorization header:
+        // Post expiry no longer goes through the job queue — see
+        // src/collections/Posts/hooks/sweepExpiredPosts.ts. This stays so that
+        // an unauthenticated runner (scripts/run-jobs.sh) can still drain the
+        // queue if one is ever wired up for the admin's Schedule Publish button.
         const authHeader = req.headers.get('authorization')
         return authHeader === `Bearer ${secret}`
       },
