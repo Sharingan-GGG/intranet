@@ -48,6 +48,7 @@ export const Posts: CollectionConfig<'posts'> = {
   defaultPopulate: {
     title: true,
     slug: true,
+    description: true,
     categories: true,
     meta: {
       image: true,
@@ -87,6 +88,15 @@ export const Posts: CollectionConfig<'posts'> = {
               name: 'heroImage',
               type: 'upload',
               relationTo: 'media',
+            },
+            {
+              name: 'description',
+              type: 'textarea',
+              maxLength: 320,
+              admin: {
+                description:
+                  'Short summary shown on post cards (max 320 characters). Falls back to the first paragraph of the body if left blank.',
+              },
             },
             {
               name: 'content',

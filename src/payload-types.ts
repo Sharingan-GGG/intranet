@@ -252,6 +252,10 @@ export interface Post {
   id: number;
   title: string;
   heroImage?: (number | null) | Media;
+  /**
+   * Short summary shown on post cards (max 320 characters). Falls back to the first paragraph of the body if left blank.
+   */
+  description?: string | null;
   content: {
     root: {
       type: string;
@@ -1970,6 +1974,7 @@ export interface FeedbackBlockSelect<T extends boolean = true> {
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
   heroImage?: T;
+  description?: T;
   content?: T;
   relatedPosts?: T;
   meta?:

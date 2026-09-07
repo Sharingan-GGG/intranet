@@ -76,8 +76,9 @@ const richTextExcerpt = (content: Post['content'], max = 180): string => {
   return truncate(collect(root).trim())
 }
 
-/** Post excerpt: prefer the body's first paragraph (the SEO meta description tab is hidden from editors and can't be kept in sync). */
-const postExcerpt = (post: Post): string => richTextExcerpt(post.content) || post.meta?.description || ''
+/** Post excerpt: the editor-written description, else the body's first paragraph (the SEO meta description tab is hidden from editors and can't be kept in sync). */
+const postExcerpt = (post: Post): string =>
+  post.description?.trim() || richTextExcerpt(post.content) || post.meta?.description || ''
 
 /** Resolve a category id from its slug, or null if it doesn't exist. */
 async function categoryIdBySlug(
