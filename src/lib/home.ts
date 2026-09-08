@@ -111,6 +111,12 @@ export type OfficeZone = {
   tz: string
 }
 
+export type WeatherCity = {
+  city: string
+  lat: number
+  lon: number
+}
+
 /** File-type tile tints: [background, foreground]. */
 export const EXT_STYLE: Record<DocExt, [string, string]> = {
   PDF: ['#FBEAEA', '#B4443C'],
@@ -159,6 +165,14 @@ export const OFFICES: OfficeZone[] = [
   { city: 'Perth', tz: 'Australia/Perth' },
   { city: 'Melbourne', tz: 'Australia/Melbourne' },
   { city: 'Auckland', tz: 'Pacific/Auckland' },
+]
+
+/** Office capitals the weather chip snaps to; Adelaide first — it is the fallback. */
+export const WEATHER_CITIES: WeatherCity[] = [
+  { city: 'Adelaide', lat: -34.9285, lon: 138.6007 },
+  { city: 'Perth', lat: -31.9523, lon: 115.8613 },
+  { city: 'Melbourne', lat: -37.8136, lon: 144.9631 },
+  { city: 'Auckland', lat: -36.8485, lon: 174.7633 },
 ]
 
 export const DOCUMENTS: KbDoc[] = [

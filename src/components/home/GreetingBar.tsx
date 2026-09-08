@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 
+import { WEATHER_CITIES, type WeatherCity } from '@/lib/home'
+
 const chip: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -34,9 +36,27 @@ const weatherLabel = (code: number): string =>
   WEATHER_LABELS.find(([codes]) => codes.includes(code))?.[1] ?? ''
 
 // Adelaide HQ — used when the browser denies or lacks geolocation.
-const FALLBACK = { lat: -34.9285, lon: 138.6007, city: 'Adelaide' }
+const FALLBACK = WEATHER_CITIES[0]
 
-async function fetchWeather(lat: number, lon: number, city: string | null): Promise<string> {
+/**
+ * Nearest office capital to a position. Squared equirectangular distance is
+ * ample for ranking four fixed points — no need for haversine.
+ */
+function nearestCity(lat: number, lon: number): WeatherCity {
+  const scale = Math.cos((lat * Math.PI) / 180)
+  let nearest = FALLBACK
+  let shortest = Infinity
+  for (const c of WEATHER_CITIES) {
+    const d = (c.lat - lat) ** 2 + ((c.lon - lon) * scale) ** 2
+    if (d < shortest) {
+      shortest = d
+      nearest = c
+    }
+  }
+  return nearest
+}
+
+async function fetchWeather({ lat, lon, city }: WeatherCity): Promise<string> {
   const res = await fetch(
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`,
   )
@@ -44,22 +64,7 @@ async function fetchWeather(lat: number, lon: number, city: string | null): Prom
   const data = await res.json()
   const temp = Math.round(data.current.temperature_2m)
   const label = weatherLabel(data.current.weather_code)
-  const parts = [`${temp}°${label ? ` and ${label}` : ''}`]
-  if (city) parts.push(city)
-  return parts.join(' · ')
-}
-
-async function cityFromCoords(lat: number, lon: number): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
-    )
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.city || data.locality || null
-  } catch {
-    return null
-  }
+  return `${temp}°${label ? ` and ${label}` : ''} · ${city}`
 }
 
 export const GreetingBar: React.FC<Props> = ({ userName }) => {
@@ -77,10 +82,9 @@ export const GreetingBar: React.FC<Props> = ({ userName }) => {
   useEffect(() => {
     let cancelled = false
 
-    const load = async (lat: number, lon: number, knownCity: string | null) => {
-      const city = knownCity ?? (await cityFromCoords(lat, lon))
+    const load = async (place: WeatherCity) => {
       try {
-        const line = await fetchWeather(lat, lon, city)
+        const line = await fetchWeather(place)
         if (!cancelled) setWeatherLine(line)
       } catch {
         /* leave the chip hidden if weather is unreachable */
@@ -89,12 +93,12 @@ export const GreetingBar: React.FC<Props> = ({ userName }) => {
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => void load(pos.coords.latitude, pos.coords.longitude, null),
-        () => void load(FALLBACK.lat, FALLBACK.lon, FALLBACK.city),
+        (pos) => void load(nearestCity(pos.coords.latitude, pos.coords.longitude)),
+        () => void load(FALLBACK),
         { timeout: 5000, maximumAge: 30 * 60 * 1000 },
       )
     } else {
-      void load(FALLBACK.lat, FALLBACK.lon, FALLBACK.city)
+      void load(FALLBACK)
     }
 
     return () => {
