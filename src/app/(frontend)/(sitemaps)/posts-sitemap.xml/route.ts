@@ -45,6 +45,11 @@ const getPostsSitemap = unstable_cache(
   ['posts-sitemap'],
   {
     tags: ['posts-sitemap'],
+    // The expiry sweep unpublishes posts from inside this very cached function,
+    // so its `revalidateTag('posts-sitemap')` is refused (see safeAfter). Without
+    // a TTL nothing else would ever invalidate this entry and the sitemap would
+    // keep listing expired posts. Matches the posts fetchers in lib/homeData.ts.
+    revalidate: 300,
   },
 )
 
