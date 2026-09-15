@@ -9,7 +9,7 @@
  * recordFromContentAuditReport. The screen does not know which it got, which is
  * why the two adapters exist.
  */
-import { Check, Copy, Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, useTransition } from 'react'
@@ -97,6 +97,7 @@ export function PageDetail({
   trackerId,
   status,
   assigned,
+  markable,
   roster,
   from,
 }: {
@@ -106,6 +107,8 @@ export function PageDetail({
   trackerId: string | null
   status: TaskStatus | null
   assigned: string[]
+  /** False for a content audit — its findings have no row to write back to. */
+  markable: boolean
   roster: Assignee[]
   from: DetailOrigin
 }) {
@@ -532,38 +535,26 @@ export function PageDetail({
                             <p className="rec-text">{issue.recommendation}</p>
                           </div>
                         )}
-                        <div className="issue-actions">
-                          {done && (
-                            <span className="issue-done-stamp">✓ Done {fmtDate(done)}</span>
-                          )}
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${done ? '' : 'btn-primary'}`}
-                            disabled={saving.has(issue.id)}
-                            onClick={() => toggleDone(issue)}
-                          >
-                            {saving.has(issue.id) ? (
-                              <Loader2 className="animate-spin" size={13} aria-hidden />
-                            ) : (
-                              <Check size={13} aria-hidden />
+                        {markable && (
+                          <div className="issue-actions">
+                            {done && (
+                              <span className="issue-done-stamp">✓ Done {fmtDate(done)}</span>
                             )}
-                            {done ? 'Undo' : 'Mark as Done'}
-                          </button>
-                          {issue.recommendation && (
                             <button
                               type="button"
-                              className="btn btn-sm"
-                              onClick={() => {
-                                void navigator.clipboard
-                                  .writeText(issue.recommendation ?? '')
-                                  .then(() => toast.success('Recommendation copied.'))
-                                  .catch(() => toast.error('Could not copy to clipboard.'))
-                              }}
+                              className={`btn btn-sm ${done ? '' : 'btn-primary'}`}
+                              disabled={saving.has(issue.id)}
+                              onClick={() => toggleDone(issue)}
                             >
-                              <Copy size={13} aria-hidden /> Copy
+                              {saving.has(issue.id) ? (
+                                <Loader2 className="animate-spin" size={13} aria-hidden />
+                              ) : (
+                                <Check size={13} aria-hidden />
+                              )}
+                              {done ? 'Undo' : 'Mark as Done'}
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </article>
                     )
                   })}

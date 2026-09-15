@@ -409,8 +409,11 @@ body {
 }
 
 .audit-table--full-seo-page-scan {
-  /* 36+36+96+130+130+130+190+300 fixed, plus ~240 */
-  min-width: 1288px;
+  /* 36+36+96+130+130+130+80+190+300 fixed, plus ~210 for the page title.
+     The title allowance is tighter than the other tabs' ~240 so that adding
+     Pending did not push this table past the 1400px shell into a horizontal
+     scrollbar; at full width the title still gets well over 210. */
+  min-width: 1338px;
 }
 
 /* The standalone Completed screen: 36+80+200+90+90+150+200 fixed, plus ~240. */
@@ -978,6 +981,9 @@ body {
 }
 .audit-dashboard .audit-th--scantype {
   width: 130px;
+}
+.audit-dashboard .audit-th--pending {
+  width: 80px;
 }
 .audit-dashboard .audit-th--assigned {
   width: 190px;
