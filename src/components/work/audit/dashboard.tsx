@@ -99,6 +99,14 @@ const SORT_LABELS: Record<Sort, string> = {
   'title-desc': 'Title — Z→A',
 }
 
+/**
+ * Rows drawn at once. Every row is already on the client — the server sends
+ * the whole joined list — so this trims the DOM, not the fetch: it is render
+ * and scroll cost that a 900-row table pays, not network. 0 means "all".
+ */
+const DEFAULT_PAGE_SIZE = 30
+const PAGE_SIZES = [30, 60, 120, 0]
+
 const TAB_TIPS: Record<DashboardTab, string> = {
   'content-pre-check': 'Content audit queue — the E-E-A-T triage in content_audits',
   'full-seo-page-scan': 'Full scan queue — the agent runs in seo_agent_tracker',
@@ -175,6 +183,8 @@ export function AuditDashboard({
   const [busyUrls, setBusyUrls] = useState<Set<string>>(new Set())
   /** The row whose summary_report is on screen — null when the dialog is shut. */
   const [summaryRow, setSummaryRow] = useState<{ id: string; url: string } | null>(null)
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
+  const [page, setPage] = useState(1)
 
   const { watch, watching } = useContentAuditPoll(() => router.refresh())
 
@@ -182,6 +192,25 @@ export function AuditDashboard({
   useEffect(() => {
     setSelected(new Set())
   }, [tab, site.domain])
+
+  // Any change to what the list contains sends you back to its first page —
+  // staying on page 7 of a freshly narrowed list shows a slice nobody asked for.
+  useEffect(() => {
+    setPage(1)
+  }, [
+    tab,
+    site.domain,
+    search,
+    typeFilter,
+    onlyTop,
+    statusFilter,
+    auditFilter,
+    decisionFilter,
+    assignedFilter,
+    yearFilter,
+    sort,
+    pageSize,
+  ])
 
   const setDomain = (domain: string) => {
     const params = new URLSearchParams(searchParams)
@@ -237,7 +266,11 @@ export function AuditDashboard({
   const tabRows = useMemo(() => {
     switch (tab) {
       case 'content-pre-check':
-        return rows.filter((r) => !r.archived)
+        // A page leaves here the moment it is promoted to a full scan — the
+        // tracker row is what promotes it, and `revertToContent` deletes that
+        // row, which is how a page comes back. Without the trackerId test a
+        // staged page sat in both queues at once.
+        return rows.filter((r) => !r.archived && !r.trackerId)
       case 'full-seo-page-scan':
         // The run queue, so a page leaves it the moment it is closed out —
         // Done rows live on the Completed tab. Keeping them here showed the
@@ -333,6 +366,21 @@ export function AuditDashboard({
    * Only rows that are ticked *and* still visible. Anything else would let a
    * filter hide a page that a bulk action then operates on anyway.
    */
+  const pageCount = pageSize === 0 ? 1 : Math.max(1, Math.ceil(visible.length / pageSize))
+
+  /** The slice actually drawn. Filters still apply to `visible`, so the boxes
+   *  and the bulk bar keep counting the whole filtered list, not this page. */
+  const paged = useMemo(
+    () => (pageSize === 0 ? visible : visible.slice((page - 1) * pageSize, page * pageSize)),
+    [visible, page, pageSize],
+  )
+
+  // Filtering down to fewer pages than the one being viewed would otherwise
+  // leave the table empty with no way back except paging.
+  useEffect(() => {
+    setPage((p) => Math.min(p, pageCount))
+  }, [pageCount])
+
   const actionable = useMemo(() => visible.filter((r) => selected.has(r.url)), [visible, selected])
 
   /** Portal parity: one box per decision bucket, in this order, with the same
@@ -471,9 +519,20 @@ export function AuditDashboard({
     })
   }
 
-  const allVisibleTicked = visible.length > 0 && visible.every((r) => selected.has(r.url))
+  // Scoped to the drawn page, not the whole filtered list: a tick box that
+  // selects rows on other pages is exactly the "queued something you cannot
+  // see" the bulk bar is built to prevent. Ticks still survive paging, so a
+  // selection can be built up across pages deliberately.
+  const allVisibleTicked = paged.length > 0 && paged.every((r) => selected.has(r.url))
   const toggleAll = () =>
-    setSelected(allVisibleTicked ? new Set() : new Set(visible.map((r) => r.url)))
+    setSelected((s) => {
+      const next = new Set(s)
+      for (const r of paged) {
+        if (allVisibleTicked) next.delete(r.url)
+        else next.add(r.url)
+      }
+      return next
+    })
 
   /** Run one action across every ticked-and-visible row, reporting once. */
   function bulk(label: string, fn: (row: DashboardRow) => Promise<ActionResult>) {
@@ -981,7 +1040,7 @@ export function AuditDashboard({
           </thead>
 
           <tbody className="audit-table__body">
-            {visible.map((row) => {
+            {paged.map((row) => {
               const busy = busyUrls.has(row.url)
               const isSelected = selected.has(row.url)
               return (
@@ -1373,6 +1432,52 @@ export function AuditDashboard({
           </tbody>
         </table>
       </div>
+
+      {visible.length > 0 && (
+        <nav className="audit-pager" aria-label="Table pages">
+          <span className="small muted tnum">
+            {pageSize === 0
+              ? `All ${visible.length}`
+              : `${(page - 1) * pageSize + 1}\u2013${Math.min(page * pageSize, visible.length)} of ${visible.length}`}
+          </span>
+
+          <div className="audit-pager__controls">
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <span className="small muted tnum">
+              Page {page} of {pageCount}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={page >= pageCount}
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            >
+              Next
+            </button>
+
+            <select
+              className="input audit-pager__size"
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              aria-label="Rows per page"
+              title="How many rows to draw at once"
+            >
+              {PAGE_SIZES.map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? 'Show all' : `${n} per page`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </nav>
+      )}
 
       <ContentSummaryDialog
         contentAuditId={summaryRow?.id ?? null}
