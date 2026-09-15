@@ -1618,3 +1618,85 @@ main {
 .sr-url:hover {
   text-decoration: underline;
 }
+
+/* --- table pager ---------------------------------------------------- */
+/* Under the table, not inside its scroll container, so it stays put while
+   the rows scroll. */
+
+.audit-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.audit-pager__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.audit-pager__size {
+  width: auto;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+/* --- dashboard: fits the viewport, table does the scrolling ---------- */
+/*
+ * The Dashboard is a control surface, not a document: the summary boxes, the
+ * toolbar and the pager should stay put while the rows move under them, at any
+ * screen height.
+ *
+ * It replaces `.audit-table-wrap`'s `max-height: calc(100vh - 300px)`, which
+ * guessed at the height of everything above the table. The guess is wrong on
+ * every screen the guess was not made for — too tall on a laptop (the page
+ * scrolls as well as the table, so the header row leaves the screen) and too
+ * short on a large monitor (a band of empty space under the table). Measuring
+ * it with flex instead costs nothing and is right everywhere.
+ *
+ * Scoped with :has() so the report, Domain List and Completed screens keep
+ * ordinary document scrolling — they are documents, and pinning them would cut
+ * long finding lists off. A browser without :has() support simply keeps the old
+ * behaviour rather than breaking.
+ */
+@supports selector(:has(*)) {
+  body:has(.audit-dashboard) {
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* `main` is the flexible row; `overflow: auto` is the escape hatch for a
+     viewport too short to hold the toolbar and a usable table at once. */
+  body:has(.audit-dashboard) > main {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 22px 0 0;
+  }
+
+  .audit-dashboard {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* The one scroll container. min-height keeps a few rows on screen rather
+     than collapsing to nothing when the chrome above is unusually tall. */
+  .audit-dashboard .audit-table-wrap {
+    flex: 1;
+    min-height: 220px;
+    max-height: none;
+  }
+
+  .audit-dashboard .audit-pager {
+    flex: 0 0 auto;
+    padding-bottom: 14px;
+  }
+}
