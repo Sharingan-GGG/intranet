@@ -46,6 +46,27 @@ export function ScanTypeChip({ fullScan, semrush }: { fullScan: boolean; semrush
   )
 }
 
+/**
+ * Findings still open on the page's newest run — the work left on it.
+ *
+ * Amber rather than red while there is work outstanding: red sits one column
+ * over on the SemRush chip, and a queue of open findings is the normal state
+ * of a scanned page, not a fault. `null` is "never scanned", which is not the
+ * same as "nothing pending" and must not read as a clean page.
+ */
+export function PendingChip({ open }: { open: number | null }) {
+  if (open == null) return <span className="tnum muted">—</span>
+  const style =
+    open > 0
+      ? { background: 'var(--sev-medium-soft)', color: 'var(--sev-medium)' }
+      : { background: 'var(--score-good-soft)', color: 'var(--score-good)' }
+  return (
+    <span className="badge tnum" style={{ borderColor: 'transparent', ...style }}>
+      {open}
+    </span>
+  )
+}
+
 /** Tracker status ladder — seo_agent_tracker.status. */
 const TASK_STATUS_STYLE: Record<TaskStatus, { bg: string; fg: string }> = {
   'not-started': { bg: 'var(--score-none-soft)', fg: 'var(--ink-2)' },

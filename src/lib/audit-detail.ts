@@ -27,6 +27,13 @@ export type PageDetailData = {
   trackerId: string | null
   status: TaskStatus | null
   assigned: string[]
+  /**
+   * Whether each finding is a row in `audit_issues` that can be written back
+   * to. False for a content audit, whose findings only exist inside the report
+   * blob — the screen drops the per-card controls rather than offering a Done
+   * with nothing behind it.
+   */
+  markable: boolean
 }
 
 /** A full scan: the newest run's report jsonb plus its relational findings. */
@@ -45,15 +52,16 @@ export async function loadPageDetail(trackerId: string): Promise<PageDetailData 
     trackerId,
     status: meta.status,
     assigned: meta.assigned,
+    markable: true,
   }
 }
 
 /**
  * A content triage row. Its findings live inside the report blob rather than in
  * `audit_issues`, so they are adapted into the same card shape — but they have
- * no row of their own to mark done, which is why their ids are synthesised and
- * the Done control has nothing to write to. The screen still renders them,
- * matching the portal.
+ * no row of their own to mark done. Their ids are synthesised to key the list,
+ * and `markable: false` tells the screen not to offer controls that would have
+ * nothing to write to. The portal made the same call from a null id.
  */
 export async function loadContentAuditDetail(id: string): Promise<PageDetailData | null> {
   const row = await fetchContentAuditById(id)
@@ -75,5 +83,13 @@ export async function loadContentAuditDetail(id: string): Promise<PageDetailData
     doneAt: null,
   }))
 
-  return { record, issues, history: [], trackerId: null, status: null, assigned: [] }
+  return {
+    record,
+    issues,
+    history: [],
+    trackerId: null,
+    status: null,
+    assigned: [],
+    markable: false,
+  }
 }

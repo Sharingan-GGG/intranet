@@ -43,6 +43,7 @@ import {
 import { useAuditFavourites } from '@/hooks/use-audit-favourites'
 import { useContentAuditPoll } from '@/hooks/use-content-audit-poll'
 import { SITES, type Site } from '@/lib/audit-config'
+import type { IssueCounts } from '@/lib/audit-data'
 import type { DashboardRow } from '@/lib/audit-dashboard'
 import {
   auditPath,
@@ -61,6 +62,7 @@ import {
   type Assignee,
   type ContentType,
   type TaskStatus,
+  type Team,
 } from '@/lib/audit-types'
 
 import { AssignMenu } from './assign-menu'
@@ -73,6 +75,7 @@ import {
   DECISION_LABELS,
   DecisionChip,
   ExpiryChip,
+  PendingChip,
   ScanTypeChip,
   ScorePill,
   TaskStatusChip,
@@ -101,6 +104,30 @@ const TAB_TIPS: Record<DashboardTab, string> = {
   'full-seo-page-scan': 'Full scan queue — the agent runs in seo_agent_tracker',
   archived: 'Archived content_audits rows',
   completed: 'Full scan rows marked Done',
+}
+
+/**
+ * Findings still open on a page, narrowed to whoever owns it.
+ *
+ * A page handed to Marketing only ever shows its marketing findings, and one
+ * handed to IT the complement, because that is the only half its owner can
+ * act on; split across both teams, or unassigned, counts everything. The
+ * summary boxes and the Pending column both read through here so a row can
+ * never disagree with the total above it.
+ */
+function openForTeam(counts: IssueCounts | null, team: Team | null): number | null {
+  if (!counts) return null
+  if (team === 'marketing') return counts.openMarketing
+  if (team === 'it') return counts.open - counts.openMarketing
+  return counts.open
+}
+
+/** The closed half of the same split. */
+function doneForTeam(counts: IssueCounts | null, team: Team | null): number | null {
+  if (!counts) return null
+  if (team === 'marketing') return counts.doneMarketing
+  if (team === 'it') return counts.done - counts.doneMarketing
+  return counts.done
 }
 
 const fmtDate = (iso: string | null) =>
@@ -200,7 +227,8 @@ export function AuditDashboard({
     (showType ? 1 : 0) +
     (showProgress ? 1 : 0) +
     (showContentColumns ? 2 : 0) +
-    (showScanType ? 1 : 0) +
+    // Scan Type brings Pending with it — both describe the run.
+    (showScanType ? 2 : 0) +
     (showAssigned ? 1 : 0) +
     // KAS, Score and Run Type all arrive with Completed.
     (showScores ? 3 : 0)
@@ -354,19 +382,9 @@ export function AuditDashboard({
     let aboveCount = 0
     for (const row of visible) {
       if (row.counts) {
-        // Whose findings count depends on who the page is assigned to: a page
-        // split across both teams, or unassigned, counts everything.
         const team = teamOf(row.assigned, roster)
-        if (team === 'marketing') {
-          open += row.counts.openMarketing
-          done += row.counts.doneMarketing
-        } else if (team === 'it') {
-          open += row.counts.open - row.counts.openMarketing
-          done += row.counts.done - row.counts.doneMarketing
-        } else {
-          open += row.counts.open
-          done += row.counts.done
-        }
+        open += openForTeam(row.counts, team) ?? 0
+        done += doneForTeam(row.counts, team) ?? 0
       }
       if (typeof row.done?.overall === 'number') {
         scored++
@@ -411,24 +429,38 @@ export function AuditDashboard({
     }
   }, [visible, roster])
 
+  /**
+   * Run one row's action and keep the row marked busy until the screen has
+   * caught up with it.
+   *
+   * The spinner is deliberately *not* cleared when the server action resolves.
+   * Most of these actions move a page between tabs — staging a full scan,
+   * reverting to Content, archiving — and the write returning only means the
+   * row changed in the database. The row on screen is still the old one until
+   * `router.refresh()` brings the re-rendered server component back, so
+   * clearing here made the spinner vanish while the page was visibly still in
+   * the tab it was leaving.
+   *
+   * Everything is inside one transition, so `pending` stays true across both
+   * the action and the refresh it schedules (React 19 Actions). The effect
+   * below clears the busy set when that finishes — on failure too, since the
+   * transition ends either way.
+   */
   const run = useCallback(
     (url: string | null, fn: () => Promise<ActionResult>) => {
       if (url) setBusyUrls((s) => new Set(s).add(url))
       startTransition(async () => {
         const result = await fn()
-        if (url) {
-          setBusyUrls((s) => {
-            const next = new Set(s)
-            next.delete(url)
-            return next
-          })
-        }
         if (!result.ok) toast.error(result.error)
         else router.refresh()
       })
     },
     [router],
   )
+
+  useEffect(() => {
+    if (!pending) setBusyUrls((s) => (s.size ? new Set() : s))
+  }, [pending])
 
   function toggleRow(url: string) {
     setSelected((s) => {
@@ -907,6 +939,12 @@ export function AuditDashboard({
                 </Th>
               )}
 
+              {showScanType && (
+                <Th name="pending">
+                  <span className="th-label">Pending</span>
+                </Th>
+              )}
+
               {showAssigned && (
                 <Th name="assigned">
                   <span className="th-label">Assigned</span>
@@ -1030,6 +1068,11 @@ export function AuditDashboard({
                   {showScanType && (
                     <Td name="scantype">
                       <ScanTypeChip fullScan={!!row.fullScan} semrush={!!row.semrush} />
+                    </Td>
+                  )}
+                  {showScanType && (
+                    <Td name="pending">
+                      <PendingChip open={openForTeam(row.counts, teamOf(row.assigned, roster))} />
                     </Td>
                   )}
                   {showAssigned && (
