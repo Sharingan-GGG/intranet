@@ -416,11 +416,6 @@ body {
   min-width: 1338px;
 }
 
-/* The standalone Completed screen: 36+80+200+90+90+150+200 fixed, plus ~240. */
-.audit-completed .audit-table {
-  min-width: 1086px;
-}
-
 /*
  * Completed has no Progress column (every row is Done) and no Type column, so
  * its nine columns fit the 1400px shell outright — the min-width is now only
@@ -1001,25 +996,6 @@ body {
 }
 .audit-dashboard .audit-th--actions {
   width: 300px;
-}
-
-.audit-completed .audit-th--type {
-  width: 80px;
-}
-.audit-completed .audit-th--keyphrase {
-  width: 200px;
-}
-.audit-completed .audit-th--keyword {
-  width: 90px;
-}
-.audit-completed .audit-th--score {
-  width: 90px;
-}
-.audit-completed .audit-th--audited {
-  width: 150px;
-}
-.audit-completed .audit-th--actions {
-  width: 200px;
 }
 
 /* --- topbar -------------------------------------------------------- */

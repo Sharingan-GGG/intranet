@@ -158,66 +158,6 @@ export async function fetchAllContent(site: Site): Promise<CompletedRow[]> {
   return lists.flat()
 }
 
-/** Trailing-slash + case-insensitive URL comparison (matches tracker urls to WP links). */
-function sameUrl(a: string, b: string): boolean {
-  return a.replace(/\/+$/, '').toLowerCase() === b.replace(/\/+$/, '').toLowerCase()
-}
-
-/** Last non-empty path segment of a URL — the WordPress slug. */
-function slugOf(url: string): string {
-  try {
-    return new URL(url).pathname.split('/').filter(Boolean).pop() ?? ''
-  } catch {
-    return ''
-  }
-}
-
-/**
- * Fetch WordPress rows for a specific set of URLs (not the whole domain) — one
- * `?slug=` lookup per type per URL, matched back by link. Keyed by URL. Used by
- * the Completed table, which sources its page list from `seo_agent_tracker`
- * rather than from WordPress.
- */
-export async function fetchRowsForUrls(
-  site: Site,
-  urls: string[],
-): Promise<Map<string, CompletedRow>> {
-  const result = new Map<string, CompletedRow>()
-  await Promise.all(
-    urls.map(async (url) => {
-      const slug = slugOf(url)
-      if (!slug) return
-      for (const type of site.types) {
-        try {
-          const params = new URLSearchParams({
-            slug,
-            status: 'publish',
-            per_page: '20',
-            _fields: FIELDS,
-          })
-          const res = await fetch(
-            `https://${site.domain}/wp-json/wp/v2/${TYPE_TO_REST[type]}?${params}`,
-            {
-              headers: { Accept: 'application/json' },
-              next: { revalidate: REVALIDATE_SECONDS, tags: [`audit-wp:${site.domain}`] },
-            },
-          )
-          if (!res.ok) continue
-          const items = (await res.json()) as WpItem[]
-          const match = items.find((it) => sameUrl(it.link, url))
-          if (match) {
-            result.set(url, normalize(match, type))
-            // Resolved — stop trying other types.
-            return
-          }
-        } catch {
-          // Try the next type.
-        }
-      }
-    }),
-  )
-  return result
-}
 
 /**
  * Cheap per-type published counts for the Domain List screen: one request per

@@ -76,13 +76,3 @@ export const getAuditRoster = cache(async (): Promise<Assignee[]> => {
   return roster.sort((a, b) => a.name.localeCompare(b.name))
 })
 
-/** The roster split by team, for the two-column assign menu. */
-export async function getAuditTeams(): Promise<
-  { key: Team; label: string; members: Assignee[] }[]
-> {
-  const roster = await getAuditRoster()
-  return [
-    { key: 'marketing', label: 'Marketing', members: roster.filter((r) => r.team === 'marketing') },
-    { key: 'it', label: 'IT', members: roster.filter((r) => r.team === 'it') },
-  ]
-}

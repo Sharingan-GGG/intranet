@@ -152,53 +152,7 @@ export async function findTrackerRowId(url: string, domain: string): Promise<str
 // Stats and the Completed table
 // ---------------------------------------------------------------------------
 
-export interface AuditStats {
-  /** Pages in the tracker (latest row per url). */
-  tracked: number
-  onReview: number
-  done: number
-  /** Latest full run per page scoring above 85. */
-  above90: number
-}
 
-export async function fetchAuditStats(domain: string): Promise<AuditStats> {
-  const [counts] = await auditQuery<{
-    tracked: string
-    on_review: string
-    done: string
-  }>(
-    `with latest as (
-       select distinct on (${NORM_URL}) status
-         from audit.seo_agent_tracker
-        where "Domain" = $1 and url is not null
-        order by ${NORM_URL}, created_at desc
-     )
-     select count(*)::text                                     as tracked,
-            count(*) filter (where status = 'In Review')::text as on_review,
-            count(*) filter (where status = 'Done')::text      as done
-       from latest`,
-    [domain],
-  )
-
-  const [scored] = await auditQuery<{ above90: string }>(
-    `with latest_run as (
-       select distinct on (${NORM_URL}) run_type, overall
-         from audit.audit_runs
-        where url like $1
-        order by ${NORM_URL}, ran_at desc
-     )
-     select count(*) filter (where run_type = 'full' and overall > 85)::text as above90
-       from latest_run`,
-    [like(domain)],
-  )
-
-  return {
-    tracked: Number(counts?.tracked ?? 0),
-    onReview: Number(counts?.on_review ?? 0),
-    done: Number(counts?.done ?? 0),
-    above90: Number(scored?.above90 ?? 0),
-  }
-}
 
 export interface DoneAudit {
   trackerId: string
@@ -431,24 +385,6 @@ export async function fetchIssueCounts(domain: string): Promise<Record<string, I
   return byTracker
 }
 
-/** Assignees per page (normalized url -> distinct emails), from the latest run per url. */
-export async function fetchAssignedByUrl(domain: string): Promise<Record<string, string[]>> {
-  const rows = await auditQuery<{ key: string; emails: string[] }>(
-    `with latest_run as (
-       select distinct on (${NORM_URL}) id, ${NORM_URL} as key
-         from audit.audit_runs
-        where url like $1
-        order by ${NORM_URL}, ran_at desc
-     )
-     select lr.key, array_agg(distinct email) as emails
-       from latest_run lr
-       join audit.audit_issues i on i.run_id = lr.id
-       cross join lateral unnest(i.assign_role) as email
-      group by lr.key`,
-    [like(domain)],
-  )
-  return Object.fromEntries(rows.map((r) => [r.key, r.emails]))
-}
 
 // ---------------------------------------------------------------------------
 // Site content audit (lightweight E-E-A-T triage, separate from the tracker)
