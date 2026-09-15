@@ -4,8 +4,6 @@
  *   /audit/scheduler/{tab}
  *   /audit/scheduler/{tab}/page-detail/{trackerId}
  *   /audit/scheduler/{tab}/content-audit/{contentAuditId}
- *   /audit/completed
- *   /audit/completed/page-detail/{trackerId}
  *   /audit/domain-list
  *
  * The standalone portal implemented this with `history.pushState` and a
@@ -23,6 +21,10 @@
  * the **Dashboard** everywhere in the UI. (In the portal's source the screen id
  * `scheduler` meant Dashboard and `overview` meant Completed — that confusion
  * does not survive the port.)
+ *
+ * The portal's standalone Completed screen is gone: it listed exactly what the
+ * Dashboard's Completed tab lists, so every report now hangs off the Dashboard
+ * and a detail view has only one place to go back to.
  */
 
 export const BASE_PATH = '/audit'
@@ -49,12 +51,11 @@ export function isDashboardTab(value: string | undefined): value is DashboardTab
   return !!value && (DASHBOARD_TABS as readonly string[]).includes(value)
 }
 
-/** Which screen a detail view was opened from, so Back returns there. */
-export type DetailOrigin = { screen: 'dashboard'; tab: DashboardTab } | { screen: 'completed' }
+/** Which tab a detail view was opened from, so Back returns there. */
+export type DetailOrigin = { screen: 'dashboard'; tab: DashboardTab }
 
 export type AuditRoute =
   | { screen: 'dashboard'; tab: DashboardTab }
-  | { screen: 'completed' }
   | { screen: 'domain-list' }
   | { screen: 'page-detail'; trackerId: string; from: DetailOrigin }
   | { screen: 'content-audit'; contentAuditId: string; from: DetailOrigin }
@@ -64,8 +65,6 @@ export function auditPath(route: AuditRoute): string {
   switch (route.screen) {
     case 'dashboard':
       return `${BASE_PATH}/scheduler/${route.tab}`
-    case 'completed':
-      return `${BASE_PATH}/completed`
     case 'domain-list':
       return `${BASE_PATH}/domain-list`
     case 'page-detail':
@@ -77,13 +76,11 @@ export function auditPath(route: AuditRoute): string {
 
 /** The path of the screen a detail view should return to. */
 export function originPath(from: DetailOrigin): string {
-  return from.screen === 'completed'
-    ? `${BASE_PATH}/completed`
-    : `${BASE_PATH}/scheduler/${from.tab}`
+  return `${BASE_PATH}/scheduler/${from.tab}`
 }
 
 export function originLabel(from: DetailOrigin): string {
-  return from.screen === 'completed' ? 'Completed' : DASHBOARD_TAB_LABELS[from.tab]
+  return DASHBOARD_TAB_LABELS[from.tab]
 }
 
 /**

@@ -56,6 +56,7 @@ import {
   RUNNABLE_AGENT_KINDS,
   TASK_STATUSES,
   TASK_STATUS_LABELS,
+  fmtAuditDate,
   TYPE_LABELS,
   teamOf,
   type AgentKind,
@@ -137,15 +138,6 @@ function doneForTeam(counts: IssueCounts | null, team: Team | null): number | nu
   if (team === 'it') return counts.done - counts.doneMarketing
   return counts.done
 }
-
-const fmtDate = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleDateString('en-AU', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
-    : '—'
 
 export function AuditDashboard({
   tab,
@@ -1091,7 +1083,7 @@ export function AuditDashboard({
                     </Td>
                   )}
                   <Td name="updated" className="small tnum">
-                    {fmtDate(row.modifiedAt)}
+                    {fmtAuditDate(row.modifiedAt)}
                   </Td>
                   {showProgress && (
                     <Td name="progress">

@@ -23,6 +23,7 @@ import {
   MARKETING_DIMS,
   SCORE_COLOR,
   TASK_STATUS_LABELS,
+  fmtAuditDate,
   band,
   teamOf,
   type Assignee,
@@ -73,15 +74,6 @@ function scannedLabel(run: RunHistoryEntry): string {
  * UI; IT is the exact complement — everything needing backend or template work.
  */
 type AudienceView = 'all' | 'marketing' | 'it'
-
-const fmtDate = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleDateString('en-NZ', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
-    : '—'
 
 /** Whether a dimension belongs to the selected audience view. */
 function inViewFor(view: AudienceView, dimension: string | null): boolean {
@@ -278,7 +270,7 @@ export function PageDetail({
             {record.url} ↗
           </a>
           <div className="hero-meta">
-            <span>Audited {fmtDate(record.auditedAt)}</span>
+            <span>Audited {fmtAuditDate(record.auditedAt)}</span>
             {record.truseo != null && (
               <span className="hero-truseo">
                 AIOSEO TruSEO <b className="tnum">{record.truseo}</b>
@@ -397,7 +389,7 @@ export function PageDetail({
                   {history.map((run) => (
                     <div key={run.runId} className="hs-run">
                       <span className="hs-run-meta">
-                        <span className="hs-run-when">{run.ranAt ? fmtDate(run.ranAt) : '—'}</span>
+                        <span className="hs-run-when">{run.ranAt ? fmtAuditDate(run.ranAt) : '—'}</span>
                         <span className="muted small">{scannedLabel(run)}</span>
                       </span>
                       {run.delta != null && run.delta !== 0 && (
@@ -538,7 +530,7 @@ export function PageDetail({
                         {markable && (
                           <div className="issue-actions">
                             {done && (
-                              <span className="issue-done-stamp">✓ Done {fmtDate(done)}</span>
+                              <span className="issue-done-stamp">✓ Done {fmtAuditDate(done)}</span>
                             )}
                             <button
                               type="button"

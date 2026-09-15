@@ -8,6 +8,38 @@
  */
 
 /**
+ * The hub's one date format — "15 Sep 2026".
+ *
+ * One helper because it was three, and one of the three quietly used en-NZ
+ * while the others used en-AU. Same output for these options, but the next
+ * option added to one copy would not have reached the others.
+ */
+export const fmtAuditDate = (iso: string | null): string =>
+  iso
+    ? new Date(iso).toLocaleDateString('en-AU', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '—'
+
+/**
+ * `numeric` columns come back from pg as strings, not numbers — `overall` and
+ * `delta` both — and the report blobs carry them as strings too. Every read of
+ * a score goes through here so one never reaches the UI as "76" and sorts as
+ * a string.
+ *
+ * Lives here rather than beside the pool: `audit-report.ts` needs it and is a
+ * pure adapter, so importing it from the server-only db module would drag
+ * `pg` into a module the client imports types from.
+ */
+export function numOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.round(n) : null
+}
+
+/**
  * Column-level vocabulary of the `audit` schema.
  *
  * The eight `agent_*` flags and "Full Scan" are enum columns holding the literal
@@ -97,12 +129,6 @@ export const SCORE_COLOR: Record<ScoreBand, string> = {
   none: 'var(--score-none)',
 }
 
-export const SCORE_SOFT: Record<ScoreBand, string> = {
-  good: 'var(--score-good-soft)',
-  warn: 'var(--score-warn-soft)',
-  bad: 'var(--score-bad-soft)',
-  none: 'var(--score-none-soft)',
-}
 
 /** Per-type published counts for one site (Domain List screen). */
 export type TypeCounts = Partial<Record<ContentType, number>>
@@ -133,18 +159,6 @@ export const AGENT_KIND_LABELS: Record<AgentKind, string> = {
   drift: 'Drift Agent',
 }
 
-export const AGENT_KINDS: AgentKind[] = [
-  'full',
-  'full-agent',
-  'semrush',
-  'content',
-  'schema',
-  'technical',
-  'performance',
-  'geo',
-  'sxo',
-  'drift',
-]
 
 /** Agent kinds offered in the Run / Re-Run dropdown — full scans only. */
 export const RUNNABLE_AGENT_KINDS: AgentKind[] = ['full', 'full-agent']

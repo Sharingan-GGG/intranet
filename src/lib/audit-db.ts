@@ -2,6 +2,8 @@ import 'server-only'
 
 import { Pool, type QueryResultRow } from 'pg'
 
+export { numOrNull } from './audit-types'
+
 /**
  * Direct Postgres access for the `audit` schema.
  *
@@ -76,13 +78,3 @@ export async function auditTransaction<T>(fn: (q: typeof auditQuery) => Promise<
   }
 }
 
-/**
- * `numeric` columns come back from pg as strings, not numbers — `overall` and
- * `delta` both. Every read of them goes through here so a score never reaches
- * the UI as "76" and sorts as a string.
- */
-export function numOrNull(value: unknown): number | null {
-  if (value === null || value === undefined) return null
-  const n = Number(value)
-  return Number.isFinite(n) ? Math.round(n) : null
-}

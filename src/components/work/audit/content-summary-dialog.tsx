@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import type { SummaryReport } from '@/lib/audit-report'
 
-import { isExpiredFlag } from './audit-chips'
+import { isExpiredFlag, tokenStyle } from './audit-chips'
 
 /**
  * Critical and high get their own severity colour; every other priority
@@ -32,12 +32,7 @@ import { isExpiredFlag } from './audit-chips'
  */
 function PriorityChip({ priority }: { priority: string | undefined }) {
   const p = (priority ?? 'info').toLowerCase()
-  const style =
-    p === 'critical'
-      ? { background: 'var(--sev-critical-soft)', color: 'var(--sev-critical)' }
-      : p === 'high'
-        ? { background: 'var(--sev-high-soft)', color: 'var(--sev-high)' }
-        : { background: 'var(--sev-low-soft)', color: 'var(--sev-low)' }
+  const style = tokenStyle(p === 'critical' ? 'sev-critical' : p === 'high' ? 'sev-high' : 'sev-low')
   return (
     <span className="status-chip sr-priority" style={style}>
       {p}
@@ -148,11 +143,7 @@ function SummaryReportBody({ report }: { report: SummaryReport }) {
             <span className="sr-label">Status</span>
             <span
               className="status-chip"
-              style={
-                expired
-                  ? { background: 'var(--sev-critical-soft)', color: 'var(--sev-critical)' }
-                  : { background: 'var(--score-good-soft)', color: 'var(--score-good)' }
-              }
+              style={tokenStyle(expired ? 'sev-critical' : 'score-good')}
             >
               {expired ? 'Expired' : 'Current'}
             </span>

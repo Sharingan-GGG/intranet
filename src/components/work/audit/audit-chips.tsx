@@ -10,16 +10,21 @@
  */
 import { band, type ScoreBand, type TaskStatus } from '@/lib/audit-types'
 
+/**
+ * The soft-background / solid-foreground pair every chip in the hub is built
+ * from. Written out inline in six places before this; one helper so a chip can
+ * never pair one family's wash with another's ink.
+ */
+export function tokenStyle(family: string): { background: string; color: string } {
+  return { background: `var(--${family}-soft)`, color: `var(--${family})` }
+}
+
 export function ScorePill({ score }: { score: number | null }) {
   const b: ScoreBand = band(score)
   return (
     <span
       className="badge tnum"
-      style={{
-        background: `var(--score-${b}-soft)`,
-        color: `var(--score-${b})`,
-        borderColor: 'transparent',
-      }}
+      style={{ ...tokenStyle(`score-${b}`), borderColor: 'transparent' }}
     >
       {score ?? '—'}
     </span>
@@ -36,9 +41,7 @@ export function ScorePill({ score }: { score: number | null }) {
  */
 export function ScanTypeChip({ fullScan, semrush }: { fullScan: boolean; semrush: boolean }) {
   if (!fullScan) return <span className="tnum muted">—</span>
-  const style = semrush
-    ? { background: 'var(--sev-critical-soft)', color: 'var(--sev-critical)' }
-    : { background: 'var(--score-good-soft)', color: 'var(--score-good)' }
+  const style = tokenStyle(semrush ? 'sev-critical' : 'score-good')
   return (
     <span className="badge" style={{ borderColor: 'transparent', ...style }}>
       {semrush ? 'Semrush' : 'Full Scan'}
@@ -56,10 +59,7 @@ export function ScanTypeChip({ fullScan, semrush }: { fullScan: boolean; semrush
  */
 export function PendingChip({ open }: { open: number | null }) {
   if (open == null) return <span className="tnum muted">—</span>
-  const style =
-    open > 0
-      ? { background: 'var(--sev-medium-soft)', color: 'var(--sev-medium)' }
-      : { background: 'var(--score-good-soft)', color: 'var(--score-good)' }
+  const style = tokenStyle(open > 0 ? 'sev-medium' : 'score-good')
   return (
     <span className="badge tnum" style={{ borderColor: 'transparent', ...style }}>
       {open}

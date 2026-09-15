@@ -10,6 +10,8 @@
  * components and the client detail view can call them.
  */
 
+import { numOrNull } from './audit-types'
+
 export interface PageIssue {
   id?: string
   /** critical | high | medium | low | info */
@@ -99,11 +101,6 @@ export interface SummaryReport {
   action_summary?: { action?: string; priority?: string }[]
   /** e.g. "49/100" */
   content_quality_score?: string
-}
-
-function numOrNull(v: unknown): number | null {
-  const n = Number(v)
-  return Number.isFinite(n) ? Math.round(n) : null
 }
 
 function hostOf(url: string): string {
