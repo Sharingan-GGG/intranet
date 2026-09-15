@@ -40,9 +40,6 @@ export default async function AuditDomainListPage() {
           >
             Dashboard
           </Link>
-          <Link className="btn btn-sm" href={auditPath({ screen: 'completed' })}>
-            Completed
-          </Link>
         </div>
       </header>
 

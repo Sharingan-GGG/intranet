@@ -52,8 +52,10 @@ export default function AuditLayout({ children }: { children: React.ReactNode })
       </head>
       <body>
         <QueryProvider>
-          {/* Light only: the portal's palette has no dark counterpart worth
-              shipping, and audit.css carries a fallback rather than a mode. */}
+          {/* Two explicit modes, no system option: the top bar offers a
+              straight light/dark switch, so following the OS as a third state
+              would leave the toggle disagreeing with what is on screen. Opens
+              light, which is the palette the portal was drawn in. */}
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <TooltipProvider>
               <AuditTopbar />

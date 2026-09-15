@@ -174,6 +174,11 @@ export function AuditDashboard({
   // Every Completed row is Done by definition, so the progress column carries no
   // information there — drop the column outright, header, filter and cells.
   const showProgress = tab !== 'completed'
+  // Completed carries the three score columns as well, and at ten columns the
+  // table only fitted by scrolling. Type is the one to give up: the list seg
+  // above already filters by it, and it is the same handful of values on every
+  // row, so it was the column paying the least for its width.
+  const showType = tab !== 'completed'
 
   // The list seg is one control over two filters: 'top' is the star filter,
   // anything else is the type filter, and 'all' clears both. Deriving it keeps
@@ -189,9 +194,10 @@ export function AuditDashboard({
     setTypeFilter(key === 'top' || key === 'all' ? 'all' : (key as ContentType))
   }
 
-  // select, star, page, type, updated, actions — plus the optional ones.
+  // select, star, page, updated, actions — plus the optional ones.
   const columnCount =
-    6 +
+    5 +
+    (showType ? 1 : 0) +
     (showProgress ? 1 : 0) +
     (showContentColumns ? 2 : 0) +
     (showScanType ? 1 : 0) +
@@ -852,9 +858,11 @@ export function AuditDashboard({
                 </span>
               </Th>
 
-              <Th name="type">
-                <span className="th-label">Type</span>
-              </Th>
+              {showType && (
+                <Th name="type">
+                  <span className="th-label">Type</span>
+                </Th>
+              )}
 
               <Th name="updated">
                 <span className="th-sort">
@@ -980,9 +988,11 @@ export function AuditDashboard({
                       {row.path}
                     </a>
                   </Td>
-                  <Td name="type" className="muted small">
-                    {TYPE_LABELS[row.type]}
-                  </Td>
+                  {showType && (
+                    <Td name="type" className="muted small">
+                      {TYPE_LABELS[row.type]}
+                    </Td>
+                  )}
                   <Td name="updated" className="small tnum">
                     {fmtDate(row.modifiedAt)}
                   </Td>

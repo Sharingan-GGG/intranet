@@ -95,6 +95,14 @@
   --sev-info: #1d4ed8;
   --sev-info-soft: #e8effd;
 
+  /* Hairlines on the accent panels. Three near-identical lavenders rather
+     than one, because they sit on different grounds and were tuned that way;
+     they are tokens so dark mode has somewhere to land. */
+  --accent-line: #dcd9fb;
+  --accent-line-strong: #cdc8f7;
+  --rec-line: #e0ddfb;
+  --topbar-bg: rgba(255, 255, 255, 0.9);
+
   --radius: 14px;
   --shadow-sm: 0 1px 2px rgba(18, 24, 36, 0.04), 0 1px 3px rgba(18, 24, 36, 0.06);
   --shadow-md: 0 2px 6px rgba(18, 24, 36, 0.05), 0 8px 24px rgba(18, 24, 36, 0.07);
@@ -102,10 +110,13 @@
 }
 
 /*
- * The portal was light-only. The layout pins the theme to light, so this block
- * is insurance rather than a supported mode: if the theme is ever toggled, the
- * screens stay legible instead of rendering dark-on-dark. Every token above is
- * redefined here — a token defined only in :root would keep its light value.
+ * Dark mode, reachable from the switch in the top bar. The portal was
+ * light-only, so this is the hub's own palette rather than a port.
+ *
+ * Every token above is redefined here, including the ones whose light value
+ * would happen to survive: a token defined only in :root keeps its light
+ * value under .dark, which is how a single missed entry turns into one
+ * white-on-white panel nobody notices until it ships.
  */
 .dark {
   --bg: #0d1117;
@@ -142,6 +153,11 @@
   --sev-low-soft: #1f2731;
   --sev-info: #60a5fa;
   --sev-info-soft: #13233d;
+
+  --accent-line: #2f3358;
+  --accent-line-strong: #3b4070;
+  --rec-line: #333a66;
+  --topbar-bg: rgba(21, 27, 35, 0.9);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -402,9 +418,16 @@ body {
   min-width: 1086px;
 }
 
+/*
+ * Completed has no Progress column (every row is Done) and no Type column, so
+ * its nine columns fit the 1400px shell outright — the min-width is now only
+ * the floor that keeps the page title readable, not a number the table has to
+ * scroll to reach. The old 1438 counted both dropped columns and forced a
+ * horizontal scrollbar the layout never needed.
+ */
 .audit-table--completed {
-  /* 36+36+96+130+130+190+80+90+110+300 fixed, plus ~240 */
-  min-width: 1438px;
+  /* 36+36+130+190+80+90+110+300 fixed, plus ~240 for the page title */
+  min-width: 1212px;
 }
 
 .audit-table th {
@@ -648,7 +671,7 @@ body {
   margin: -8px -12px;
   padding: 12px;
   border-radius: 11px;
-  border: 1px solid #dcd9fb;
+  border: 1px solid var(--accent-line);
 }
 
 .bar-head {
@@ -693,7 +716,7 @@ body {
 }
 
 .bar-geo .bar-track {
-  background: #fff;
+  background: var(--surface);
 }
 
 .bar-fill {
@@ -707,8 +730,8 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--accent-ink);
-  background: #fff;
-  border: 1px solid #cdc8f7;
+  background: var(--surface);
+  border: 1px solid var(--accent-line-strong);
   padding: 2px 7px;
   border-radius: 999px;
 }
@@ -902,7 +925,7 @@ body {
 .rec {
   margin-top: 12px;
   background: var(--accent-soft);
-  border: 1px solid #e0ddfb;
+  border: 1px solid var(--rec-line);
   border-radius: 9px;
   padding: 11px 13px;
 }
@@ -998,7 +1021,7 @@ body {
    and Domain List are screens, so they sit here, not in the list toolbar. */
 
 .topbar {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--topbar-bg);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1057,6 +1080,34 @@ body {
 
 .tb-spacer {
   flex: 1;
+}
+
+/* Home and the theme switch, pushed right by .tb-spacer. Square so they read
+   as chrome rather than as two more nav items. */
+.tb-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  /* Fixed size so the bar does not reflow when the theme icon mounts. */
+  flex: 0 0 auto;
+}
+
+.tb-icon:hover {
+  background: var(--surface-2);
+  border-color: var(--ink-3);
+  color: var(--ink);
 }
 
 main {
