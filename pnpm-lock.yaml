@@ -16,7 +16,7 @@ importers:
         version: 3.85.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))
       '@payloadcms/db-sqlite':
         specifier: 3.85.2
-        version: 3.85.2(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)
+        version: 3.85.2(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)
       '@payloadcms/live-preview-react':
         specifier: 3.85.2
         version: 3.85.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -177,6 +177,9 @@ importers:
       '@types/node':
         specifier: 22.19.9
         version: 22.19.9
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
@@ -2916,6 +2919,9 @@ packages:
   '@types/pg@8.20.0':
     resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
 
+  '@types/pg@8.23.1':
+    resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
+
   '@types/prismjs@1.26.6':
     resolution: {integrity: sha512-vqlvI7qlMvcCBbVe0AKAb4f97//Hy0EBTaiW8AalRnG/xAN5zOiWWyrNqNXeq8+KAuvRewjCVY1+IPxk4RdNYw==}
 
@@ -4092,6 +4098,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -8015,13 +8022,13 @@ snapshots:
       - sqlite3
       - supports-color
 
-  '@payloadcms/db-sqlite@3.85.2(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)':
+  '@payloadcms/db-sqlite@3.85.2(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)':
     dependencies:
       '@libsql/client': 0.14.0
-      '@payloadcms/drizzle': 3.85.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)
+      '@payloadcms/drizzle': 3.85.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)
       console-table-printer: 2.12.1
       drizzle-kit: 0.31.7
-      drizzle-orm: 0.45.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(pg@8.20.0)
+      drizzle-orm: 0.45.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(pg@8.20.0)
       payload: 3.85.2(graphql@16.14.2)(typescript@5.7.3)
       prompts: 2.4.2
       to-snake-case: 1.0.0
@@ -8064,6 +8071,46 @@ snapshots:
       console-table-printer: 2.12.1
       dequal: 2.0.3
       drizzle-orm: 0.45.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(pg@8.20.0)
+      payload: 3.85.2(graphql@16.14.2)(typescript@5.7.3)
+      prompts: 2.4.2
+      to-snake-case: 1.0.0
+      uuid: 13.0.2
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@payloadcms/drizzle@3.85.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(payload@3.85.2(graphql@16.14.2)(typescript@5.7.3))(pg@8.20.0)':
+    dependencies:
+      console-table-printer: 2.12.1
+      dequal: 2.0.3
+      drizzle-orm: 0.45.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(pg@8.20.0)
       payload: 3.85.2(graphql@16.14.2)(typescript@5.7.3)
       prompts: 2.4.2
       to-snake-case: 1.0.0
@@ -9385,6 +9432,12 @@ snapshots:
       pg-protocol: 1.15.0
       pg-types: 2.2.0
 
+  '@types/pg@8.23.1':
+    dependencies:
+      '@types/node': 22.19.9
+      pg-protocol: 1.15.0
+      pg-types: 2.2.0
+
   '@types/prismjs@1.26.6': {}
 
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
@@ -10229,6 +10282,15 @@ snapshots:
       '@libsql/client': 0.14.0
       '@types/better-sqlite3': 7.6.13
       '@types/pg': 8.20.0
+      better-sqlite3: 12.11.1
+      mysql2: 3.22.6(@types/node@22.19.9)
+      pg: 8.20.0
+
+  drizzle-orm@0.45.2(@libsql/client@0.14.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.23.1)(better-sqlite3@12.11.1)(mysql2@3.22.6(@types/node@22.19.9))(pg@8.20.0):
+    optionalDependencies:
+      '@libsql/client': 0.14.0
+      '@types/better-sqlite3': 7.6.13
+      '@types/pg': 8.23.1
       better-sqlite3: 12.11.1
       mysql2: 3.22.6(@types/node@22.19.9)
       pg: 8.20.0
