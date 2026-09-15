@@ -17,6 +17,7 @@ const pageOptions = [
   { label: 'Route: Search', value: 'route:search' },
   { label: 'Route: Seat Scanner', value: 'route:seat-scanner' },
   { label: 'Route: Pre Departure', value: 'route:pre-departure' },
+  { label: 'Route: Audit Hub', value: 'route:audit' },
 ]
 
 export const Permissions: CollectionConfig = {

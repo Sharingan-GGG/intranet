@@ -1437,6 +1437,7 @@ export interface Permission {
         | 'route:search'
         | 'route:seat-scanner'
         | 'route:pre-departure'
+        | 'route:audit'
       )[]
     | null;
   /**
@@ -1457,6 +1458,7 @@ export interface Permission {
         | 'route:search'
         | 'route:seat-scanner'
         | 'route:pre-departure'
+        | 'route:audit'
       )[]
     | null;
   /**

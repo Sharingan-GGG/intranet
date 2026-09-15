@@ -91,6 +91,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/escape-html": "^1.0.2",
     "@types/node": "22.19.9",
+    "@types/pg": "^8.23.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/xml2js": "^0.4.14",

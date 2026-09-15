@@ -50,6 +50,16 @@ const preDepartureEnabled =
   process.env.NODE_ENV !== 'production' || process.env.PRE_DEPARTURE_ENABLED === 'true'
 
 /**
+ * The Audit Hub, gated the same way and for the same reason. Only one prefix is
+ * needed: it has no API routes of its own — every write is a server action, and
+ * those POST to the page URL, so they are already inside `/audit`.
+ */
+const AUDIT_PREFIXES = ['/audit']
+
+const auditEnabled =
+  process.env.NODE_ENV !== 'production' || process.env.AUDIT_ENABLED === 'true'
+
+/**
  * Cookies that are dead weight but never expire on their own, and so accumulate in a
  * long-lived browser profile until the Cookie header outgrows the edge's header buffer and
  * every request to the site is rejected with a 400 before it ever reaches this app.
@@ -190,9 +200,13 @@ function expireStaleAuthCookies(
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Checked before the session gate: on live this must read as "no such route",
+  // Checked before the session gate: on live these must read as "no such route",
   // never as a login redirect that hints the module is there.
-  if (!preDepartureEnabled && PRE_DEPARTURE_PREFIXES.some((p) => pathname.startsWith(p))) {
+  const disabledModule =
+    (!preDepartureEnabled && PRE_DEPARTURE_PREFIXES.some((p) => pathname.startsWith(p))) ||
+    (!auditEnabled && AUDIT_PREFIXES.some((p) => pathname.startsWith(p)))
+
+  if (disabledModule) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Not Found' }, { status: 404 })
     }
