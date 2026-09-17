@@ -23,7 +23,7 @@
  *   - bulk actions only ever touch rows that are both ticked AND visible, so
  *     narrowing the list can never queue something you cannot see.
  */
-import { Loader2, Star } from 'lucide-react'
+import { ArrowUpRightIcon, Loader2, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
@@ -31,6 +31,7 @@ import { toast } from 'sonner'
 
 import {
   cancelScheduledScan,
+  getPageTraffic,
   queueSiteContentAudit,
   refreshWordPress,
   setContentAuditArchived,
@@ -39,16 +40,21 @@ import {
   updateTrackerStatus,
   revertToContent,
   type ActionResult,
+  type PageTrafficResult,
 } from '@/app/audit/actions'
 import { useAuditFavourites } from '@/hooks/use-audit-favourites'
 import { useContentAuditPoll } from '@/hooks/use-content-audit-poll'
 import { SITES, type Site } from '@/lib/audit-config'
 import type { IssueCounts } from '@/lib/audit-data'
 import type { DashboardRow } from '@/lib/audit-dashboard'
+import { AuditTrafficDrawer } from '@/components/work/audit/traffic-drawer'
+import { AuditTrafficPageDetail } from '@/components/work/audit/traffic-page-detail'
+import { GA4_ALL_CHANNELS, GA4_DASHBOARD_DAYS, normaliseAuditPath } from '@/lib/audit-types'
 import {
   auditPath,
   DASHBOARD_TABS,
   DASHBOARD_TAB_LABELS,
+  HIGHLIGHT_ANCHOR,
   type DashboardTab,
 } from '@/lib/audit-route'
 import {
@@ -145,12 +151,21 @@ export function AuditDashboard({
   rows,
   roster,
   loadError,
+  ga4Channel,
+  ga4Channels,
+  ga4Paths,
 }: {
   tab: DashboardTab
   site: Site
   rows: DashboardRow[]
   roster: Assignee[]
   loadError: string | null
+  /** The selected GA4 channel, or '' for All GA4. */
+  ga4Channel: string
+  /** Channels this site's property actually saw, biggest first. */
+  ga4Channels: { channel: string; sessions: number }[]
+  /** Paths that saw traffic from that channel; null when nothing is selected. */
+  ga4Paths: string[] | null
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -160,7 +175,33 @@ export function AuditDashboard({
 
   const [onlyTop, setOnlyTop] = useState(false)
   const [typeFilter, setTypeFilter] = useState<ContentType | 'all'>('all')
-  const [search, setSearch] = useState('')
+  /**
+   * `?highlight=` arrives from the Traffic drawer: a page that has traffic but
+   * has never been scanned, handed over to be triaged here.
+   *
+   * It seeds the filter as well as marking the row. Marking alone would often
+   * mark something off-screen — the list is paged client-side at 30 rows and
+   * may be filtered already — so the one row asked for is brought into view and
+   * the filter box says plainly why the list is short.
+   */
+  const highlight = searchParams.get('highlight')
+  const [search, setSearch] = useState(highlight ?? '')
+
+  /**
+   * Bring the anchored row into view.
+   *
+   * The fragment alone is not enough: the browser resolves it before React has
+   * rendered the table, so by the time the row exists the jump has already
+   * missed. The table is also its own scroll container, so this scrolls within
+   * it rather than moving the page.
+   */
+  useEffect(() => {
+    if (!highlight) return
+    const row = document.getElementById(HIGHLIGHT_ANCHOR)
+    if (!row) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    row.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' })
+  }, [highlight])
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [auditFilter, setAuditFilter] = useState<AuditStatus | 'all'>('all')
   const [decisionFilter, setDecisionFilter] = useState('all')
@@ -200,6 +241,7 @@ export function AuditDashboard({
     decisionFilter,
     assignedFilter,
     yearFilter,
+    ga4Channel,
     sort,
     pageSize,
   ])
@@ -207,7 +249,23 @@ export function AuditDashboard({
   const setDomain = (domain: string) => {
     const params = new URLSearchParams(searchParams)
     params.set('domain', domain)
+    // Channels are per-property, so one site's selection means nothing on
+    // another — the same reason the Traffic screen drops it on a site change.
+    params.delete('ga4')
     router.push(`${auditPath({ screen: 'dashboard', tab })}?${params}`)
+  }
+
+  /**
+   * The GA4 channel filter.
+   *
+   * A navigation, not local state: the set of qualifying paths is fetched on
+   * the server, so the choice has to reach it.
+   */
+  const setGa4 = (channel: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (channel) params.set('ga4', channel)
+    else params.delete('ga4')
+    startTransition(() => router.push(`${auditPath({ screen: 'dashboard', tab })}?${params}`))
   }
 
   /**
@@ -276,6 +334,66 @@ export function AuditDashboard({
     }
   }, [rows, tab])
 
+  /**
+   * Paths that qualify under the GA4 filter.
+   *
+   * Rebuilt here because a Set cannot cross the server/client boundary — the
+   * page sends an array — and a Set is what the row test wants.
+   */
+  /**
+   * The traffic drawer.
+   *
+   * Component state, not a route: the Traffic screen can intercept because its
+   * list is cheap to keep mounted, but intercepting across this segment would
+   * re-run WordPress, four queries and the GA4 lookups just to open a panel
+   * over them. The trade is that the browser's Back does not close this one.
+   */
+  const [drawerPath, setDrawerPath] = useState<string | null>(null)
+  const [drawerTitle, setDrawerTitle] = useState('')
+  const [drawer, setDrawer] = useState<PageTrafficResult | null>(null)
+
+  const openTraffic = useCallback(
+    (path: string, title: string) => {
+      setDrawerPath(path)
+      setDrawerTitle(title)
+      setDrawer(null)
+      void getPageTraffic(site.domain, path).then((result) => {
+        // Ignore a reply that arrived after the drawer moved on or closed.
+        setDrawerPath((current) => {
+          if (current === path) setDrawer(result)
+          return current
+        })
+      })
+    },
+    [site.domain],
+  )
+
+  /**
+   * Open the drawer from anywhere on the row.
+   *
+   * Dashboard rows are dense with controls — a checkbox, a star, the assign
+   * menu, several action buttons and two kinds of link — so this steps aside
+   * for anything interactive rather than listing what it should respond to.
+   * It also ignores a click that ended a text selection, which on rows this
+   * wide is easy to do by accident.
+   */
+  const openTrafficFromRow = useCallback(
+    (e: React.MouseEvent, path: string, title: string) => {
+      const el = e.target as HTMLElement
+      if (el.closest('a, button, input, select, textarea, label, [role="menu"], [role="dialog"]')) {
+        return
+      }
+      if (window.getSelection()?.toString()) return
+      openTraffic(path, title)
+    },
+    [openTraffic],
+  )
+
+  const ga4PathSet = useMemo(
+    () => (ga4Paths ? new Set(ga4Paths) : null),
+    [ga4Paths],
+  )
+
   const years = useMemo(() => {
     const set = new Set<string>()
     for (const r of tabRows) if (r.modifiedAt) set.add(r.modifiedAt.slice(0, 4))
@@ -298,6 +416,8 @@ export function AuditDashboard({
     const needle = search.trim().toLowerCase()
     const filtered = tabRows.filter((r) => {
       if (onlyTop && !favourites.has(r.url)) return false
+      // The GA4 channel filter: keep only pages that saw traffic from it.
+      if (ga4PathSet && !ga4PathSet.has(normaliseAuditPath(r.path))) return false
       if (typeFilter !== 'all' && r.type !== typeFilter) return false
       if (
         needle &&
@@ -351,6 +471,7 @@ export function AuditDashboard({
     decisionFilter,
     yearFilter,
     assignedFilter,
+    ga4PathSet,
     sort,
   ])
 
@@ -708,6 +829,31 @@ export function AuditDashboard({
                 </option>
               ))}
             </select>
+
+            {/* Narrows the queue to pages that actually got traffic from one
+                channel in the last 28 days — "which of these did organic search
+                reach" is the question the Dashboard could not answer before.
+                Disabled when the site has no GA4 property, or GA was
+                unreachable: the queue itself never depends on it. */}
+            <select
+              className="audit-toolbar__site input w-auto"
+              value={ga4Channel}
+              onChange={(e) => setGa4(e.target.value)}
+              aria-label="GA4 traffic channel"
+              title={
+                ga4Channels.length === 0
+                  ? 'No GA4 property connected for this site'
+                  : 'Show only pages with traffic from this channel, last 28 days'
+              }
+              disabled={ga4Channels.length === 0}
+            >
+              <option value="">All GA4</option>
+              {ga4Channels.map((c) => (
+                <option key={c.channel} value={c.channel}>
+                  {c.channel} ({c.sessions.toLocaleString('en-AU')})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* All / ★ Top / one per content type — the portal's second seg. It
@@ -1038,8 +1184,12 @@ export function AuditDashboard({
               return (
                 <tr
                   key={row.id}
-                  className={`audit-row${isSelected ? ' audit-row--selected' : ''}${busy ? ' audit-row--busy' : ''}`}
+                  className={`audit-row${isSelected ? ' audit-row--selected' : ''}${
+                    busy ? ' audit-row--busy' : ''
+                  }${isHighlighted(row.path, highlight) ? ' audit-row--highlight' : ''}`}
+                  id={isHighlighted(row.path, highlight) ? HIGHLIGHT_ANCHOR : undefined}
                   data-url={row.url}
+                  onClick={(e) => openTrafficFromRow(e, row.path, row.title)}
                 >
                   <Td name="select">
                     <input
@@ -1067,15 +1217,34 @@ export function AuditDashboard({
                     </button>
                   </Td>
                   <Td name="page">
-                    <div className="audit-row__title font-semibold">{row.title}</div>
-                    <a
-                      className="audit-row__path muted small hover:underline"
-                      href={row.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {row.path}
-                    </a>
+                    {/* The path used to be spelled out on a second line. It
+                        repeats the title for most rows and cost the row a whole
+                        line; the arrow keeps the link and puts the URL in its
+                        tooltip. Nested inside the title so the two share a
+                        line without the cell becoming a flex container. */}
+                    <div className="audit-row__title font-semibold">
+                      {/* The whole row opens the drawer; this keeps the title
+                          reachable by keyboard, which a click handler on the
+                          <tr> is not. */}
+                      <button
+                        type="button"
+                        className="audit-row__open"
+                        onClick={() => openTraffic(row.path, row.title)}
+                        title={`${row.title} — open traffic`}
+                      >
+                        {row.title}
+                      </button>
+                      <a
+                        className="audit-row__ext"
+                        href={row.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={row.url}
+                        aria-label={`Open ${row.title} in a new tab`}
+                      >
+                        <ArrowUpRightIcon size={13} aria-hidden />
+                      </a>
+                    </div>
                   </Td>
                   {showType && (
                     <Td name="type" className="muted small">
@@ -1476,6 +1645,28 @@ export function AuditDashboard({
         url={summaryRow?.url ?? null}
         onClose={() => setSummaryRow(null)}
       />
+
+      {drawerPath !== null && (
+        <AuditTrafficDrawer onClose={() => setDrawerPath(null)}>
+          {drawer === null ? (
+            <p className="muted p-4">Loading traffic for {drawerTitle}…</p>
+          ) : !drawer.ok ? (
+            <p className="muted p-4">Could not load page traffic: {drawer.error}</p>
+          ) : (
+            <AuditTrafficPageDetail
+              site={site}
+              path={drawerPath}
+              days={GA4_DASHBOARD_DAYS}
+              channel={GA4_ALL_CHANNELS}
+              data={drawer.data}
+              audit={drawer.audit}
+              error={null}
+              hasProperty={drawer.hasProperty}
+              variant="drawer"
+            />
+          )}
+        </AuditTrafficDrawer>
+      )}
     </div>
   )
 }
@@ -1512,6 +1703,18 @@ function SummaryBox({
       </div>
     </div>
   )
+}
+
+/**
+ * Whether this row is the one the Traffic drawer sent us to.
+ *
+ * Trailing slashes are ignored: WordPress gives `/deals/` and GA4 reports
+ * `/deals` for the same page, and an exact match would silently never fire.
+ */
+function isHighlighted(path: string, highlight: string | null): boolean {
+  if (!highlight) return false
+  const trim = (v: string) => v.replace(/\/+$/, '').toLowerCase()
+  return trim(path) === trim(highlight)
 }
 
 function Th({ name, children }: { name: string; children?: React.ReactNode }) {

@@ -24,11 +24,68 @@ the `audit` schema:
 | `/audit/scheduler/completed` | Full-scan rows whose tracker status is Done |
 | `/audit/completed` | The standalone Completed table — adds keyphrase, keyword score and the stat cards |
 | `/audit/domain-list` | One card per site with live published counts |
+| `/audit/traffic` | GA4 engagement for one site: summary cards, then that site's pages by title, over a 7/28/90/365-day window |
+| `/audit/traffic/page-detail?path=…` | One page's traffic: totals, daily trend, and splits by channel, device and country — plus its SEO report if it has one |
 | `…/page-detail/{trackerId}` | One full-scan run: gauge, dimension bars, findings, history |
 | `…/content-audit/{id}` | A content triage row, rendered through the same screen |
 
 `scheduler` is the URL segment the portal shipped and is kept so existing links
 resolve; the screen is the **Dashboard** everywhere in the UI.
+
+## The GA4 filter on the Dashboard
+
+`audit-toolbar__controls` carries an **All GA4** select beside the site select,
+listing the channels that site's GA4 property actually saw with their session
+counts. Choosing one narrows the queue to pages that got traffic from that
+channel in the last 28 days — "which of these did organic search actually
+reach", which the Dashboard could not answer before.
+
+It is a navigation (`?ga4=`), not local state: the qualifying paths are fetched
+on the server. Selecting a site clears it, because channels are per-property.
+
+Three things keep it honest:
+
+- **It is an extra, never a gate.** A site with no GA4 property (TWCT) or a GA
+  outage leaves the select empty and disabled, and the queue renders exactly as
+  before. The whole block is wrapped in a `try`.
+- **The path limit is 1000, not the page table's 50.** This answers "did this
+  page get *any* traffic from that channel", so a page ranked 400th by views
+  still has to be in the set or the filter would quietly hide pages that do
+  qualify. RAT AU's organic set is 340 distinct paths.
+- **Paths are normalised** through `normaliseAuditPath` — WordPress gives
+  `/deals/`, GA4 reports `/deals`. Without it the filter would match nothing and
+  look like "no pages have organic traffic".
+
+The set crosses the server boundary as an array and is rebuilt as a `Set` in the
+component; a `Set` is not serialisable.
+
+Both lookups are **cached for an hour** (`unstable_cache`, tag
+`GA4_DASHBOARD_TAG`). The window ends *yesterday*, so the answer only changes
+once a day, and the Dashboard is opened repeatedly — an hour is short enough to
+pick up the new day and long enough that reopening costs nothing. `refreshGa4`
+busts the tag so an explicit refresh is not left an hour behind. The Traffic
+screen deliberately calls the **uncached** versions: there the numbers are the
+content and are promised live; here they only fill a dropdown.
+
+**Clicking anywhere on a row opens the traffic drawer**, the same panel the
+Traffic screen uses. Dashboard rows are dense with controls — a checkbox, a
+star, the assign menu, eleven buttons, three links and a select — so the
+handler steps aside for anything interactive (`closest('a, button, input,
+select, textarea, label, …')`) rather than trying to list what it should
+respond to. It also ignores a click that ended a text selection, which on rows
+this wide is easy to do by accident. The title stays a button because a click
+handler on a `<tr>` is not reachable by keyboard.
+
+Unlike the Traffic screen's, this drawer is **component state fed by a server
+action** (`getPageTraffic`), not an intercepting route. Intercepting across this
+segment would re-run WordPress, four queries and the GA4 lookups just to open a
+panel over them. The trade is that the browser's Back does not close this one —
+which is also why `AuditTrafficDrawer` takes an optional `onClose` instead of
+always calling `router.back()`.
+
+A page with no GA4 rows says so outright. "No property connected", "the request
+failed" and "GA has nothing for this path" are three different answers and get
+three different messages — an empty panel would make them look identical.
 
 ## Two invariants that are easy to break
 
@@ -50,6 +107,9 @@ src/app/audit/**                     routes, layout, server actions
 src/components/work/audit/**         client components
 src/lib/audit-*.ts                   data layer, roster, route model, adapters
 src/lib/audit-db.ts                  pg pool + auditQuery(), the direct connection
+src/lib/google-analytics.ts          GA4 Admin + Data APIs, hand-rolled REST
+src/lib/audit-ga4.ts                 the GA4 nightly ingest and the traffic reads
+src/app/api/audit/ga4-ingest/        the cron endpoint (the hub's only API route)
 supabase/database/schemas/audit/**   the schema itself (see its own README)
 scripts/audit-copy.mjs               one-time data copy from the old project
 ```
@@ -67,6 +127,217 @@ an error boundary instead of rendering as an empty table. Writes are server
 actions that return a result for the UI to toast, and each re-checks
 `route:audit` — a server action is reachable by anyone who can guess its id, so
 the check on the page only decides what renders.
+
+## GA4 traffic
+
+The traffic screen never calls Google. A nightly cron POSTs
+`/api/audit/ga4-ingest` with a `CRON_SECRET` bearer token; that writes one row
+per property per day into `audit.ga4_daily`, and the screen reads Postgres. This
+is the hub's only API route — every other write is a server action, and those
+POST to a page URL, so they already carry a session. Cron does not.
+
+Three things here are load-bearing and look optional:
+
+- **The service account is a Viewer at the GA _account_ level**, not per
+  property. Granted per property, the Admin API enumerates nothing: discovery
+  returns an empty list and the screen is simply blank, with no error.
+- **The job re-pulls a trailing 3 days, not just yesterday.** GA4 figures are
+  not final for roughly 48h, so a yesterday-only pull would store provisional
+  numbers permanently. `(property_id, date)` is the upsert's conflict target,
+  which is what makes the re-pull overwrite instead of duplicate.
+- **Rates and averages are re-derived over a window, never summed.**
+  `engagement_rate` is `sum(engaged)::numeric / sum(sessions)` — the cast
+  matters, because bigint division silently returns 0 — and the average session
+  duration is weighted by sessions. Averaging the daily columns weights a quiet
+  Sunday like a busy Monday.
+
+Dates come from GA's relative tokens (`3daysAgo`, `yesterday`) so Google
+resolves them in each property's own timezone; computing them from the server
+clock would put AU and NZ properties on a Sydney day.
+
+The screen is **shaped like the Dashboard on purpose**: `?domain=` picks the
+site (default RAT AU), the same summary strip sits on top, and the same
+two-row `audit-toolbar` holds the range, the filter and the site select. It is
+the same job on a different data source, and a second table design for it would
+be a second thing to keep in step. It does not copy the row machinery — there is
+nothing to tick, star, assign or queue here.
+
+**Everything on the screen is live; `audit.ga4_daily` backs none of it.** The
+six summary figures need key events and three GA-computed ratios the snapshot
+does not hold, and splitting anything by channel needs a dimension it does not
+have. Three calls run in parallel per load: the channel split, the summary
+figures, and the page table. The snapshot is now purely the historical store the
+nightly ingest keeps warm — worth knowing before anyone assumes the cron is
+load-bearing for this page. (It is still the only place GA4 history accumulates,
+and GA4 itself only keeps 14 months.)
+
+The six cards are chosen for what this hub is for, not for generic analytics:
+
+| Card | Why | Filtered by channel? |
+| --- | --- | --- |
+| Organic Share | the one figure that says whether SEO is working | no — composition |
+| AI Assistant | the GEO signal; real ChatGPT/Gemini/Perplexity referrals | no — composition |
+| Key Events | traffic that did something (`thank_you`, `form_submit`) | yes |
+| Bounce Rate | asked of GA, not derived from engagement rate | yes |
+| Views / Session | depth | yes |
+| Sessions / User | return visits | yes |
+
+Organic Share and AI Assistant deliberately ignore `?channel=`: they describe how
+the *site's* traffic is composed, which is a property fact, not a fact about the
+slice on screen. Their cards say "of all traffic" so the scope is on the card
+rather than in this file.
+
+The delta's arrow and its colour answer different questions — a falling bounce
+rate is a green ▼ — so `Delta` takes `lowerIsBetter` rather than colouring by
+direction.
+
+The ratios are **asked of GA, not derived**. Bounce rate is nearly `1 -
+engagementRate` and views-per-session is nearly `views / sessions`, but GA
+computes both against its own session and user counts and the derived versions
+land a few percent off what the GA4 UI shows for the same range.
+
+**The page table is fetched live** too. Per-page rows are high-cardinality —
+~450 titles for RAT AU alone — so storing them nightly would cost far more than
+it saves for a table that only renders for the one site you are looking at.
+
+**Traffic is unfiltered by default, and that default flatters SEO.** On both
+live properties paid is the *majority* of all traffic (RAT AU: Paid Social 39%
++ Paid Search 18%, against 30% Organic Search; RAT NZ: Paid Social 56% + Paid
+Search 6%, against 16% Organic Search). Read next to an SEO score, an
+all-traffic figure credits SEO for work it had no part in — RAT AU's `/deals/`
+is 17,841 views unfiltered and 4,045 from organic search.
+
+So `?channel=` filters the whole screen to one GA4 default channel group. Two
+consequences worth knowing:
+
+- **The channel list is derived, not hardcoded.** One request per load returns
+  the channels that property actually saw, so the filter never offers one that
+  would return an empty table. GA4's full default-channel set is much longer
+  than any property uses.
+- **The filter changes where the cards come from.** Unfiltered they read the
+  nightly snapshot; filtered, the snapshot has no channel dimension, so they
+  come from GA in the same request that built the channel list. That request
+  asks for two *named* date ranges, which is what keeps the previous-period
+  deltas without a second round trip — GA appends a `dateRange` dimension and
+  returns a row per (channel, range), which `runGa4ChannelReport` merges. The
+  header line says which of the two you are looking at.
+
+**The channel chips are the only channel control** — there is no select, and no
+page header above them; the topbar already says which screen this is, so the
+`<h1>` is `sr-only` for the document outline. The strip leads with an **All**
+chip carrying the unfiltered total, which is both the default state and what
+makes the channels beside it legible as parts of a whole. A `?channel=` that is
+not in the list (a stale link, or a channel with no traffic in the chosen
+window) gets a synthetic zero chip, so the screen always offers a way back.
+
+**The All chip is ~1.8% under GA's true session total** — 25,786 against 26,249
+on RAT AU's last 28 days. Not a bug and not fixable: every dimensioned request
+loses the sessions GA cannot attribute, and the chips are dimensioned by channel
+while the cards are not. It is why the summary report asks for plain totals and
+leaves the splitting to the chips.
+
+The freshness note is **the Refresh button's tooltip** (the button sits at the
+end of the toolbar's tab row, after the search), not a line of prose under the
+title. It still says which source you are reading — nightly snapshot when
+unfiltered, live from GA when not — and that GA4 is not final for ~48h, but it
+is hover-only, so a stale cron is less visible than it was.
+
+**Clicking anywhere on a row opens the drawer.** The row handler steps aside
+for clicks that landed on a link (`closest('a')`), so the arrow still goes to
+the live page and the title — kept as a real link for keyboard and middle-click
+— still opens the drawer. Two destinations on one row, and the browser already
+knows what to do with the one it was given. The page travels as
+`?path=` rather than a route segment — a URL path inside a path needs encoding
+either way, and a query parameter carries the site, range and channel in force
+with it. The path *below* the title still links to the live page: two links,
+two destinations, which is why the title is not also an external link.
+
+The drawer is an **intercepting route**, the only one in this codebase:
+
+```
+traffic/
+  layout.tsx                    children + the drawer slot
+  page.tsx                      the list
+  page-detail/page.tsx          the full page — hard load, refresh, outside link
+  page-detail/load.ts           the shared loader both forms call
+  @drawer/default.tsx           null, when no drawer route matches
+  @drawer/(.)page-detail/       the same detail, intercepted into the drawer
+```
+
+That machinery buys one thing worth having: `children` keeps rendering the list
+it already had, so opening a page costs its own five GA calls and nothing more.
+Rendering the drawer from the list's own `?page=` instead would re-run the list
+— three more GA calls on every open and every close.
+
+Two consequences to keep in mind when editing it. Closing is `router.back()`,
+not a state flip, because the drawer *is* a history entry — it was opened by a
+navigation, so the browser's Back must close it too. And the slot must never
+`redirect()`: that would move the page out from under the drawer, so a missing
+`?path=` renders null there while the full page redirects.
+
+That screen is five parallel GA requests (totals, daily, and three splits) —
+one grouping per report is all GA returns. Its channel split deliberately
+ignores `?channel=`: filtered, it would be one bar at 100% and say nothing.
+
+When a page has traffic but **no** SEO report, the drawer offers a **Check
+content** button into the Dashboard's Content Pre-Check tab, built by
+`contentPreCheckForPath` in `audit-route.ts` so the parameter and the fragment
+cannot drift apart:
+
+```
+/audit/scheduler/content-pre-check?domain=…&highlight=%2Fdeals%2F#highlighted-row
+```
+
+Three things land that row in front of you, and all three are needed. The query
+**marks** it green and **seeds the filter** — marking alone usually marks
+something off-screen, since the list pages client-side at 30 rows. The fragment
+names it. And the Dashboard scrolls to it in an effect, because the browser
+resolves a fragment before React has rendered the table, so by the time the row
+exists the jump has already missed; the table is its own scroll container, so
+that scroll happens within it rather than moving the page.
+
+Path matching ignores trailing slashes throughout — WordPress stores `/deals/`,
+GA4 reports `/deals`, and the tracker holds both — so an exact comparison would
+silently never fire.
+
+It also makes **the join this hub existed for**: the same URL matched against
+`audit.seo_agent_tracker`, so a page's SEO score sits beside its traffic. The
+tracker stores absolute URLs with a trailing slash and GA reports paths without
+one, so the lookup tries four spellings (bare and trailing-slash, with and
+without `www`) against `"Domain"`. What it surfaces is the point — RAT AU's
+`/deals/` is the single most-viewed page on the site at ~17,800 views and has
+**never been scanned**, while `/about/` is audited and Done.
+
+Switching site drops the channel filter: channels are per-property, so one
+site's selection would otherwise show an empty table under a channel name that
+site never saw.
+
+The page cell shows the **title and an `↗` arrow**, not the spelled-out path —
+on every Dashboard tab as well as here. The path repeated the title on most
+rows and cost each row a second line; the arrow keeps the link out to the live
+page and carries the URL in its `title`, so removing the text did not remove
+the ability to see where it goes. On the Dashboard the arrow nests inside the
+title so the two share a line; on Traffic they are siblings in `.ga4-pagecell`,
+because the title is itself a `<Link>` and an `<a>` inside one is invalid.
+
+Rows are grouped by **title and path**, not title alone. Title alone reads
+better but silently merges pages that share one, and leaves nothing to link to;
+the path is `pagePath`, not `pagePathPlusQueryString`, so campaign parameters do
+not shatter one page into a dozen rows.
+
+The metric columns are toggled by the chips in the toolbar, driven by one
+`METRICS` list in `traffic.tsx` so a metric cannot appear in the chips but be
+missing from the table. The choice is kept in `localStorage`, read after mount
+rather than during render — seeding state from `localStorage` is the same
+hydration bug the topbar's theme toggle documents.
+
+`audit-table--traffic` is the one table here with `table-layout: auto`. The
+column count changes as metrics are toggled, and under `fixed` a cell's
+min-width is ignored, so the title column would collapse once enough metrics
+were on.
+
+**Not every site has a GA4 property** — TWCT does not. Those sites stay
+selectable and say so, rather than rendering an empty table that looks broken.
 
 ## Access
 

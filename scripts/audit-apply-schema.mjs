@@ -37,6 +37,8 @@ const FILES = [
   'tables/seo_site_content_audit.sql',
   'tables/drift_baselines.sql',
   'tables/drift_events.sql',
+  'tables/ga4_properties.sql',
+  'tables/ga4_daily.sql',
   'views/tracker_latest_run.sql',
 ]
 

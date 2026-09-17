@@ -243,3 +243,132 @@ export function teamOf(
   }
   return teams.size === 1 ? [...teams][0]! : null
 }
+
+// --- GA4 traffic -----------------------------------------------------------
+
+export const GA4_RANGES = [7, 28, 90, 365] as const
+export type Ga4RangeDays = (typeof GA4_RANGES)[number]
+export const DEFAULT_GA4_RANGE: Ga4RangeDays = 28
+
+export function resolveGa4Range(raw: string | undefined): Ga4RangeDays {
+  const n = Number(raw)
+  return (GA4_RANGES as readonly number[]).includes(n) ? (n as Ga4RangeDays) : DEFAULT_GA4_RANGE
+}
+
+export type Ga4PropertyTotals = {
+  propertyId: string
+  displayName: string
+  domain: string | null
+  activeUsers: number
+  newUsers: number
+  sessions: number
+  engagedSessions: number
+  /** Re-derived over the window, never averaged. Null when there were no sessions. */
+  engagementRate: number | null
+  /** Seconds, sessions-weighted over the window. Null when there were no sessions. */
+  avgSessionDuration: number | null
+  screenPageViews: number
+  /** Active users in the equal-length window immediately before this one. */
+  prevActiveUsers: number
+  prevSessions: number
+}
+
+export type Ga4PageEngagement = {
+  pageTitle: string
+  /** Host-relative path, for the link under the title. Empty if GA had none. */
+  pagePath: string
+  views: number
+  activeUsers: number
+  newUsers: number
+  sessions: number
+  engagedSessions: number
+  /** Derived over the window, never averaged. Null with no sessions. */
+  engagementRate: number | null
+  /** Seconds per active user — GA4's "average engagement time". Null with no users. */
+  avgEngagementTime: number | null
+  /** Views per active user, the other half of GA4's Pages report. */
+  viewsPerUser: number | null
+}
+
+/**
+ * The sentinel for "don't filter by channel".
+ *
+ * A value rather than an absent param so the select always has something
+ * selected, and so the URL says plainly which of the two the screen is showing.
+ */
+export const GA4_ALL_CHANNELS = 'all'
+
+export type Ga4ChannelTotals = {
+  channel: string
+  sessions: number
+  activeUsers: number
+  share: number
+}
+
+/**
+ * The six summary figures.
+ *
+ * Four respond to the channel filter; `organicShare` and `aiAssistant` do not —
+ * they describe how the site's traffic is *composed*, which is a property fact,
+ * not a fact about the slice you are looking at. Their cards say so.
+ */
+export type Ga4Cards = {
+  /** Organic Search as a fraction of all sessions. Property-wide. */
+  organicShare: number | null
+  prevOrganicShare: number | null
+  /** Sessions referred by ChatGPT, Gemini, Perplexity and friends. Property-wide. */
+  aiAssistant: number
+  prevAiAssistant: number
+  keyEvents: number
+  prevKeyEvents: number
+  bounceRate: number
+  prevBounceRate: number
+  viewsPerSession: number
+  prevViewsPerSession: number
+  sessionsPerUser: number
+  prevSessionsPerUser: number
+}
+
+export type Ga4PageDetail = {
+  views: number
+  prevViews: number
+  activeUsers: number
+  prevActiveUsers: number
+  newUsers: number
+  sessions: number
+  prevSessions: number
+  keyEvents: number
+  prevKeyEvents: number
+  /** Derived over the window, never averaged. Null with no sessions. */
+  engagementRate: number | null
+  /** Seconds per active user. Null with no users. */
+  avgEngagementTime: number | null
+}
+
+export type Ga4Split = { label: string; views: number; activeUsers: number; sessions: number }
+
+/** The SEO side of the hub, for the same URL — the reason both screens exist. */
+export type Ga4PageAudit = {
+  trackerId: string
+  overall: number | null
+  status: string | null
+}
+
+/**
+ * One spelling for a page path, so three sources can be compared.
+ *
+ * WordPress gives `/deals/`, GA4 reports `/deals`, and the tracker holds both.
+ * Client-safe because the Dashboard matches rows against a GA4 path set in the
+ * browser.
+ */
+export function normaliseAuditPath(path: string): string {
+  return path.replace(/\/+$/, '').toLowerCase()
+}
+
+/**
+ * The window the Dashboard's GA4 filter and drawer look at.
+ *
+ * The Dashboard has no range control, so one constant serves both. Client-safe
+ * because the drawer renders it in a label.
+ */
+export const GA4_DASHBOARD_DAYS: Ga4RangeDays = 28
