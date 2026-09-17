@@ -50,11 +50,15 @@ const preDepartureEnabled =
   process.env.NODE_ENV !== 'production' || process.env.PRE_DEPARTURE_ENABLED === 'true'
 
 /**
- * The Audit Hub, gated the same way and for the same reason. Only one prefix is
- * needed: it has no API routes of its own — every write is a server action, and
- * those POST to the page URL, so they are already inside `/audit`.
+ * The Audit Hub, gated the same way and for the same reason.
+ *
+ * Every write is a server action, and those POST to the page URL, so they are
+ * already inside `/audit`. The one exception is the GA4 nightly ingest: cron
+ * has no session to POST a server action with, so it needs a real endpoint —
+ * listed here too, which is what keeps it behind the same kill switch (the
+ * disabled branch already answers `/api/` paths with a JSON 404).
  */
-const AUDIT_PREFIXES = ['/audit']
+const AUDIT_PREFIXES = ['/audit', '/api/audit/']
 
 const auditEnabled =
   process.env.NODE_ENV !== 'production' || process.env.AUDIT_ENABLED === 'true'
@@ -260,6 +264,11 @@ export default async function middleware(req: NextRequest) {
     // Cron hits /api/payload-jobs/run with an Authorization header;
     // Payload's jobs access control validates the CRON_SECRET itself.
     if (pathname.startsWith('/api/payload-jobs/') && req.headers.has('authorization')) {
+      return response
+    }
+    // Same division of labour for the GA4 ingest: cPanel cron POSTs it with a
+    // bearer CRON_SECRET, and the route handler compares the secret itself.
+    if (pathname.startsWith('/api/audit/') && req.headers.has('authorization')) {
       return response
     }
     const unauthorized = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -349,7 +349,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 9px;
   padding: 3px;
-  gap: 2px;
+  gap: 5px;
 }
 
 .seg-btn {
@@ -468,6 +468,20 @@ body {
   background: var(--accent-soft);
 }
 
+/*
+ * The row the Traffic drawer sent us to.
+ *
+ * Green, and listed after the selected rule so it wins when a highlighted row
+ * is also ticked — arriving here is the more specific thing that just happened.
+ * The left rule carries the meaning where a background alone would read as
+ * just another stripe.
+ */
+.audit-row--highlight,
+.audit-table tbody tr.audit-row--highlight:nth-child(even) {
+  background: var(--score-good-soft);
+  box-shadow: inset 3px 0 0 var(--score-good);
+}
+
 .audit-row--busy {
   opacity: 0.6;
 }
@@ -479,6 +493,27 @@ body {
 
 .audit-row__title {
   line-height: 1.3;
+}
+
+/*
+ * The external-link arrow that replaced the spelled-out path.
+ *
+ * `--ink-3` so it reads as chrome next to the title rather than competing with
+ * it, and the URL lives in its `title` — removing the text must not remove the
+ * ability to see where the link goes.
+ */
+.audit-row__ext {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--ink-3);
+  vertical-align: middle;
+  /* Never the thing that gets clipped when the title is long. */
+  flex: 0 0 auto;
+}
+
+.audit-row__ext:hover {
+  color: var(--accent-ink);
 }
 
 .audit-row__star {
@@ -1139,6 +1174,39 @@ main {
   grid-template-columns: repeat(5, 1fr);
 }
 
+/* minmax(0, 1fr) rather than a bare 1fr: a plain 1fr floors at the content's
+   own width, so one long figure would widen its card and leave the four
+   uneven. */
+.audit-summary[data-cols='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.audit-summary[data-cols='6'] {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+/*
+ * Six across is a lot narrower than three, so the card loosens its grip: the
+ * portal's 34px figure and 116px floor were sized for a third of the row and
+ * overflow at a sixth.
+ */
+.audit-summary--six .stat {
+  padding: 14px 15px;
+  min-height: 96px;
+  /* The label and sub-line ellipsis above only takes effect once the grid item
+     is allowed to be narrower than its content. */
+  min-width: 0;
+}
+
+.audit-summary--six .stat-value {
+  font-size: 26px;
+}
+
+.audit-summary--six .stat-label,
+.audit-summary--six .stat-sub {
+  font-size: 12px;
+}
+
 .audit-summary .stat {
   padding: 18px 20px;
   display: flex;
@@ -1185,10 +1253,19 @@ main {
   .audit-summary[data-cols='5'] {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .audit-summary[data-cols='4'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .audit-summary[data-cols='6'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 860px) {
-  .audit-summary[data-cols='5'] {
+  .audit-summary[data-cols='5'],
+  .audit-summary[data-cols='6'] {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -1675,4 +1752,498 @@ main {
     flex: 0 0 auto;
     padding-bottom: 14px;
   }
+}
+
+/* --- traffic (GA4) ------------------------------------------------ */
+
+/*
+ * The channel strip sits between the summary cards and the toolbar: it reads as
+ * a breakdown of the cards above it, and as the filter for the table below.
+ * There is no page header above it — the topbar already says which screen this
+ * is.
+ */
+/*
+ * One line that scrolls, rather than wrapping onto two or three.
+ *
+ * Note `overflow-x: auto` computes `overflow-y` to auto as well — the same rule
+ * `.audit-table-wrap` documents — so this box clips vertically too. The vertical
+ * padding is what keeps the chips' focus rings off that edge.
+ */
+.ga4-channels {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 3px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  /*
+   * The bar is there but invisible until the strip is hovered or focused, and
+   * absent entirely when the chips already fit — `overflow-x: auto` draws
+   * nothing when there is nothing to scroll.
+   *
+   * Hidden by colour, not by width: toggling `scrollbar-width` or the
+   * `::-webkit-scrollbar` height on hover changes the box's height and makes
+   * the whole strip jump as the pointer crosses it.
+   */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.ga4-channels:hover,
+.ga4-channels:focus-within {
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.ga4-channels::-webkit-scrollbar {
+  height: 6px;
+}
+
+.ga4-channels::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.ga4-channels:hover::-webkit-scrollbar-thumb,
+.ga4-channels:focus-within::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+/* All is the unfiltered total, so it reads as the sum the rest break down —
+   a slightly heavier rule keeps it distinct from the channels beside it. */
+.ga4-channel--all {
+  border-color: var(--border-strong);
+}
+
+/*
+ * Compact and inline, not the stacked card it was when it had its own row —
+ * beside a heading the label and the number read better side by side.
+ */
+.ga4-channel {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.ga4-channel:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.ga4-channel:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* The active filter, so the strip says which slice the table is showing
+   without having to re-read the select. */
+.ga4-channel--on,
+.ga4-channel--on:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ga4-channel__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ga4-channel--on .ga4-channel__label {
+  color: var(--accent-ink);
+}
+
+.ga4-channel__value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/*
+ * table-layout: auto, unlike every other table here.
+ *
+ * The Dashboard tables have a fixed column set, so `fixed` plus a per-tab
+ * min-width is right for them. This one's column count changes as metrics are
+ * toggled, and under `fixed` a cell's min-width is ignored — the title column
+ * would collapse once enough metrics were on. `auto` lets the title take the
+ * slack and the numbers size to themselves, with the wrap scrolling when the
+ * lot no longer fits.
+ */
+.audit-table--traffic {
+  table-layout: auto;
+  min-width: 720px;
+}
+
+.audit-traffic .audit-th--page,
+.audit-traffic .audit-td--page {
+  min-width: 320px;
+}
+
+.audit-traffic .audit-th--metric {
+  width: 104px;
+  text-align: right;
+}
+
+.audit-traffic .audit-td--metric {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Titles and paths are long and arbitrary; one line each with an ellipsis keeps
+   the numbers beside them on a predictable grid. The full text is in the title
+   attribute, and the path is a link to the live page. */
+.ga4-pagetitle {
+  display: block;
+  max-width: 560px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The chips are wordier now that "V/U" is spelled out, so they need to sit a
+   little tighter to still fit two rows. */
+.ga4-metrics .seg-btn {
+  padding: 6px 9px;
+}
+
+/* The chips wrap on a narrow window rather than pushing the site select off
+   the row — there are eight of them. */
+.ga4-metrics {
+  flex-wrap: wrap;
+}
+
+.ga4-delta {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.ga4-delta--up {
+  color: var(--score-good);
+}
+
+.ga4-delta--down {
+  color: var(--score-bad);
+}
+
+.ga4-spin {
+  animation: ga4-spin 0.9s linear infinite;
+}
+
+@keyframes ga4-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ga4-spin {
+    animation: none;
+  }
+}
+
+/* --- traffic: page detail ----------------------------------------- */
+
+/* The whole row opens the page's drawer. The hover background already comes
+   from `.audit-table tbody tr:hover`; this only adds the affordance. */
+.ga4-row {
+  cursor: pointer;
+}
+
+/* Title and arrow on one line, the title taking the slack. `min-width: 0` is
+   what lets the title's ellipsis engage instead of pushing the arrow out. */
+.ga4-pagecell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ga4-pagecell .ga4-pagetitle {
+  min-width: 0;
+}
+
+/* A title that is also a link needs to say so without turning the table into
+   a wall of blue. */
+.ga4-pagelink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ga4-pagelink:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
+}
+
+.ga4-detail__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ga4-detail__head {
+  margin-bottom: 14px;
+}
+
+/* Paths are long and must not push the layout wide. */
+.ga4-detail__head h1 {
+  overflow-wrap: anywhere;
+}
+
+.ga4-detail__url {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.ga4-detail__audit {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+/* Pushes the report button to the far end, whatever the figures beside it. */
+.ga4-detail__audit .btn {
+  margin-left: auto;
+}
+
+.ga4-detail__audit .stat-value {
+  font-size: 24px;
+}
+
+.ga4-trend {
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+/*
+ * The numbers row mirrors the bars row exactly — same flex basis, same gap — so
+ * each figure sits over its own bar without either knowing the column count.
+ */
+.ga4-trend__nums {
+  display: flex;
+  gap: 1px;
+  margin-top: 8px;
+}
+
+.ga4-trend__num {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--ink-3);
+  /* A day that will not fit its figure clips rather than wrapping the row into
+     two uneven lines. */
+  overflow: hidden;
+}
+
+/*
+ * Bars, not a polyline: the window can be 7 days or 365, and 365 points in a
+ * short box is noise. `align-items: flex-end` is what makes each bar grow from
+ * the baseline, and the 1px min-width keeps a 365-day window from rendering
+ * hairlines that disappear.
+ */
+.ga4-trend__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 90px;
+  margin-top: 4px;
+}
+
+.ga4-trend__bar {
+  flex: 1 1 0;
+  min-width: 1px;
+  background: var(--accent);
+  border-radius: 1px 1px 0 0;
+  opacity: 0.85;
+}
+
+.ga4-trend__bar:hover {
+  opacity: 1;
+}
+
+.ga4-trend__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.ga4-splits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.ga4-split {
+  padding: 14px 16px;
+  min-width: 0;
+}
+
+.ga4-split__table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+}
+
+.ga4-split__table td {
+  padding: 4px 0;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.ga4-split__label {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 10px !important;
+}
+
+/* The bar cell absorbs the leftover width so the labels and figures either
+   side stay on a predictable grid. */
+.ga4-split__bar {
+  width: 100%;
+}
+
+.ga4-split__bar .bar-fill {
+  display: block;
+  height: 6px;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.ga4-split__value {
+  text-align: right;
+  padding-left: 10px !important;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .ga4-splits {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- traffic: page drawer ----------------------------------------- */
+
+/*
+ * Fixed to the viewport, above the sticky table header and the topbar.
+ *
+ * The audit tree renders its own <html>, so there is no app-wide overlay layer
+ * to borrow — the drawer brings its own, and the z-index only has to clear the
+ * table header (2) and the topbar.
+ */
+.ga4-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.ga4-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: rgb(0 0 0 / 38%);
+  animation: ga4-fade 0.15s ease;
+}
+
+.ga4-drawer__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -18px 0 48px rgb(0 0 0 / 18%);
+  animation: ga4-slide 0.18s ease;
+  /* Focused programmatically on open, so the ring would otherwise sit around
+     the whole panel. */
+  outline: none;
+}
+
+.ga4-drawer__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 1;
+}
+
+/* The panel scrolls, not the page behind it — which is held still while the
+   drawer is open. */
+.ga4-drawer__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 22px 28px;
+}
+
+/* In a 760px panel the three splits read better stacked than squeezed. */
+.ga4-splits--stacked {
+  grid-template-columns: 1fr;
+}
+
+@keyframes ga4-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ga4-slide {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ga4-drawer__scrim,
+  .ga4-drawer__panel {
+    animation: none;
+  }
+}
+
+/* Every row opens its traffic drawer; the empty-state row is not a row. */
+.audit-row:not(.audit-row--empty) {
+  cursor: pointer;
+}
+
+/* The page title on the Dashboard, which opens the traffic drawer. */
+.audit-row__open {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.audit-row__open:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
 }

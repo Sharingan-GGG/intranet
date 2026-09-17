@@ -36,6 +36,11 @@ const NAV: { label: string; href: string; match: (path: string) => boolean }[] =
     href: auditPath({ screen: 'domain-list' }),
     match: (p) => p.startsWith(`${BASE_PATH}/domain-list`),
   },
+  {
+    label: 'Traffic',
+    href: auditPath({ screen: 'traffic' }),
+    match: (p) => p.startsWith(`${BASE_PATH}/traffic`),
+  },
 ]
 
 export function AuditTopbar() {

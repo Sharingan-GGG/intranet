@@ -20,6 +20,14 @@ import { revalidatePath, updateTag } from 'next/cache'
 
 import { auditQuery, auditTransaction } from '@/lib/audit-db'
 import {
+  GA4_DASHBOARD_DAYS,
+  GA4_DASHBOARD_TAG,
+  ingestGa4,
+  loadGa4PageAudit,
+  loadGa4PageDetail,
+  loadGa4PropertyForDomain,
+} from '@/lib/audit-ga4'
+import {
   fetchContentAuditById,
   fetchContentAuditStatusesByUrl,
   findTrackerRowId,
@@ -441,6 +449,38 @@ const fireFullScanWorker = () =>
  * updateTag gives read-your-own-writes, so the person who pressed Refresh sees
  * the new data in the same round trip instead of the render that follows.
  */
+/**
+ * Re-pull GA4 now.
+ *
+ * Unlike refreshWordPress, which only drops a fetch-cache tag, there is no
+ * cache to drop here: the traffic screen reads Postgres, so refreshing means
+ * actually going to Google. It calls `ingestGa4` in-process rather than POSTing
+ * to the ingest route — that route exists for cron, which has no session, and a
+ * self-addressed HTTP call would need the server to know its own public origin.
+ *
+ * `ingestGa4` shares an in-flight run, so a second click joins the first rather
+ * than doubling the API spend.
+ */
+export async function refreshGa4(): Promise<ActionResult> {
+  const gate = await requireAccess()
+  if (!gate.ok) return gate
+  try {
+    const result = await ingestGa4({ days: 3 })
+    // The Dashboard's channel list and path sets are cached for an hour; an
+    // explicit refresh should not leave them an hour behind.
+    updateTag(GA4_DASHBOARD_TAG)
+    revalidateAudit()
+    if (!result.ok) {
+      return result.properties === 0
+        ? { ok: false, error: 'No GA4 properties visible — check the service account\u2019s access in GA.' }
+        : { ok: false, error: `Refreshed, but ${result.errors.length} property/properties failed.` }
+    }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'GA4 refresh failed.' }
+  }
+}
+
 export async function refreshWordPress(domain: string): Promise<ActionResult> {
   const gate = await requireAccess()
   if (!gate.ok) return gate
@@ -489,5 +529,48 @@ export async function getContentAuditSummary(id: string): Promise<SummaryReport 
     return (await fetchContentAuditById(id))?.summaryReport ?? null
   } catch {
     return null
+  }
+}
+
+export type PageTrafficResult =
+  | {
+      ok: true
+      /** False when the site has no GA4 property at all. */
+      hasProperty: boolean
+      /** Null when GA has nothing for this path — a real answer, not a failure. */
+      data: Awaited<ReturnType<typeof loadGa4PageDetail>> | null
+      audit: Awaited<ReturnType<typeof loadGa4PageAudit>>
+    }
+  | { ok: false; error: string }
+
+/**
+ * One page's traffic, for the Dashboard's drawer.
+ *
+ * A read exposed as a server action, like `getContentAuditStatuses` above: the
+ * Dashboard is the only caller and it needs the same access gate.
+ *
+ * The Traffic screen gets this through an intercepting route instead, because
+ * its drawer opens over a list cheap enough to keep mounted. The Dashboard's
+ * list is WordPress plus four queries plus GA — intercepting across that
+ * segment would re-run the lot — so here the drawer fetches on demand and the
+ * queue behind it is never touched.
+ */
+export async function getPageTraffic(domain: string, path: string): Promise<PageTrafficResult> {
+  const gate = await requireAccess()
+  if (!gate.ok) return { ok: false, error: gate.error }
+
+  try {
+    const propertyId = await loadGa4PropertyForDomain(domain)
+    // The audit lookup is local and worth having even with no GA4 property.
+    const audit = await loadGa4PageAudit(domain, path).catch(() => null)
+    if (!propertyId) return { ok: true, hasProperty: false, data: null, audit }
+
+    const data = await loadGa4PageDetail(propertyId, GA4_DASHBOARD_DAYS, path)
+    // No views in the window means GA genuinely has nothing for this path —
+    // distinct from a request that failed, and the drawer says so.
+    const empty = data.detail.views === 0 && data.daily.length === 0
+    return { ok: true, hasProperty: true, data: empty ? null : data, audit }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Could not load page traffic.' }
   }
 }

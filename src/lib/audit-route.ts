@@ -5,6 +5,8 @@
  *   /audit/scheduler/{tab}/page-detail/{trackerId}
  *   /audit/scheduler/{tab}/content-audit/{contentAuditId}
  *   /audit/domain-list
+ *   /audit/traffic
+ *   /audit/traffic/page-detail?path=…
  *
  * The standalone portal implemented this with `history.pushState` and a
  * hand-written `applyRoute`, toggling an `.on` class between `<section>`s. The
@@ -57,8 +59,30 @@ export type DetailOrigin = { screen: 'dashboard'; tab: DashboardTab }
 export type AuditRoute =
   | { screen: 'dashboard'; tab: DashboardTab }
   | { screen: 'domain-list' }
+  | { screen: 'traffic' }
+  | { screen: 'traffic-page'; path: string; domain: string; days: number; channel?: string }
   | { screen: 'page-detail'; trackerId: string; from: DetailOrigin }
   | { screen: 'content-audit'; contentAuditId: string; from: DetailOrigin }
+
+/**
+ * Fragment naming the row a `?highlight=` points at.
+ *
+ * In one place because two screens have to agree on it: the Traffic drawer
+ * writes it into the link, and the Dashboard puts it on the matching row.
+ */
+export const HIGHLIGHT_ANCHOR = 'highlighted-row'
+
+/**
+ * Content Pre-Check, scoped and anchored to one page.
+ *
+ * The query marks and filters to the row; the fragment is what makes the
+ * browser jump to it. Built here rather than at the call site so the parameter
+ * name and the fragment cannot drift apart.
+ */
+export function contentPreCheckForPath(domain: string, path: string): string {
+  const q = new URLSearchParams({ domain, highlight: path })
+  return `${auditPath({ screen: 'dashboard', tab: 'content-pre-check' })}?${q}#${HIGHLIGHT_ANCHOR}`
+}
 
 /** The canonical path for a route. */
 export function auditPath(route: AuditRoute): string {
@@ -67,6 +91,19 @@ export function auditPath(route: AuditRoute): string {
       return `${BASE_PATH}/scheduler/${route.tab}`
     case 'domain-list':
       return `${BASE_PATH}/domain-list`
+    case 'traffic':
+      return `${BASE_PATH}/traffic`
+    case 'traffic-page': {
+      // The page is identified by its path, which is itself a path — so it
+      // travels as a query parameter rather than a segment, encoded once.
+      const q = new URLSearchParams({
+        path: route.path,
+        domain: route.domain,
+        days: String(route.days),
+      })
+      if (route.channel) q.set('channel', route.channel)
+      return `${BASE_PATH}/traffic/page-detail?${q}`
+    }
     case 'page-detail':
       return `${originPath(route.from)}/page-detail/${route.trackerId}`
     case 'content-audit':
