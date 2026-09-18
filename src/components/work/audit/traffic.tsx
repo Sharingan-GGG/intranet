@@ -19,11 +19,14 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { refreshGa4 } from '@/app/audit/actions'
+import { Ga4Stat, ga4DeltaOf, ga4Pct } from '@/components/work/audit/ga4-stat'
 import { SITES, type Site } from '@/lib/audit-config'
 import { auditPath } from '@/lib/audit-route'
 import {
+  fmtNum as fmt,
   GA4_ALL_CHANNELS,
   GA4_RANGES,
+  GA4_RANGE_LABELS,
   type Ga4Cards,
   type Ga4ChannelTotals,
   type Ga4PageEngagement,
@@ -64,13 +67,6 @@ const DEFAULT_METRICS: MetricKey[] = [
 ]
 
 const STORAGE_KEY = 'audit:traffic:metrics'
-
-const RANGE_LABEL: Record<Ga4RangeDays, string> = {
-  7: '7 days',
-  28: '28 days',
-  90: '90 days',
-  365: '12 months',
-}
 
 type Props = {
   site: Site
@@ -225,38 +221,38 @@ export function AuditTraffic({
           Organic Share and AI Assistant are the SEO and GEO signals; the other
           four say whether that traffic did anything. */}
       <section className="audit-summary audit-summary--six" data-cols="6">
-        <Stat
+        <Ga4Stat
           label="Organic Share"
-          value={cards ? pct(cards.organicShare) : '—'}
-          delta={cards ? deltaOf(cards.organicShare, cards.prevOrganicShare) : null}
+          value={cards ? ga4Pct(cards.organicShare) : '—'}
+          delta={cards ? ga4DeltaOf(cards.organicShare, cards.prevOrganicShare) : null}
           note="of all traffic"
         />
-        <Stat
+        <Ga4Stat
           label="GEO Data"
           value={cards ? fmt(cards.aiAssistant) : '—'}
-          delta={cards ? deltaOf(cards.aiAssistant, cards.prevAiAssistant) : null}
+          delta={cards ? ga4DeltaOf(cards.aiAssistant, cards.prevAiAssistant) : null}
           note="AI assistant sessions"
         />
-        <Stat
+        <Ga4Stat
           label="Key Events"
           value={cards ? fmt(cards.keyEvents) : '—'}
-          delta={cards ? deltaOf(cards.keyEvents, cards.prevKeyEvents) : null}
+          delta={cards ? ga4DeltaOf(cards.keyEvents, cards.prevKeyEvents) : null}
         />
-        <Stat
+        <Ga4Stat
           label="Bounce Rate"
-          value={cards ? pct(cards.bounceRate) : '—'}
-          delta={cards ? deltaOf(cards.bounceRate, cards.prevBounceRate) : null}
+          value={cards ? ga4Pct(cards.bounceRate) : '—'}
+          delta={cards ? ga4DeltaOf(cards.bounceRate, cards.prevBounceRate) : null}
           lowerIsBetter
         />
-        <Stat
+        <Ga4Stat
           label="Views / Session"
           value={cards ? cards.viewsPerSession.toFixed(2) : '—'}
-          delta={cards ? deltaOf(cards.viewsPerSession, cards.prevViewsPerSession) : null}
+          delta={cards ? ga4DeltaOf(cards.viewsPerSession, cards.prevViewsPerSession) : null}
         />
-        <Stat
+        <Ga4Stat
           label="Sessions / User"
           value={cards ? cards.sessionsPerUser.toFixed(2) : '—'}
-          delta={cards ? deltaOf(cards.sessionsPerUser, cards.prevSessionsPerUser) : null}
+          delta={cards ? ga4DeltaOf(cards.sessionsPerUser, cards.prevSessionsPerUser) : null}
         />
       </section>
 
@@ -304,7 +300,7 @@ export function AuditTraffic({
                 disabled={pending}
                 onClick={() => setParam('days', String(r))}
               >
-                {RANGE_LABEL[r]}
+                {GA4_RANGE_LABELS[r]}
               </button>
             ))}
           </nav>
@@ -490,7 +486,7 @@ function cell(p: Ga4PageEngagement, key: MetricKey): string {
     case 'engagedSessions':
       return fmt(p.engagedSessions)
     case 'engagementRate':
-      return pct(p.engagementRate)
+      return ga4Pct(p.engagementRate)
     case 'avgEngagementTime':
       return duration(p.avgEngagementTime)
     case 'views':
@@ -498,62 +494,6 @@ function cell(p: Ga4PageEngagement, key: MetricKey): string {
     case 'viewsPerUser':
       return p.viewsPerUser === null ? '—' : p.viewsPerUser.toFixed(1)
   }
-}
-
-function Stat({
-  label,
-  value,
-  delta,
-  note,
-  lowerIsBetter,
-}: {
-  label: string
-  value: string
-  delta?: number | null
-  note?: string
-  lowerIsBetter?: boolean
-}) {
-  return (
-    <div className="card stat">
-      <span className="stat-label">{label}</span>
-      <span className="stat-value tnum">{value}</span>
-      <span className="stat-sub">
-        <Delta value={delta ?? null} lowerIsBetter={lowerIsBetter} />{' '}
-        <span className="muted">{note ?? 'vs previous'}</span>
-      </span>
-    </div>
-  )
-}
-
-/**
- * The arrow says which way it moved; the colour says whether that is good.
- *
- * They are not the same question — a bounce rate falling is a green ▼ — and
- * colouring by direction alone would call every improvement in it a loss.
- */
-function Delta({ value, lowerIsBetter }: { value: number | null; lowerIsBetter?: boolean }) {
-  if (value === null) return null
-  const up = value >= 0
-  const good = lowerIsBetter ? !up : up
-  return (
-    <span className={`ga4-delta ${good ? 'ga4-delta--up' : 'ga4-delta--down'}`}>
-      {up ? '▲' : '▼'} {Math.abs(value).toFixed(0)}%
-    </span>
-  )
-}
-
-/** Percentage change, for any pair — null when there is no baseline to move from. */
-function deltaOf(current: number | null, previous: number | null): number | null {
-  if (current === null || previous === null || previous <= 0) return null
-  return ((current - previous) / previous) * 100
-}
-
-function fmt(n: number): string {
-  return n.toLocaleString('en-AU')
-}
-
-function pct(v: number | null): string {
-  return v === null ? '—' : `${(v * 100).toFixed(1)}%`
 }
 
 /** Seconds as m:ss — the form GA4 itself uses. */

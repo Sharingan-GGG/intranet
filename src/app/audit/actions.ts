@@ -20,7 +20,6 @@ import { revalidatePath, updateTag } from 'next/cache'
 
 import { auditQuery, auditTransaction } from '@/lib/audit-db'
 import {
-  GA4_DASHBOARD_DAYS,
   GA4_DASHBOARD_TAG,
   ingestGa4,
   loadGa4PageAudit,
@@ -34,7 +33,13 @@ import {
   TASK_TO_DB_STATUS,
 } from '@/lib/audit-data'
 import type { SummaryReport } from '@/lib/audit-report'
-import type { AgentKind, ContentAuditStatus, TaskStatus, YesNo } from '@/lib/audit-types'
+import {
+  resolveGa4Range,
+  type AgentKind,
+  type ContentAuditStatus,
+  type TaskStatus,
+  type YesNo,
+} from '@/lib/audit-types'
 import { getAuditSession } from '@/lib/audit-user'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -555,7 +560,11 @@ export type PageTrafficResult =
  * segment would re-run the lot — so here the drawer fetches on demand and the
  * queue behind it is never touched.
  */
-export async function getPageTraffic(domain: string, path: string): Promise<PageTrafficResult> {
+export async function getPageTraffic(
+  domain: string,
+  path: string,
+  days?: number,
+): Promise<PageTrafficResult> {
   const gate = await requireAccess()
   if (!gate.ok) return { ok: false, error: gate.error }
 
@@ -565,7 +574,9 @@ export async function getPageTraffic(domain: string, path: string): Promise<Page
     const audit = await loadGa4PageAudit(domain, path).catch(() => null)
     if (!propertyId) return { ok: true, hasProperty: false, data: null, audit }
 
-    const data = await loadGa4PageDetail(propertyId, GA4_DASHBOARD_DAYS, path)
+    // Resolved here, not trusted: this is a server action, so the window is
+    // client input like any other and only the four offered ranges may through.
+    const data = await loadGa4PageDetail(propertyId, resolveGa4Range(days?.toString()), path)
     // No views in the window means GA genuinely has nothing for this path —
     // distinct from a request that failed, and the drawer says so.
     const empty = data.detail.views === 0 && data.daily.length === 0

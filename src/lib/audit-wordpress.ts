@@ -121,7 +121,7 @@ function fetchPage(domain: string, type: ContentType, page: number): Promise<Res
  * 456-post site drops from ~2.6 s to ~0.75 s. PAGE_CONCURRENCY caps how many
  * are in flight so a much larger domain can't open a socket per page at once.
  */
-export async function fetchType(domain: string, type: ContentType): Promise<CompletedRow[]> {
+async function fetchType(domain: string, type: ContentType): Promise<CompletedRow[]> {
   const first = await fetchPage(domain, type, 1)
   // CPT not registered on this site.
   if (first.status === 404) return []

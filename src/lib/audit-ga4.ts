@@ -16,19 +16,20 @@ import 'server-only'
  */
 import { unstable_cache } from 'next/cache'
 
-import { auditQuery, auditTransaction, numOrNull } from './audit-db'
+import { auditQuery, auditTransaction } from './audit-db'
 import {
+  DEFAULT_GA4_RANGE,
   GA4_ALL_CHANNELS,
+  normaliseAuditPath,
+  numOrNull,
   type Ga4Cards,
   type Ga4ChannelTotals,
   type Ga4PageAudit,
   type Ga4PageDetail,
   type Ga4PageEngagement,
-  type Ga4PropertyTotals,
+  type Ga4PathViews,
   type Ga4RangeDays,
   type Ga4Split,
-  GA4_DASHBOARD_DAYS,
-  normaliseAuditPath,
 } from './audit-types'
 import {
   listGa4Properties,
@@ -188,93 +189,6 @@ async function upsertDaily(propertyId: string, rows: Ga4DailyRow[]): Promise<voi
 // through this module for them would drag `pg` into the browser bundle.
 // ---------------------------------------------------------------------------
 
-type TotalsRow = {
-  property_id: string
-  display_name: string
-  domain: string | null
-  active_users_total: string | null
-  new_users_total: string | null
-  sessions_total: string | null
-  engaged_total: string | null
-  engagement_rate: string | null
-  avg_duration: string | null
-  page_views_total: string | null
-  prev_active_users: string | null
-  prev_sessions: string | null
-}
-
-/**
- * One row per active property, for a window of `days` ending on the newest day
- * we hold.
- *
- * Anchored on `max(date)` rather than `current_date` so the window always lines
- * up with real data: the server clock is UTC, the dates are property-local, and
- * anchoring on "today" would otherwise open every range with an empty day.
- *
- * Note what is summed and what is not. Counts sum. `engagement_rate` and
- * `avg_session_duration` are **re-derived** from the counts — averaging daily
- * rates weights a quiet Sunday the same as a busy Monday, which is simply the
- * wrong number and an easy one to ship without noticing.
- */
-export async function loadGa4Totals(days: Ga4RangeDays): Promise<Ga4PropertyTotals[]> {
-  const rows = await auditQuery<TotalsRow>(
-    `with anchor as (
-       select coalesce((select max(date) from audit.ga4_daily), current_date - 1) as cur_end
-     ),
-     b as (
-       select cur_end,
-              cur_end - ($1::int - 1)     as cur_start,
-              cur_end - $1::int           as prev_end,
-              cur_end - (2 * $1::int - 1) as prev_start
-         from anchor
-     )
-     select p.property_id,
-            p.display_name,
-            p.domain,
-            coalesce(sum(d.active_users)      filter (where d.date >= b.cur_start), 0) as active_users_total,
-            coalesce(sum(d.new_users)         filter (where d.date >= b.cur_start), 0) as new_users_total,
-            coalesce(sum(d.sessions)          filter (where d.date >= b.cur_start), 0) as sessions_total,
-            coalesce(sum(d.engaged_sessions)  filter (where d.date >= b.cur_start), 0) as engaged_total,
-            coalesce(sum(d.screen_page_views) filter (where d.date >= b.cur_start), 0) as page_views_total,
-            -- The ::numeric is load-bearing, and it has to sit on the argument:
-            -- bigint/bigint is integer division, so without it an engagement
-            -- rate of 0.53 comes back as exactly 0 for every property. It
-            -- cannot go on the sum() instead — FILTER must follow the aggregate
-            -- call directly, so casting the result is a syntax error rather
-            -- than merely a wrong number.
-            sum(d.engaged_sessions::numeric) filter (where d.date >= b.cur_start)
-              / nullif(sum(d.sessions) filter (where d.date >= b.cur_start), 0) as engagement_rate,
-            sum(d.avg_session_duration * d.sessions) filter (where d.date >= b.cur_start)
-              / nullif(sum(d.sessions) filter (where d.date >= b.cur_start), 0) as avg_duration,
-            coalesce(sum(d.active_users) filter (where d.date <= b.prev_end), 0) as prev_active_users,
-            coalesce(sum(d.sessions)     filter (where d.date <= b.prev_end), 0) as prev_sessions
-       from audit.ga4_properties p
-       cross join b
-       left join audit.ga4_daily d
-              on d.property_id = p.property_id
-             and d.date between b.prev_start and b.cur_end
-      where p.is_active
-      group by p.property_id, p.display_name, p.domain
-      order by sessions_total desc, p.display_name asc`,
-    [days],
-  )
-
-  return rows.map((r) => ({
-    propertyId: r.property_id,
-    displayName: r.display_name,
-    domain: r.domain,
-    activeUsers: int(r.active_users_total),
-    newUsers: int(r.new_users_total),
-    sessions: int(r.sessions_total),
-    engagedSessions: int(r.engaged_total),
-    engagementRate: numOrNull(r.engagement_rate),
-    avgSessionDuration: numOrNull(r.avg_duration),
-    screenPageViews: int(r.page_views_total),
-    prevActiveUsers: int(r.prev_active_users),
-    prevSessions: int(r.prev_sessions),
-  }))
-}
-
 /**
  * How current the table is.
  *
@@ -305,12 +219,6 @@ export async function loadGa4Freshness(): Promise<{
   }
 }
 
-/** `sum()` comes back as a string from pg; counts are always whole. */
-function int(raw: string | null): number {
-  const n = Number(raw)
-  return Number.isFinite(n) ? Math.round(n) : 0
-}
-
 /**
  * Top pages for the selected property.
  *
@@ -320,8 +228,8 @@ function int(raw: string | null): number {
  * table that only renders for the one site you are looking at. One page view is
  * one request against a quota of 1,440 per property per day.
  *
- * Rates are derived here, from the totals, for the same reason they are derived
- * in loadGa4Totals: GA cannot be asked for a correct rate over a window.
+ * Rates are derived here, from the totals, and never asked of GA: it cannot be
+ * asked for a correct rate over a window.
  */
 export async function loadGa4PageEngagement(
   propertyId: string,
@@ -361,15 +269,16 @@ export async function loadGa4Channels(
 }> {
   const rows = await runGa4ChannelReport(propertyId, days)
   const totalSessions = rows.reduce((a, r) => a + r.sessions, 0)
+  const prevTotal = rows.reduce((a, r) => a + r.prevSessions, 0)
 
   const list: Ga4ChannelTotals[] = rows.map((r) => ({
     channel: r.channel,
     sessions: Math.round(r.sessions),
     activeUsers: Math.round(r.activeUsers),
     share: totalSessions > 0 ? r.sessions / totalSessions : 0,
+    prevShare: prevTotal > 0 ? r.prevSessions / prevTotal : 0,
   }))
 
-  const prevTotal = rows.reduce((a, r) => a + r.prevSessions, 0)
   const organic = rows.find((r) => r.channel === 'Organic Search')
   const ai = rows.find((r) => r.channel === 'AI Assistant')
 
@@ -427,8 +336,6 @@ export async function loadGa4PropertyForDomain(domain: string): Promise<string |
   )
   return rows[0]?.property_id ?? null
 }
-
-export { GA4_ALL_CHANNELS, GA4_DASHBOARD_DAYS }
 
 /**
  * Everything the page-detail screen shows, in one go.
@@ -517,20 +424,32 @@ export async function loadGa4PageAudit(
 }
 
 /**
- * Paths on this property that saw traffic from one channel.
+ * Views per page on this property, for one channel or for all of them.
  *
- * A set, for the Dashboard's GA4 filter to test each row against. The limit is
- * deliberately far above the page-table's 50: this answers "did this page get
- * any organic traffic", so a page ranked 400th by views still has to be in it
- * or the filter would quietly hide pages that do qualify.
+ * Feeds both halves of the Dashboard's GA4 column: the number each row shows,
+ * and — when a channel is picked — the filter that decides which rows survive,
+ * since a path absent from this list saw no traffic from that channel.
+ *
+ * The limit is deliberately far above the page-table's 50. This also answers
+ * "did this page get *any* organic traffic", so a page ranked 400th by views
+ * still has to be in it or the filter would quietly hide pages that qualify.
+ *
+ * Summed per path, not taken row by row: the report groups by title *and*
+ * path, so a page whose title changed mid-window comes back as two rows and
+ * reading either one alone would under-report it.
  */
-export async function loadGa4PathsForChannel(
+export async function loadGa4PathViews(
   propertyId: string,
   channel: string,
-  days: Ga4RangeDays = GA4_DASHBOARD_DAYS,
-): Promise<Set<string>> {
+  days: Ga4RangeDays = DEFAULT_GA4_RANGE,
+): Promise<Ga4PathViews[]> {
   const rows = await runGa4PageReport(propertyId, `${days}daysAgo`, 'yesterday', 1000, channel)
-  return new Set(rows.map((r) => normaliseAuditPath(r.pagePath)))
+  const byPath = new Map<string, number>()
+  for (const r of rows) {
+    const path = normaliseAuditPath(r.pagePath)
+    byPath.set(path, (byPath.get(path) ?? 0) + Math.round(r.screenPageViews))
+  }
+  return [...byPath].map(([path, views]) => ({ path, views }))
 }
 
 /**
@@ -573,17 +492,43 @@ export function loadGa4ChannelList(
   )()
 }
 
-/** The same caching for the heavier per-channel path lookup. */
-export function loadGa4PathsForChannelCached(
+/**
+ * The Dashboard's bounce rate, cached.
+ *
+ * `loadGa4Summary` returns six figures for one request; the Dashboard shows
+ * one of them, and narrowing it here rather than passing the lot keeps the
+ * component's props honest about what the screen actually uses.
+ *
+ * Channel- and window-aware like everything else on that strip: the card has
+ * to answer for the same slice of traffic the column beneath it counts, or the
+ * two would quietly disagree.
+ */
+export function loadGa4BounceCached(
+  propertyId: string,
+  days: Ga4RangeDays,
+  channel: string,
+): Promise<{ rate: number; prev: number }> {
+  return unstable_cache(
+    async () => {
+      const summary = await loadGa4Summary(propertyId, days, channel || undefined)
+      return { rate: summary.bounceRate, prev: summary.prevBounceRate }
+    },
+    ['ga4-bounce', propertyId, channel, String(days)],
+    { revalidate: GA4_DASHBOARD_TTL, tags: [GA4_DASHBOARD_TAG] },
+  )()
+}
+
+/** The same caching for the heavier per-page lookup. */
+export function loadGa4PathViewsCached(
   propertyId: string,
   channel: string,
-  days: Ga4RangeDays = GA4_DASHBOARD_DAYS,
-): Promise<string[]> {
+  days: Ga4RangeDays = DEFAULT_GA4_RANGE,
+): Promise<Ga4PathViews[]> {
   return unstable_cache(
-    // A Set is not serialisable, so the cache stores the array the component
-    // wants anyway and the Set is rebuilt client-side.
-    async () => [...(await loadGa4PathsForChannel(propertyId, channel, days))],
-    ['ga4-channel-paths', propertyId, channel, String(days)],
+    async () => loadGa4PathViews(propertyId, channel, days),
+    // '' — all channels — is a key part like any other, so All GA4 and each
+    // channel get their own entry instead of sharing one.
+    ['ga4-path-views', propertyId, channel, String(days)],
     { revalidate: GA4_DASHBOARD_TTL, tags: [GA4_DASHBOARD_TAG] },
   )()
 }

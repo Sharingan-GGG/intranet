@@ -22,10 +22,11 @@ import 'server-only'
  * broken query look identical to the user — an error boundary is the honest
  * outcome. Writes (app/audit/actions.ts) still return a result to toast.
  */
-import { auditQuery, numOrNull } from './audit-db'
+import { auditQuery } from './audit-db'
 import type { ContentAuditReport, PageReport, SummaryReport } from './audit-report'
 import {
   MARKETING_DIMS,
+  numOrNull,
   type ContentAuditStatus,
   type StatusType,
   type TaskStatus,
@@ -52,15 +53,11 @@ export const TASK_TO_DB_STATUS: Record<TaskStatus, StatusType> = {
 const toTaskStatus = (status: string | null): TaskStatus =>
   DB_STATUS_TO_TASK[status ?? ''] ?? 'not-started'
 
-/** Strip trailing slash + lowercase so tracker urls match WordPress links (e.g. /about vs /about/). */
-export function normUrl(url: string): string {
-  return url.replace(/\/+$/, '').toLowerCase()
-}
-
 /**
- * The SQL spelling of normUrl, for the `distinct on` keys. `rtrim(url, '/')`
- * strips every trailing slash, matching the regex; the two must agree or a
- * lookup keyed in JS misses the row the query returned.
+ * The SQL spelling of `normaliseAuditPath`, for the `distinct on` keys.
+ * `rtrim(url, '/')` strips every trailing slash, matching that function's
+ * regex; the two must agree or a lookup keyed in JS misses the row the query
+ * returned.
  */
 const NORM_URL = `lower(rtrim(url, '/'))`
 
@@ -271,7 +268,7 @@ export async function fetchLatestRunDetail(trackerId: string): Promise<RunDetail
   return { runId: run.id, report: run.report ?? {}, issues: await fetchIssues(run.id) }
 }
 
-export async function fetchIssues(runId: string): Promise<IssueRow[]> {
+async function fetchIssues(runId: string): Promise<IssueRow[]> {
   const rows = await auditQuery<{
     id: string
     priority: string | null

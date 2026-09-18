@@ -50,8 +50,6 @@ export function numOrNull(value: unknown): number | null {
  */
 export type YesNo = 'Yes' | 'No'
 
-export type ScheduleType = 'Bi-Weekly' | 'Monthly' | 'Quarterly'
-
 export type StatusType =
   'Not Yet Started' | 'Scheduled' | 'In Progress' | 'Done' | 'In Review' | 'Error'
 
@@ -104,10 +102,6 @@ export interface CompletedRow {
   /** WP last-updated date, UTC (ISO), for sorting and display. */
   modifiedAt: string | null
 }
-
-export type Tab = 'all' | 'top' | ContentType
-
-export type SortDir = 'asc' | 'desc'
 
 export type ScoreBand = 'good' | 'warn' | 'bad' | 'none'
 
@@ -248,29 +242,41 @@ export function teamOf(
 
 export const GA4_RANGES = [7, 28, 90, 365] as const
 export type Ga4RangeDays = (typeof GA4_RANGES)[number]
+
+/**
+ * The window every GA4 screen opens on, and the fallback for an unrecognised
+ * `?days=`. Only a default: Traffic's seg buttons and the Dashboard's GA4
+ * Views header both move it, and the Dashboard drawer follows whatever is
+ * picked.
+ */
 export const DEFAULT_GA4_RANGE: Ga4RangeDays = 28
+
+/**
+ * How each range is written in the UI.
+ *
+ * Shared rather than spelled out per screen: Traffic and the Dashboard's GA4
+ * Views column offer the same four windows, and two copies would eventually
+ * disagree about whether 365 is "12 months" or "1 year".
+ */
+export const GA4_RANGE_LABELS: Record<Ga4RangeDays, string> = {
+  7: '7 days',
+  28: '28 days',
+  90: '90 days',
+  365: '12 months',
+}
+
+/**
+ * The same window, compact — for the Dashboard's GA4 Views header, where the
+ * select *is* the column heading and has to fit a table column rather than a
+ * row of seg buttons.
+ */
+export function ga4RangeShort(days: Ga4RangeDays): string {
+  return days === 365 ? '12M' : `${days}D`
+}
 
 export function resolveGa4Range(raw: string | undefined): Ga4RangeDays {
   const n = Number(raw)
   return (GA4_RANGES as readonly number[]).includes(n) ? (n as Ga4RangeDays) : DEFAULT_GA4_RANGE
-}
-
-export type Ga4PropertyTotals = {
-  propertyId: string
-  displayName: string
-  domain: string | null
-  activeUsers: number
-  newUsers: number
-  sessions: number
-  engagedSessions: number
-  /** Re-derived over the window, never averaged. Null when there were no sessions. */
-  engagementRate: number | null
-  /** Seconds, sessions-weighted over the window. Null when there were no sessions. */
-  avgSessionDuration: number | null
-  screenPageViews: number
-  /** Active users in the equal-length window immediately before this one. */
-  prevActiveUsers: number
-  prevSessions: number
 }
 
 export type Ga4PageEngagement = {
@@ -303,6 +309,12 @@ export type Ga4ChannelTotals = {
   sessions: number
   activeUsers: number
   share: number
+  /**
+   * The same share over the window before this one, so a card can say which
+   * way the mix is moving. Zero when the previous window had no sessions at
+   * all — a delta against nothing is not a rise, and `ga4DeltaOf` drops it.
+   */
+  prevShare: number
 }
 
 /**
@@ -354,6 +366,11 @@ export type Ga4PageAudit = {
   status: string | null
 }
 
+/** Thousands separators, the one way every audit screen writes a count. */
+export function fmtNum(n: number): string {
+  return n.toLocaleString('en-AU')
+}
+
 /**
  * One spelling for a page path, so three sources can be compared.
  *
@@ -366,9 +383,11 @@ export function normaliseAuditPath(path: string): string {
 }
 
 /**
- * The window the Dashboard's GA4 filter and drawer look at.
+ * Views for one page path over the Dashboard's window.
  *
- * The Dashboard has no range control, so one constant serves both. Client-safe
- * because the drawer renders it in a label.
+ * An array of pairs rather than a Map: it crosses the server/client boundary,
+ * and the Dashboard rebuilds the lookup it wants on arrival. `path` is already
+ * normalised, so the rows can be matched without re-normalising the whole list
+ * on every render.
  */
-export const GA4_DASHBOARD_DAYS: Ga4RangeDays = 28
+export type Ga4PathViews = { path: string; views: number }

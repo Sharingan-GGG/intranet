@@ -10,8 +10,10 @@
 import { ArrowLeftIcon, ExternalLinkIcon } from 'lucide-react'
 import Link from 'next/link'
 
+import { Ga4Stat, ga4DeltaOf, ga4Pct } from '@/components/work/audit/ga4-stat'
 import { auditPath, contentPreCheckForPath } from '@/lib/audit-route'
 import {
+  fmtNum as fmt,
   GA4_ALL_CHANNELS,
   type Ga4PageAudit,
   type Ga4PageDetail,
@@ -143,23 +145,23 @@ export function AuditTrafficPageDetail({
       {data && (
         <>
           <section className="audit-summary audit-summary--six" data-cols={isDrawer ? '3' : '6'}>
-            <Stat label="Views" value={fmt(data.detail.views)} delta={deltaOf(data.detail.views, data.detail.prevViews)} />
-            <Stat
+            <Ga4Stat label="Views" value={fmt(data.detail.views)} delta={ga4DeltaOf(data.detail.views, data.detail.prevViews)} />
+            <Ga4Stat
               label="Active Users"
               value={fmt(data.detail.activeUsers)}
-              delta={deltaOf(data.detail.activeUsers, data.detail.prevActiveUsers)}
+              delta={ga4DeltaOf(data.detail.activeUsers, data.detail.prevActiveUsers)}
             />
-            <Stat label="New Users" value={fmt(data.detail.newUsers)} />
-            <Stat
+            <Ga4Stat label="New Users" value={fmt(data.detail.newUsers)} />
+            <Ga4Stat
               label="Sessions"
               value={fmt(data.detail.sessions)}
-              delta={deltaOf(data.detail.sessions, data.detail.prevSessions)}
+              delta={ga4DeltaOf(data.detail.sessions, data.detail.prevSessions)}
             />
-            <Stat label="Engagement" value={pct(data.detail.engagementRate)} />
-            <Stat
+            <Ga4Stat label="Engagement" value={ga4Pct(data.detail.engagementRate)} />
+            <Ga4Stat
               label="Key Events"
               value={fmt(data.detail.keyEvents)}
-              delta={deltaOf(data.detail.keyEvents, data.detail.prevKeyEvents)}
+              delta={ga4DeltaOf(data.detail.keyEvents, data.detail.prevKeyEvents)}
             />
           </section>
 
@@ -269,36 +271,3 @@ function Split({ title, rows, note }: { title: string; rows: Ga4Split[]; note?: 
   )
 }
 
-function Stat({ label, value, delta }: { label: string; value: string; delta?: number | null }) {
-  return (
-    <div className="card stat">
-      <span className="stat-label">{label}</span>
-      <span className="stat-value tnum">{value}</span>
-      <span className="stat-sub">
-        {delta === undefined || delta === null ? (
-          <span className="muted">&nbsp;</span>
-        ) : (
-          <>
-            <span className={`ga4-delta ${delta >= 0 ? 'ga4-delta--up' : 'ga4-delta--down'}`}>
-              {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(0)}%
-            </span>{' '}
-            <span className="muted">vs previous</span>
-          </>
-        )}
-      </span>
-    </div>
-  )
-}
-
-function fmt(n: number): string {
-  return n.toLocaleString('en-AU')
-}
-
-function pct(v: number | null): string {
-  return v === null ? '—' : `${(v * 100).toFixed(1)}%`
-}
-
-function deltaOf(current: number, previous: number): number | null {
-  if (previous <= 0) return null
-  return ((current - previous) / previous) * 100
-}
