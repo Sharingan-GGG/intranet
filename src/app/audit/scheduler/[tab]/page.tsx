@@ -6,9 +6,9 @@ import { AuditDashboard } from '@/components/work/audit/dashboard'
 import { DEFAULT_SITE, siteByDomain } from '@/lib/audit-config'
 import { loadDashboard } from '@/lib/audit-dashboard'
 import {
-  GA4_DASHBOARD_DAYS,
+  loadGa4BounceCached,
   loadGa4ChannelList,
-  loadGa4PathsForChannelCached,
+  loadGa4PathViewsCached,
   loadGa4PropertyForDomain,
 } from '@/lib/audit-ga4'
 import {
@@ -18,6 +18,11 @@ import {
   DASHBOARD_TAB_LABELS,
 } from '@/lib/audit-route'
 import { getAuditRoster } from '@/lib/audit-roster'
+import {
+  resolveGa4Range,
+  type Ga4ChannelTotals,
+  type Ga4PathViews,
+} from '@/lib/audit-types'
 import { getAuditSession } from '@/lib/audit-user'
 
 /**
@@ -30,7 +35,7 @@ export const revalidate = 0
 
 type Props = {
   params: Promise<{ tab: string }>
-  searchParams: Promise<{ domain?: string; ga4?: string }>
+  searchParams: Promise<{ domain?: string; ga4?: string; days?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -40,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AuditDashboardPage({ params, searchParams }: Props) {
   const { tab: rawTab } = await params
-  const { domain, ga4 } = await searchParams
+  const { domain, ga4, days } = await searchParams
 
   const { user, canAccess } = await getAuditSession()
   if (!user) redirect('/login?redirect=/audit')
@@ -54,6 +59,9 @@ export default async function AuditDashboardPage({ params, searchParams }: Props
 
   const site = domain ? siteByDomain(domain) : DEFAULT_SITE
   const channel = ga4?.trim() || ''
+  // Resolved rather than trusted: `?days=999` falls back to the default
+  // instead of reaching GA with a window it does not offer.
+  const range = resolveGa4Range(days)
 
   const [{ rows, error }, roster, propertyId] = await Promise.all([
     loadDashboard(site),
@@ -64,18 +72,26 @@ export default async function AuditDashboardPage({ params, searchParams }: Props
   // The GA4 filter is an extra, never a gate: a site with no property, or a GA
   // outage, must still render the queue. Both failures collapse to "no channels
   // offered", which is what the disabled select then says.
-  let ga4Channels: { channel: string; sessions: number }[] = []
-  let ga4Paths: string[] | null = null
+  let ga4Channels: Ga4ChannelTotals[] = []
+  let ga4Views: Ga4PathViews[] = []
+  let ga4Bounce: { rate: number; prev: number } | null = null
   if (propertyId) {
     try {
-      // Both cached for an hour: the Dashboard is opened repeatedly and these
-      // only change once a day. The Traffic screen calls the uncached versions.
-      const [channels, paths] = await Promise.all([
-        loadGa4ChannelList(propertyId, GA4_DASHBOARD_DAYS),
-        channel ? loadGa4PathsForChannelCached(propertyId, channel) : Promise.resolve(null),
+      // All three cached for an hour: the Dashboard is opened repeatedly and
+      // they only change once a day. The Traffic screen calls the uncached
+      // versions, because there the numbers are the content.
+      //
+      // The per-page views are fetched whether or not a channel is picked: the
+      // column shows a number on every row, and with nothing selected that
+      // number is the page's total across all channels.
+      const [channels, views, bounce] = await Promise.all([
+        loadGa4ChannelList(propertyId, range),
+        loadGa4PathViewsCached(propertyId, channel, range),
+        loadGa4BounceCached(propertyId, range, channel),
       ])
-      ga4Channels = channels.map((c) => ({ channel: c.channel, sessions: c.sessions }))
-      ga4Paths = paths
+      ga4Channels = channels
+      ga4Views = views
+      ga4Bounce = bounce
     } catch {
       // Leave the filter empty and carry on.
     }
@@ -89,8 +105,10 @@ export default async function AuditDashboardPage({ params, searchParams }: Props
       roster={roster}
       loadError={error}
       ga4Channel={channel}
+      ga4Days={range}
       ga4Channels={ga4Channels}
-      ga4Paths={ga4Paths}
+      ga4Bounce={ga4Bounce}
+      ga4Views={ga4Views}
     />
   )
 }

@@ -49,7 +49,17 @@ import type { IssueCounts } from '@/lib/audit-data'
 import type { DashboardRow } from '@/lib/audit-dashboard'
 import { AuditTrafficDrawer } from '@/components/work/audit/traffic-drawer'
 import { AuditTrafficPageDetail } from '@/components/work/audit/traffic-page-detail'
-import { GA4_ALL_CHANNELS, GA4_DASHBOARD_DAYS, normaliseAuditPath } from '@/lib/audit-types'
+import {
+  fmtNum,
+  GA4_ALL_CHANNELS,
+  GA4_RANGES,
+  GA4_RANGE_LABELS,
+  ga4RangeShort,
+  normaliseAuditPath,
+  type Ga4ChannelTotals,
+  type Ga4PathViews,
+  type Ga4RangeDays,
+} from '@/lib/audit-types'
 import {
   auditPath,
   DASHBOARD_TABS,
@@ -75,6 +85,7 @@ import {
 import { AssignMenu } from './assign-menu'
 import { ContentSummaryDialog } from './content-summary-dialog'
 import { DecisionHelp } from './decision-help'
+import { Ga4Stat, ga4DeltaOf, ga4Pct } from './ga4-stat'
 import {
   AUDIT_STATUSES,
   AUDIT_STATUS_LABELS,
@@ -94,14 +105,22 @@ type Sort =
   | 'published-asc'
   | 'wp-updated-desc'
   | 'wp-updated-asc'
+  | 'views-desc'
+  | 'views-asc'
   | 'title-asc'
   | 'title-desc'
 
+/**
+ * Insertion order is the order of the options, so the pairs stay together: the
+ * two dates, then views, then the title.
+ */
 const SORT_LABELS: Record<Sort, string> = {
   'published-desc': 'Published — Newest',
   'published-asc': 'Published — Oldest',
   'wp-updated-desc': 'WP Updated — Newest',
   'wp-updated-asc': 'WP Updated — Oldest',
+  'views-desc': 'GA4 Views — Highest',
+  'views-asc': 'GA4 Views — Lowest',
   'title-asc': 'Title — A→Z',
   'title-desc': 'Title — Z→A',
 }
@@ -113,6 +132,33 @@ const SORT_LABELS: Record<Sort, string> = {
  */
 const DEFAULT_PAGE_SIZE = 30
 const PAGE_SIZES = [30, 60, 120, 0]
+
+/**
+ * One box per decision bucket, in this order, with the same caption and colour
+ * the portal used. `keys` groups the two rewrite decisions into one box,
+ * exactly as the chip and the decision filter already group them.
+ *
+ * Publish As Is is not among them, on either tab that shows this strip: it was
+ * the one figure up there that no action follows from, and dropping it leaves
+ * Content Pre-Check and Archived the same six cards rather than two strips
+ * that differ by one. The decision itself is untouched — the filter still
+ * offers it and the rows still carry its chip.
+ */
+const DECISION_BOXES: { label: string; keys: string[]; sub: string; color: string }[] = [
+  { label: 'Revision', keys: ['needs_revision'], sub: 'Minor edits', color: 'var(--sev-low)' },
+  {
+    label: 'Rewrite - Expired',
+    keys: ['needs_major_rewrite', 'expired_needs_refresh'],
+    sub: 'Needs a rewrite',
+    color: 'var(--score-warn)',
+  },
+  {
+    label: 'Unpublish / Noindex',
+    keys: ['unpublish_or_noindex'],
+    sub: 'Remove or noindex',
+    color: 'var(--sev-critical)',
+  },
+]
 
 const TAB_TIPS: Record<DashboardTab, string> = {
   'content-pre-check': 'Content audit queue — the E-E-A-T triage in content_audits',
@@ -152,8 +198,10 @@ export function AuditDashboard({
   roster,
   loadError,
   ga4Channel,
+  ga4Days,
   ga4Channels,
-  ga4Paths,
+  ga4Bounce,
+  ga4Views,
 }: {
   tab: DashboardTab
   site: Site
@@ -162,10 +210,17 @@ export function AuditDashboard({
   loadError: string | null
   /** The selected GA4 channel, or '' for All GA4. */
   ga4Channel: string
+  /** The window the views cover, from `?days=`. */
+  ga4Days: Ga4RangeDays
   /** Channels this site's property actually saw, biggest first. */
-  ga4Channels: { channel: string; sessions: number }[]
-  /** Paths that saw traffic from that channel; null when nothing is selected. */
-  ga4Paths: string[] | null
+  ga4Channels: Ga4ChannelTotals[]
+  /** Bounce rate for the selected channel and window; null with no property. */
+  ga4Bounce: { rate: number; prev: number } | null
+  /**
+   * Views per page over the selected window — for the selected channel, or
+   * across all of them when none is picked. Empty with no property behind it.
+   */
+  ga4Views: Ga4PathViews[]
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -242,6 +297,7 @@ export function AuditDashboard({
     assignedFilter,
     yearFilter,
     ga4Channel,
+    ga4Days,
     sort,
     pageSize,
   ])
@@ -265,6 +321,19 @@ export function AuditDashboard({
     const params = new URLSearchParams(searchParams)
     if (channel) params.set('ga4', channel)
     else params.delete('ga4')
+    startTransition(() => router.push(`${auditPath({ screen: 'dashboard', tab })}?${params}`))
+  }
+
+  /**
+   * The window the GA4 Views column counts over.
+   *
+   * A navigation for the same reason as the channel — the figures come from the
+   * server — and `?days=` is the name Traffic already uses, so the two screens
+   * read the same range out of a URL.
+   */
+  const setGa4Days = (days: string) => {
+    const params = new URLSearchParams(searchParams)
+    params.set('days', days)
     startTransition(() => router.push(`${auditPath({ screen: 'dashboard', tab })}?${params}`))
   }
 
@@ -300,18 +369,6 @@ export function AuditDashboard({
     setTypeFilter(key === 'top' || key === 'all' ? 'all' : (key as ContentType))
   }
 
-  // select, star, page, updated, actions — plus the optional ones.
-  const columnCount =
-    5 +
-    (showType ? 1 : 0) +
-    (showProgress ? 1 : 0) +
-    (showContentColumns ? 2 : 0) +
-    // Scan Type brings Pending with it — both describe the run.
-    (showScanType ? 2 : 0) +
-    (showAssigned ? 1 : 0) +
-    // KAS, Score and Run Type all arrive with Completed.
-    (showScores ? 3 : 0)
-
   /** Rows belonging to this tab, before the user's filters. */
   const tabRows = useMemo(() => {
     switch (tab) {
@@ -335,12 +392,6 @@ export function AuditDashboard({
   }, [rows, tab])
 
   /**
-   * Paths that qualify under the GA4 filter.
-   *
-   * Rebuilt here because a Set cannot cross the server/client boundary — the
-   * page sends an array — and a Set is what the row test wants.
-   */
-  /**
    * The traffic drawer.
    *
    * Component state, not a route: the Traffic screen can intercept because its
@@ -357,7 +408,7 @@ export function AuditDashboard({
       setDrawerPath(path)
       setDrawerTitle(title)
       setDrawer(null)
-      void getPageTraffic(site.domain, path).then((result) => {
+      void getPageTraffic(site.domain, path, ga4Days).then((result) => {
         // Ignore a reply that arrived after the drawer moved on or closed.
         setDrawerPath((current) => {
           if (current === path) setDrawer(result)
@@ -365,7 +416,7 @@ export function AuditDashboard({
         })
       })
     },
-    [site.domain],
+    [site.domain, ga4Days],
   )
 
   /**
@@ -389,9 +440,27 @@ export function AuditDashboard({
     [openTraffic],
   )
 
+  /**
+   * Views by path, for the GA4 Views column.
+   *
+   * Rebuilt here because a Map cannot cross the server/client boundary — the
+   * page sends pairs — and a Map is what a per-row lookup wants.
+   */
+  const ga4ViewsByPath = useMemo(
+    () => new Map(ga4Views.map((v) => [v.path, v.views])),
+    [ga4Views],
+  )
+
+  /**
+   * Paths that qualify under the GA4 filter.
+   *
+   * Only once a channel is picked: with All GA4 selected the column is just a
+   * number, and filtering on it would hide every page GA has never seen —
+   * which on the Content queue is most of the reason to be looking.
+   */
   const ga4PathSet = useMemo(
-    () => (ga4Paths ? new Set(ga4Paths) : null),
-    [ga4Paths],
+    () => (ga4Channel ? new Set(ga4ViewsByPath.keys()) : null),
+    [ga4Channel, ga4ViewsByPath],
   )
 
   const years = useMemo(() => {
@@ -443,6 +512,21 @@ export function AuditDashboard({
     const byDate = (a: string | null, b: string | null, dir: number) =>
       dir * ((b ? Date.parse(b) : 0) - (a ? Date.parse(a) : 0))
 
+    /**
+     * Views, with the pages GA has never seen kept at the bottom either way.
+     *
+     * A page with no GA4 row is unknown, not zero, so Lowest must not open on
+     * a screenful of them — that would bury the least-read pages the sort was
+     * asked for. Undefined compares as -1 and is pulled out before the
+     * direction is applied, which is what keeps it last in both.
+     */
+    const byViews = (a: DashboardRow, b: DashboardRow, dir: number) => {
+      const av = ga4ViewsByPath.get(normaliseAuditPath(a.path))
+      const bv = ga4ViewsByPath.get(normaliseAuditPath(b.path))
+      if (av == null || bv == null) return (av == null ? 1 : 0) - (bv == null ? 1 : 0)
+      return dir * (bv - av)
+    }
+
     return filtered.sort((a, b) => {
       switch (sort) {
         case 'published-desc':
@@ -453,6 +537,10 @@ export function AuditDashboard({
           return byDate(a.modifiedAt, b.modifiedAt, 1)
         case 'wp-updated-asc':
           return byDate(a.modifiedAt, b.modifiedAt, -1)
+        case 'views-desc':
+          return byViews(a, b, 1)
+        case 'views-asc':
+          return byViews(a, b, -1)
         case 'title-asc':
           return a.title.localeCompare(b.title)
         case 'title-desc':
@@ -472,6 +560,7 @@ export function AuditDashboard({
     yearFilter,
     assignedFilter,
     ga4PathSet,
+    ga4ViewsByPath,
     sort,
   ])
 
@@ -496,30 +585,47 @@ export function AuditDashboard({
 
   const actionable = useMemo(() => visible.filter((r) => selected.has(r.url)), [visible, selected])
 
-  /** Portal parity: one box per decision bucket, in this order, with the same
-   *  caption and colour. `keys` groups the two rewrite decisions into one box,
-   *  exactly as the chip and the decision filter already group them. */
-  const DECISION_BOXES: { label: string; keys: string[]; sub: string; color: string }[] = [
-    {
-      label: 'Publish As Is',
-      keys: ['publish_as_is'],
-      sub: 'No changes needed',
-      color: 'var(--score-good)',
-    },
-    { label: 'Revision', keys: ['needs_revision'], sub: 'Minor edits', color: 'var(--sev-low)' },
-    {
-      label: 'Rewrite - Expired',
-      keys: ['needs_major_rewrite', 'expired_needs_refresh'],
-      sub: 'Needs a rewrite',
-      color: 'var(--score-warn)',
-    },
-    {
-      label: 'Unpublish / Noindex',
-      keys: ['unpublish_or_noindex'],
-      sub: 'Remove or noindex',
-      color: 'var(--sev-critical)',
-    },
-  ]
+  /**
+   * The traffic-type card: what share of this site's sessions came through the
+   * channel in focus.
+   *
+   * With a channel picked that is the channel itself; on All GA4 it falls back
+   * to Organic Search, which is the one this hub exists to move and the same
+   * figure the Traffic screen leads with.
+   *
+   * Derived from the channel list rather than fetched: the shares are already
+   * in it, so the card costs no extra GA request.
+   */
+  const trafficType = useMemo(() => {
+    const name = ga4Channel || 'Organic Search'
+    const row = ga4Channels.find((c) => c.channel === name)
+    return { name, share: row?.share ?? null, prevShare: row?.prevShare ?? null }
+  }, [ga4Channel, ga4Channels])
+
+  /**
+   * The two GA4 cards that close every tab's summary strip.
+   *
+   * Site-wide rather than scoped to `visible`, unlike every other box up
+   * there: they are GA's answer for the whole property, and no filter on this
+   * screen can narrow them. Rendered on all four tabs because "is this site
+   * being read, and does the traffic stick" is the question behind the queue
+   * whichever queue you are in.
+   */
+  const ga4Cards = (
+    <>
+      <Ga4Stat
+        label={`Traffic Type - ${trafficType.name}`}
+        value={ga4Pct(trafficType.share)}
+        delta={ga4DeltaOf(trafficType.share, trafficType.prevShare)}
+      />
+      <Ga4Stat
+        label="Bounce Rate"
+        value={ga4Bounce ? ga4Pct(ga4Bounce.rate) : '—'}
+        delta={ga4Bounce ? ga4DeltaOf(ga4Bounce.rate, ga4Bounce.prev) : null}
+        lowerIsBetter
+      />
+    </>
+  )
 
   /** Whether any user-set filter is narrowing the list — captions the boxes.
    *  Reads the filters themselves, not the row count, so a tab's own built-in
@@ -682,11 +788,14 @@ export function AuditDashboard({
   return (
     <div className="audit-dashboard shell">
       {/* No page head: the mode switch in the toolbar is the heading. */}
-      {/* Boxes above the table, per tab — Content/Archived get the scanned count
-          plus the decision split, Full Scan its findings queue, Completed its
-          scores. All read `visible`, so every active filter is already applied. */}
+      {/* Boxes above the table, per tab — Content and Archived share one strip
+          (the scanned count plus the decision split), Full Scan gets its
+          findings queue, Completed its scores. All read `visible`, so every active filter is already applied,
+          with the two GA4 cards on the end as the exception: those are the
+          property's own figures and nothing on this screen narrows them.
+          `--six` is the tighter card the strip needs past four across. */}
       {showContentColumns ? (
-        <section className="audit-summary" data-cols="5">
+        <section className="audit-summary audit-summary--six" data-cols="6">
           <SummaryBox
             name="scanned"
             label="Scanned"
@@ -713,9 +822,10 @@ export function AuditDashboard({
               />
             )
           })}
+          {ga4Cards}
         </section>
       ) : tab === 'completed' ? (
-        <section className="audit-summary" data-cols="3">
+        <section className="audit-summary audit-summary--six" data-cols="5">
           <SummaryBox
             name="pages"
             label="Pages"
@@ -741,9 +851,10 @@ export function AuditDashboard({
             sub="Full audit, score > 85"
             color={summary.above85 ? 'var(--score-good)' : 'var(--ink-3)'}
           />
+          {ga4Cards}
         </section>
       ) : (
-        <section className="audit-summary" data-cols="3">
+        <section className="audit-summary audit-summary--six" data-cols="5">
           <SummaryBox
             name="pending"
             label="Pages Pending"
@@ -768,6 +879,7 @@ export function AuditDashboard({
             sub="Every finding marked done"
             color={summary.completedPages ? 'var(--score-good)' : 'var(--ink-3)'}
           />
+          {ga4Cards}
         </section>
       )}
 
@@ -831,10 +943,12 @@ export function AuditDashboard({
             </select>
 
             {/* Narrows the queue to pages that actually got traffic from one
-                channel in the last 28 days — "which of these did organic search
-                reach" is the question the Dashboard could not answer before.
-                Disabled when the site has no GA4 property, or GA was
-                unreachable: the queue itself never depends on it. */}
+                channel — "which of these did organic search reach" is the
+                question the Dashboard could not answer before. It sits beside
+                the site select because it scopes the whole list, not one
+                column; what it does to the GA4 Views figures is said in that
+                column's own window select. Disabled when the site has no GA4
+                property, or GA was unreachable: the queue never depends on it. */}
             <select
               className="audit-toolbar__site input w-auto"
               value={ga4Channel}
@@ -843,14 +957,14 @@ export function AuditDashboard({
               title={
                 ga4Channels.length === 0
                   ? 'No GA4 property connected for this site'
-                  : 'Show only pages with traffic from this channel, last 28 days'
+                  : `Show only pages with traffic from this channel, last ${GA4_RANGE_LABELS[ga4Days]}`
               }
               disabled={ga4Channels.length === 0}
             >
               <option value="">All GA4</option>
               {ga4Channels.map((c) => (
                 <option key={c.channel} value={c.channel}>
-                  {c.channel} ({c.sessions.toLocaleString('en-AU')})
+                  {c.channel} ({fmtNum(c.sessions)})
                 </option>
               ))}
             </select>
@@ -1050,9 +1164,12 @@ export function AuditDashboard({
 
       <div className="audit-table-wrap card">
         <table className={`audit-table audit-table--${tab} text-sm`}>
-          {/* Labels only, plus the two controls the portal keeps in the head:
-              the Page sort and the WP Updated year. Every other filter lives in
-              the toolbar, where you can see them all at once. */}
+          {/* Labels, plus the three controls that belong to one column each:
+              the Page sort, the WP Updated year and the GA4 views window. The
+              last two are the heading — their column has no label beside them,
+              because the control already says what the column holds. Every
+              filter that scopes the whole list lives in the toolbar instead,
+              where you can see them all at once. */}
           <thead className="audit-table__head">
             <tr className="audit-table__labels">
               <Th name="select">
@@ -1073,7 +1190,7 @@ export function AuditDashboard({
                 <span className="th-label">Page</span>
                 <span className="th-sort">
                   <select
-                    title="Sort pages by publish date or title"
+                    title="Sort pages by date, GA4 views or title"
                     value={sort}
                     onChange={(e) => setSort(e.target.value as Sort)}
                     aria-label="Sort"
@@ -1105,6 +1222,39 @@ export function AuditDashboard({
                     {years.map((y) => (
                       <option key={y} value={y}>
                         {y}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </Th>
+
+              {/* The range select sits here rather than in the toolbar
+                  because this column is the only thing it changes: it says
+                  what window the figures count, which is exactly what the
+                  header has to declare for a bare number to mean anything.
+                  The channel filter stays in the toolbar, where it scopes the
+                  whole list. Disabled when the site has no GA4 property, or GA
+                  was unreachable — the queue never depends on it. */}
+              <Th name="ga4views">
+                {/* The select is the heading: like the WP Updated column, the
+                    control says what the column is, and a label beside it in a
+                    cell this narrow only crowded it. Hence the short forms —
+                    28D, 12M — which have to read as a column title. */}
+                <span className="th-sort">
+                  <select
+                    value={ga4Days}
+                    onChange={(e) => setGa4Days(e.target.value)}
+                    aria-label="GA4 views window"
+                    title={
+                      ga4Channels.length === 0
+                        ? 'No GA4 property connected for this site'
+                        : 'GA4 views — how far back they are counted'
+                    }
+                    disabled={ga4Channels.length === 0}
+                  >
+                    {GA4_RANGES.map((r) => (
+                      <option key={r} value={r}>
+                        {ga4RangeShort(r)}
                       </option>
                     ))}
                   </select>
@@ -1181,6 +1331,7 @@ export function AuditDashboard({
             {paged.map((row) => {
               const busy = busyUrls.has(row.url)
               const isSelected = selected.has(row.url)
+              const ga4Row = ga4ViewsByPath.get(normaliseAuditPath(row.path))
               return (
                 <tr
                   key={row.id}
@@ -1253,6 +1404,12 @@ export function AuditDashboard({
                   )}
                   <Td name="updated" className="small tnum">
                     {fmtAuditDate(row.modifiedAt)}
+                  </Td>
+                  {/* A page GA has never seen and a page with no property
+                      behind it both read as a dash: zero would claim we
+                      measured it and found nothing. */}
+                  <Td name="ga4views" className="small tnum">
+                    {ga4Row ? fmtNum(ga4Row) : <span className="muted">—</span>}
                   </Td>
                   {showProgress && (
                     <Td name="progress">
@@ -1583,7 +1740,11 @@ export function AuditDashboard({
 
             {!visible.length && (
               <tr className="audit-row audit-row--empty">
-                <Td name="empty" className="muted p-8 text-center" colSpan={columnCount}>
+                {/* Over-wide on purpose: a colSpan past the row's column
+                    count is clamped to it, which is exactly "every column"
+                    without a second per-tab tally to keep in step with the
+                    header. */}
+                <Td name="empty" className="muted p-8 text-center" colSpan={99}>
                   {loadError
                     ? 'Nothing to show — WordPress could not be read.'
                     : 'No pages match these filters.'}
@@ -1656,7 +1817,7 @@ export function AuditDashboard({
             <AuditTrafficPageDetail
               site={site}
               path={drawerPath}
-              days={GA4_DASHBOARD_DAYS}
+              days={ga4Days}
               channel={GA4_ALL_CHANNELS}
               data={drawer.data}
               audit={drawer.audit}

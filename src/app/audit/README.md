@@ -32,40 +32,109 @@ the `audit` schema:
 `scheduler` is the URL segment the portal shipped and is kept so existing links
 resolve; the screen is the **Dashboard** everywhere in the UI.
 
-## The GA4 filter on the Dashboard
+## The GA4 Views column on the Dashboard
 
-`audit-toolbar__controls` carries an **All GA4** select beside the site select,
-listing the channels that site's GA4 property actually saw with their session
-counts. Choosing one narrows the queue to pages that got traffic from that
-channel in the last 28 days — "which of these did organic search actually
-reach", which the Dashboard could not answer before.
+Every row carries its **GA4 views**, and the two controls behind that number
+sit where each one's reach is:
 
-It is a navigation (`?ga4=`), not local state: the qualifying paths are fetched
-on the server. Selecting a site clears it, because channels are per-property.
+- **`audit-toolbar__controls`** carries the **All GA4** channel select, beside
+  the site select, listing the channels that site's property actually saw with
+  their session counts. It scopes the whole list — choosing one recounts the
+  views from that channel alone *and* drops the pages it never reached, which
+  is "which of these did organic search actually reach", the question the
+  Dashboard could not answer before.
+- **The column header** carries the window — **7D · 28D · 90D · 12M**, the same
+  four `GA4_RANGES` the Traffic screen offers. The select *is* the heading, as
+  in the WP Updated column: no label sits beside it, because the control
+  already says what the column holds and a label crowded a cell this narrow.
+  Hence the short spellings, from `ga4RangeShort`; `GA4_RANGE_LABELS` keeps
+  the long ones for Traffic's seg buttons, where they have the room. It changes
+  nothing but this column, and a bare view count is meaningless until the
+  header says how far back it counts.
+
+The **Page** column's sort dropdown carries **GA4 Views — Highest / Lowest**
+alongside the date and title sorts, because a views column you cannot order by
+only answers "how many" one row at a time. Pages GA has never seen stay at the
+bottom in *both* directions: they are unknown, not zero, and putting them first
+under Lowest would bury the least-read pages the sort was asked for.
+
+With no channel selected the column shows each page's total across all channels
+and nothing is filtered out: filtering on All GA4 would hide every page GA has
+never seen, which on the Content queue is most of the reason to be looking. A
+page with no views, and every row on a site with no property, reads as a dash
+rather than a zero — zero would claim we measured it and found nothing.
+
+Both are navigations (`?ga4=` and `?days=`), not local state: the figures come
+from the server. `?days=` is deliberately the name Traffic already uses, so the
+two screens read the same range out of a URL, and it is put through
+`resolveGa4Range` on arrival so `?days=999` falls back to 28 rather than
+reaching GA with a window it does not offer. Selecting a site clears the
+channel, because channels are per-property; the window survives, because it is
+not. The traffic drawer follows the same window, so opening a row cannot
+contradict the column that sent you there.
 
 Three things keep it honest:
 
 - **It is an extra, never a gate.** A site with no GA4 property (TWCT) or a GA
   outage leaves the select empty and disabled, and the queue renders exactly as
   before. The whole block is wrapped in a `try`.
-- **The path limit is 1000, not the page table's 50.** This answers "did this
-  page get *any* traffic from that channel", so a page ranked 400th by views
-  still has to be in the set or the filter would quietly hide pages that do
-  qualify. RAT AU's organic set is 340 distinct paths.
+- **The path limit is 1000, not the page table's 50.** This also answers "did
+  this page get *any* traffic from that channel", so a page ranked 400th by
+  views still has to be in the set or the filter would quietly hide pages that
+  do qualify. RAT AU's organic set is 340 distinct paths.
 - **Paths are normalised** through `normaliseAuditPath` — WordPress gives
   `/deals/`, GA4 reports `/deals`. Without it the filter would match nothing and
   look like "no pages have organic traffic".
 
-The set crosses the server boundary as an array and is rebuilt as a `Set` in the
-component; a `Set` is not serialisable.
+The views cross the server boundary as `{ path, views }` pairs and are rebuilt
+as a `Map` in the component; a `Map` is not serialisable. The filter's `Set` is
+that map's keys, so one request serves both the numbers and the filter. Views
+are summed per path — the GA report groups by title *and* path, so a page whose
+title changed mid-window comes back as two rows.
 
 Both lookups are **cached for an hour** (`unstable_cache`, tag
-`GA4_DASHBOARD_TAG`). The window ends *yesterday*, so the answer only changes
+`GA4_DASHBOARD_TAG`), keyed by property, channel and window so the four ranges
+never share an entry. The window ends *yesterday*, so the answer only changes
 once a day, and the Dashboard is opened repeatedly — an hour is short enough to
 pick up the new day and long enough that reopening costs nothing. `refreshGa4`
 busts the tag so an explicit refresh is not left an hour behind. The Traffic
 screen deliberately calls the **uncached** versions: there the numbers are the
-content and are promised live; here they only fill a dropdown.
+content and are promised live; here they fill a dropdown, one column and two
+cards. Three GA requests per property/channel/window combination, against a
+quota of 1,440 per property per day.
+
+### The two GA4 cards on the summary strip
+
+Every tab's `audit-summary` ends with **Traffic Type** and **Bounce Rate**,
+`Ga4Stat` cards lifted from the Traffic screen — including its delta arrow,
+where the colour answers "is that good" rather than "which way did it move", so
+a bounce rate falling is a green ▼. `Ga4Stat` now lives in `ga4-stat.tsx` and
+both screens import it; two copies would have been two cards that look alike
+until someone changes one.
+
+- **Traffic Type** names its channel in the label — *Traffic Type - Organic
+  Search* — carries that channel's share of all sessions as the figure, and the
+  movement underneath. The channel is whichever the toolbar filter has, or
+  Organic Search on All GA4, that being the one this hub exists to move. It is
+  derived from the channel list the filter already needed, including a
+  `prevShare` added for the delta, so the card costs no extra request.
+- **Bounce Rate** is `loadGa4BounceCached`, one figure narrowed out of
+  `loadGa4Summary`'s six. Channel- and window-aware like everything else on the
+  strip, or the card and the column beneath it could disagree about which slice
+  of traffic they describe.
+
+These two are the **one exception** to the invariant below: they are the
+property's figures and no filter on this screen narrows them, which is also why
+they render on all four tabs. Both read `—` with no GA4 property behind them,
+and the whole block is inside the same `try` as the rest — a GA outage costs
+the cards, never the queue.
+
+**Publish As Is is not on the decision strip**, on either tab that shows one.
+It was the one figure up there that no action follows from, and dropping it
+leaves Content Pre-Check and Archived the same six cards — Scanned, three
+decision boxes and the two GA4 ones — rather than two strips differing by a
+single box. The decision itself is untouched: the filter still offers it and
+the rows still carry its chip.
 
 **Clicking anywhere on a row opens the traffic drawer**, the same panel the
 Traffic screen uses. Dashboard rows are dense with controls — a checkbox, a
@@ -91,7 +160,9 @@ three different messages — an empty panel would make them look identical.
 
 - **The summary boxes count visible rows**, so every active filter applies to
   them. A box that counted `rows` rather than `visible` would disagree with the
-  table under it.
+  table under it. The two GA4 cards are the stated exception above: they are
+  GA's answer for the whole property, and they say which channel and window
+  they mean on their own caption.
 - **Bulk actions only touch rows that are both ticked and visible.** Narrowing
   the list must never queue something the user cannot see.
 

@@ -16,14 +16,13 @@ import {
   fetchDoneAudits,
   fetchIssueCounts,
   fetchLatestStatuses,
-  normUrl,
   type ContentAuditListRow,
   type DoneAudit,
   type IssueCounts,
   type TrackedRow,
 } from './audit-data'
 import type { Site } from './audit-config'
-import type { ContentType, TaskStatus } from './audit-types'
+import { normaliseAuditPath, type ContentType, type TaskStatus } from './audit-types'
 
 export type DashboardRow = {
   /** WordPress post id — unique within a domain, used as the React key. */
@@ -120,7 +119,7 @@ export async function loadDashboard(site: Site): Promise<DashboardData> {
       contentError: content?.error ?? null,
 
       counts: tracker ? (issueCounts[tracker.id] ?? null) : null,
-      done: doneAudits[normUrl(row.url)] ?? null,
+      done: doneAudits[normaliseAuditPath(row.url)] ?? null,
     }
   })
 

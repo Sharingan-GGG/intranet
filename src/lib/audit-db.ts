@@ -2,8 +2,6 @@ import 'server-only'
 
 import { Pool, type QueryResultRow } from 'pg'
 
-export { numOrNull } from './audit-types'
-
 /**
  * Direct Postgres access for the `audit` schema.
  *

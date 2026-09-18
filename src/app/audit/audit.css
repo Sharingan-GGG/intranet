@@ -287,17 +287,6 @@ body {
   border-radius: 8px;
 }
 
-.btn-danger {
-  background: var(--score-bad-soft);
-  border-color: var(--score-bad);
-  color: var(--score-bad);
-}
-
-.btn-danger:hover {
-  background: var(--score-bad);
-  color: #fff;
-}
-
 .input {
   font: inherit;
   font-size: 14px;
@@ -404,28 +393,29 @@ body {
  */
 .audit-table--content-pre-check,
 .audit-table--archived {
-  /* 36+36+96+130+130+100+180+300 fixed, plus ~240 for the page title */
-  min-width: 1248px;
+  /* 36+36+96+130+110+130+100+180+300 fixed, plus ~240 for the page title */
+  min-width: 1358px;
 }
 
 .audit-table--full-seo-page-scan {
-  /* 36+36+96+130+130+130+80+190+300 fixed, plus ~210 for the page title.
-     The title allowance is tighter than the other tabs' ~240 so that adding
-     Pending did not push this table past the 1400px shell into a horizontal
-     scrollbar; at full width the title still gets well over 210. */
-  min-width: 1338px;
+  /* 36+36+96+130+110+130+130+80+190+300 fixed, plus ~190 for the page title.
+     The title allowance is tighter than the other tabs' ~240 because this tab
+     carries the most columns; at full width the title still gets well over
+     190. With GA4 Views added this tab does now exceed the 1400px shell and
+     scrolls horizontally — ten columns will not fit it otherwise, and the
+     alternative was a title column too narrow to read. */
+  min-width: 1428px;
 }
 
 /*
  * Completed has no Progress column (every row is Done) and no Type column, so
- * its nine columns fit the 1400px shell outright — the min-width is now only
+ * its ten columns still fit the 1400px shell outright — the min-width is only
  * the floor that keeps the page title readable, not a number the table has to
- * scroll to reach. The old 1438 counted both dropped columns and forced a
- * horizontal scrollbar the layout never needed.
+ * scroll to reach.
  */
 .audit-table--completed {
-  /* 36+36+130+190+80+90+110+300 fixed, plus ~240 for the page title */
-  min-width: 1212px;
+  /* 36+36+130+110+190+80+90+110+300 fixed, plus ~240 for the page title */
+  min-width: 1322px;
 }
 
 .audit-table th {
@@ -552,10 +542,6 @@ body {
 
 .audit-alert--error .audit-alert__title {
   color: var(--score-bad);
-}
-
-.audit-alert--warn {
-  border-color: var(--score-warn);
 }
 
 /* --- page detail ------------------------------------------------- */
@@ -932,13 +918,6 @@ body {
   line-height: 1.35;
 }
 
-.issue-detail {
-  font-size: 13.5px;
-  color: var(--ink-2);
-  margin: 7px 0 0;
-  line-height: 1.55;
-}
-
 .issue-actions {
   display: flex;
   align-items: center;
@@ -999,6 +978,11 @@ body {
 }
 .audit-dashboard .audit-th--updated {
   width: 130px;
+}
+/* Wide enough for the label and the range select under it — "12 months" is
+   the longest option, and the figures themselves are four digits at most. */
+.audit-dashboard .audit-th--ga4views {
+  width: 110px;
 }
 .audit-dashboard .audit-th--progress {
   width: 130px;
@@ -1170,25 +1154,28 @@ main {
   margin-bottom: 18px;
 }
 
-.audit-summary[data-cols='5'] {
-  grid-template-columns: repeat(5, 1fr);
-}
-
-/* minmax(0, 1fr) rather than a bare 1fr: a plain 1fr floors at the content's
-   own width, so one long figure would widen its card and leave the four
-   uneven. */
+/* minmax(0, 1fr) rather than a bare 1fr throughout: a plain 1fr floors at the
+   content's own width, so one long figure or caption — "Organic Search — of
+   all sessions" is the current worst case — would widen its own card and leave
+   the rest of the row uneven. */
 .audit-summary[data-cols='4'] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.audit-summary[data-cols='5'] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .audit-summary[data-cols='6'] {
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 /*
- * Six across is a lot narrower than three, so the card loosens its grip: the
- * portal's 34px figure and 116px floor were sized for a third of the row and
- * overflow at a sixth.
+ * Five or more across is a lot narrower than three, so the card loosens its
+ * grip: the portal's 34px figure and 116px floor were sized for a third of the
+ * row and overflow at a sixth. The class is `--six` after the first strip that
+ * needed it; every Dashboard strip carries it now that the GA4 cards put them
+ * all past four.
  */
 .audit-summary--six .stat {
   padding: 14px 15px;
