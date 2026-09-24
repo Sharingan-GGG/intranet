@@ -169,6 +169,85 @@ export const Events: CollectionConfig = {
       ],
     },
     {
+      name: 'exceptions',
+      type: 'array',
+      label: 'Changes to single occurrences',
+      labels: { singular: 'Change', plural: 'Changes' },
+      admin: {
+        condition: (data) => Boolean(data?.repeat) && data?.repeat !== 'none',
+        description:
+          'Move or cancel one occurrence without changing the rest of the series, e.g. "30 Sep → 29 Sep".',
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'originalDate',
+              type: 'date',
+              required: true,
+              label: 'Occurrence',
+              admin: {
+                date: { pickerAppearance: 'dayOnly', displayFormat: 'd MMM yyyy' },
+                width: '50%',
+                description: 'The date this occurrence would normally fall on.',
+                components: {
+                  // Dropdown of the dates this series actually falls on.
+                  Field: '@/components/admin/EventOccurrenceField#EventOccurrenceField',
+                },
+              },
+            },
+            {
+              name: 'action',
+              type: 'select',
+              required: true,
+              defaultValue: 'move',
+              options: [
+                { label: 'Move to another day', value: 'move' },
+                { label: 'Cancel', value: 'cancel' },
+              ],
+              admin: { width: '50%' },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          admin: {
+            condition: (_, siblingData) => siblingData?.action !== 'cancel',
+          },
+          fields: [
+            {
+              name: 'newDate',
+              type: 'date',
+              label: 'New date',
+              admin: {
+                date: { pickerAppearance: 'dayOnly', displayFormat: 'd MMM yyyy' },
+                width: '50%',
+              },
+              validate: (
+                value: unknown,
+                { siblingData }: { siblingData: { action?: string | null } },
+              ) => {
+                if (siblingData?.action === 'move' && !value) return 'Please set the new date.'
+                return true
+              },
+            },
+            {
+              name: 'newTime',
+              type: 'date',
+              label: 'New time',
+              admin: {
+                date: { pickerAppearance: 'timeOnly', displayFormat: 'h:mm a', timeIntervals: 15 },
+                width: '50%',
+                description: 'Leave blank to keep the usual time.',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       name: 'location',
       type: 'text',
       admin: {

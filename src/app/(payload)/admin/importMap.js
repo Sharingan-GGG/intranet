@@ -22,6 +22,7 @@ import { default as default_582cd82cce32671392a2a2f98265a8ef } from '@/component
 import { FolderTableCell as FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { FolderField as FolderField_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { EventEndDateField as EventEndDateField_125d716a105610608319f2335a7e86c4 } from '@/components/admin/EventEndDateField'
+import { EventOccurrenceField as EventOccurrenceField_ae83b69b8d70960f2776e913d4e4afa3 } from '@/components/admin/EventOccurrenceField'
 import { DepartmentWorkspaceUsers as DepartmentWorkspaceUsers_edf52cff21a0c04d1326969339334b9d } from '@/components/admin/DepartmentWorkspaceUsers'
 import { AccountRowLabel as AccountRowLabel_06d0cb594d8f6ba2ac35015f930c882e } from 'payload-authjs/components'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
@@ -66,6 +67,7 @@ export const importMap = {
   "@payloadcms/next/rsc#FolderTableCell": FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/next/rsc#FolderField": FolderField_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@/components/admin/EventEndDateField#EventEndDateField": EventEndDateField_125d716a105610608319f2335a7e86c4,
+  "@/components/admin/EventOccurrenceField#EventOccurrenceField": EventOccurrenceField_ae83b69b8d70960f2776e913d4e4afa3,
   "@/components/admin/DepartmentWorkspaceUsers#DepartmentWorkspaceUsers": DepartmentWorkspaceUsers_edf52cff21a0c04d1326969339334b9d,
   "payload-authjs/components#AccountRowLabel": AccountRowLabel_06d0cb594d8f6ba2ac35015f930c882e,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
