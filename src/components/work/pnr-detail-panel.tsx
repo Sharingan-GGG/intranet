@@ -351,7 +351,7 @@ export function PnrDetailPanel({
             ) : (
               <span className="size-2 rounded-full bg-muted" />
             )}
-            P3 Details
+            Mandatory Info
           </TabsTrigger>
           <TabsTrigger value="tickets" className="pnr-vs-tickets gap-1.5 text-xs">
             {pnrData ? (
