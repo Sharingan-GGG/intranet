@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache'
 import configPromise from '@payload-config'
 
 import type { Category, Media, Post } from '@/payload-types'
+import { dayKey, seriesDates } from '@/utilities/eventOccurrences'
 import {
   DOCUMENTS,
   EDMS,
@@ -372,6 +373,33 @@ type EventDoc = {
   repeat?: string | null
   repeatEvery?: number | null
   repeatFrequency?: string | null
+  time?: string | null
+  exceptions?:
+    | {
+        originalDate: string
+        action: 'move' | 'cancel'
+        newDate?: string | null
+        newTime?: string | null
+      }[]
+    | null
+}
+
+/** Removes cancelled/moved occurrences and adds each moved one on its new day. */
+const applyExceptions = (doc: EventDoc, dates: string[]): string[] => {
+  const exceptions = doc.exceptions ?? []
+  if (exceptions.length === 0) return dates
+  const skip = new Set(exceptions.map((e) => dayKey(e.originalDate)))
+  const moved = exceptions.flatMap((e) => (e.action === 'move' && e.newDate ? [e.newDate] : []))
+  return [...dates.filter((d) => !skip.has(dayKey(d))), ...moved]
+}
+
+/** Start time for one occurrence: a moved occurrence's own time, else the event's usual time. */
+const occurrenceTime = (doc: EventDoc, dateISO: string): string | null => {
+  const key = dayKey(dateISO)
+  const moved = doc.exceptions?.find(
+    (e) => e.action === 'move' && e.newDate && e.newTime && dayKey(e.newDate) === key,
+  )
+  return moved?.newTime ?? doc.time ?? null
 }
 
 /** Title of an event's populated category relationship, used as its display tag. */
@@ -391,48 +419,8 @@ const spanDays = (doc: EventDoc): number => {
 }
 
 /** Start date of each occurrence (repeat expansion), NOT including any multi-day span. */
-const occurrenceStarts = (doc: EventDoc, horizon: Date): string[] => {
-  const start = new Date(doc.date)
-  const repeat = doc.repeat ?? 'none'
-  if (repeat === 'none' || Number.isNaN(start.getTime())) return [doc.date]
-
-  const stepMap: Record<string, { every: number; unit: string }> = {
-    weekly: { every: 1, unit: 'weeks' },
-    fortnightly: { every: 2, unit: 'weeks' },
-    monthly: { every: 1, unit: 'months' },
-    quarterly: { every: 3, unit: 'months' },
-    biannually: { every: 6, unit: 'months' },
-    annually: { every: 1, unit: 'years' },
-  }
-  const step =
-    repeat === 'custom'
-      ? { every: Math.max(1, doc.repeatEvery ?? 1), unit: doc.repeatFrequency ?? 'weeks' }
-      : stepMap[repeat]
-  if (!step) return [doc.date]
-
-  const dates: string[] = []
-  const cursor = new Date(start)
-  for (let i = 0; cursor <= horizon && i < 200; i++) {
-    dates.push(cursor.toISOString())
-    switch (step.unit) {
-      case 'days':
-        cursor.setDate(cursor.getDate() + step.every)
-        break
-      case 'weeks':
-        cursor.setDate(cursor.getDate() + step.every * 7)
-        break
-      case 'months':
-        cursor.setMonth(cursor.getMonth() + step.every)
-        break
-      case 'years':
-        cursor.setFullYear(cursor.getFullYear() + step.every)
-        break
-      default:
-        return dates
-    }
-  }
-  return dates
-}
+const occurrenceStarts = (doc: EventDoc, horizon: Date): string[] =>
+  (doc.repeat ?? 'none') === 'none' ? [doc.date] : applyExceptions(doc, seriesDates(doc, horizon))
 
 /**
  * Every calendar day an event touches: each occurrence start (from repeat
@@ -515,11 +503,12 @@ export const getEventGroups = unstable_cache(
       end.setDate(end.getDate() + span)
       endLabel = dayMonth.format(end)
     }
+    const time = occurrenceTime(d, dateISO)
     const item = {
       title: d.title,
       tag: eventTag(d.category),
-      time: formatEventTime(d.time),
-      timeISO: d.time ?? null,
+      time: formatEventTime(time),
+      timeISO: time,
       loc: d.location ?? '—',
       endLabel,
       slug: d.slug ?? undefined,
@@ -558,8 +547,8 @@ export const getCalendarEvents = unstable_cache(
         expandOccurrences(d, horizon).map((dateISO) => ({
           title: d.title,
           tag: eventTag(d.category),
-          time: formatEventTime(d.time),
-          timeISO: d.time ?? null,
+          time: formatEventTime(occurrenceTime(d, dateISO)),
+          timeISO: occurrenceTime(d, dateISO),
           loc: d.location ?? '—',
           description: d.description ?? null,
           dateISO,

@@ -1332,6 +1332,24 @@ export interface Event {
   repeatEvery?: number | null;
   repeatFrequency?: ('days' | 'weeks' | 'months' | 'years') | null;
   /**
+   * Move or cancel one occurrence without changing the rest of the series, e.g. "30 Sep → 29 Sep".
+   */
+  exceptions?:
+    | {
+        /**
+         * The date this occurrence would normally fall on.
+         */
+        originalDate: string;
+        action: 'move' | 'cancel';
+        newDate?: string | null;
+        /**
+         * Leave blank to keep the usual time.
+         */
+        newTime?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * e.g. "Adelaide HQ, Boardroom" or "Online · Teams".
    */
   location?: string | null;
@@ -2178,6 +2196,15 @@ export interface EventsSelect<T extends boolean = true> {
   repeat?: T;
   repeatEvery?: T;
   repeatFrequency?: T;
+  exceptions?:
+    | T
+    | {
+        originalDate?: T;
+        action?: T;
+        newDate?: T;
+        newTime?: T;
+        id?: T;
+      };
   location?: T;
   description?: T;
   buttonLabel?: T;
