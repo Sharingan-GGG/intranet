@@ -10,6 +10,13 @@ process.env.NODE_ENV = 'production'
 // causing ENETUNREACH. Force IPv4 so Postgres connections always resolve to a reachable address.
 require('dns').setDefaultResultOrder('ipv4first')
 
+// Result order alone doesn't cover fetch(): Node's Happy Eyeballs still races every address
+// with a 250ms per-attempt cap, and a far-away IPv4 host (the n8n box) takes longer than that
+// to connect from here, so the attempt is cut, IPv6 is ENETUNREACH, and the call dies as a
+// bare "fetch failed" (ETIMEDOUT). With no IPv6 route there is nothing to race — connect to
+// the first (IPv4) address and let it take as long as it needs.
+require('net').setDefaultAutoSelectFamily(false)
+
 const next = require('next')
 const { createServer } = require('http')
 

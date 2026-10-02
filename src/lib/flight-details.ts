@@ -195,10 +195,9 @@ export function tdRowHasException(
     seatStatusCode = (seat.statusCode || "").toUpperCase()
   }
 
+  // FF rule: no FF for this airline is fine (green); two FF sharing one receiver
+  // (this airline) is a conflict (red); two FF on two different receivers is fine.
   const receiverInfo = getReceiverInfoForAirline(loyaltyPrograms, airlineCode)
-  const receiverDisplay = receiverInfo.display
-  const receiverNoMatch =
-    loyaltyPrograms.length > 0 && receiverDisplay === "N/A"
   const receiverMultipleSc = receiverInfo.matchCount > 1
 
   const flightStatusCode = (flight.flightStatusCode || "").toUpperCase()
@@ -206,15 +205,7 @@ export function tdRowHasException(
   const seatStatusOk =
     hasSeatData && (seatStatusCode === "HK" || seatStatusCode === "KK")
 
-  if (
-    receiverNoMatch ||
-    receiverMultipleSc ||
-    !flightStatusOk ||
-    !seatStatusOk
-  ) {
-    return true
-  }
-  return false
+  return receiverMultipleSc || !flightStatusOk || !seatStatusOk
 }
 
 export function passengerHasTdException(
@@ -235,11 +226,11 @@ export function evaluateFlightDetailsMother(
 
   if (!data || !data.flights?.length || !data.travelers?.length) {
     return {
-      motherStatus: hasGkTourBooking ? "Exception" : "Pending",
+      motherStatus: "Pending",
       hasAnyPassengerFlightException: false,
       hasAnyTdException: false,
       hasGkTourBooking,
-      pnrMotherException: hasGkTourBooking,
+      pnrMotherException: false,
     }
   }
 
@@ -251,9 +242,10 @@ export function evaluateFlightDetailsMother(
     if (passengerHasTdException(data, t)) hasAnyTdException = true
   })
 
-  const hasFlightsException =
+  // GK/TOUR is flagged by its own "GK Detected" tag and deliberately does not
+  // colour the Flight Details mother.
+  const pnrMotherException =
     hasAnyPassengerFlightException || hasAnyTdException
-  const pnrMotherException = hasFlightsException || hasGkTourBooking
 
   return {
     motherStatus: pnrMotherException ? "Exception" : "Pending",

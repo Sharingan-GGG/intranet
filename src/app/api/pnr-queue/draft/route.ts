@@ -106,8 +106,12 @@ export async function POST(req: NextRequest) {
       webhook_response: webhookData,
     })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error"
-    console.error("[draft] Webhook call failed:", msg)
+    // Node's fetch reports every network failure as a bare "fetch failed"; the real
+    // reason (ENOTFOUND, ECONNRESET, UND_ERR_HEADERS_TIMEOUT, ...) is on e.cause.
+    const cause = e instanceof Error ? (e.cause as { code?: string; message?: string } | undefined) : undefined
+    const base = e instanceof Error ? e.message : "Unknown error"
+    const msg = cause ? `${base} (${cause.code ?? cause.message ?? String(cause)})` : base
+    console.error("[draft] Webhook call failed:", msg, cause)
     return NextResponse.json(
       { success: false, error: `Webhook call failed: ${msg}` },
       { status: 500 }

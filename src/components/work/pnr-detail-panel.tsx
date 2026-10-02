@@ -22,6 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { P3DetailsContent } from "@/components/work/p3/p3-details-content"
 import { MessagesTabContent } from "@/components/work/messages/messages-tab-content"
+import { CODES_EXCLUDED_FROM_EXCEPTION } from "@/lib/messages-mother"
 import { PnrVsTicketsContent } from "@/components/work/tickets/pnr-vs-tickets-content"
 import { PnrNotesTab } from "@/components/work/pnr-notes-tab"
 import { PnrReportItTab } from "@/components/work/pnr-report-it-tab"
@@ -288,7 +289,15 @@ export function PnrDetailPanel({
   const p3A3sForMessages = React.useMemo(() => {
     if (p3Skipped || !p3Result || !pnrData) return null
     const r = tryP3ModelFromFetchResult(p3Result, pnrData)
-    return r.ok ? r.model.travelInfo : null
+    // CTCM/CTCE/DOCS/TKNE already show on the Mandatory Info tab.
+    return r.ok
+      ? r.model.travelInfo.filter(
+          (row) =>
+            !(CODES_EXCLUDED_FROM_EXCEPTION as readonly string[]).includes(
+              row.ssrType
+            )
+        )
+      : null
   }, [p3Skipped, p3Result, pnrData])
 
   const tabStatuses = React.useMemo(
@@ -406,7 +415,6 @@ export function PnrDetailPanel({
                   scAndNum,
                 } = getTravelerLoyaltyAccordionFields(p)
                 const paxFlightStatus: TabStatus =
-                  hasTourSegmentForTcBookingFromBookingJson(booking) ||
                   passengerHasException(booking, idx) ||
                   passengerHasTdException(booking, idx)
                     ? "exception"
@@ -550,11 +558,7 @@ export function PnrDetailPanel({
                                     )
                                     const recDisplay = rc.display
                                     const recWarn =
-                                      loyalty.length > 0 && recDisplay === "N/A"
-                                        ? "receiver"
-                                        : rc.matchCount > 1
-                                          ? "multi"
-                                          : null
+                                      rc.matchCount > 1 ? "multi" : null
                                     const bad = tdRowHasException(
                                       f,
                                       booking,
@@ -606,10 +610,8 @@ export function PnrDetailPanel({
                                         <TableCell
                                           className={cn(
                                             "max-w-[14rem] truncate",
-                                            recWarn === "receiver" &&
-                                              "text-destructive",
                                             recWarn === "multi" &&
-                                              "text-amber-700 dark:text-amber-200"
+                                              "text-destructive"
                                           )}
                                           title={recDisplay}
                                         >
