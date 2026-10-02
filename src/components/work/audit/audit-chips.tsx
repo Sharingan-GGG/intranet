@@ -32,7 +32,7 @@ export function ScorePill({ score }: { score: number | null }) {
 }
 
 /**
- * The Full SEO Page Scan tab's Scan Type column: which scan the row is queued
+ * The Full Scan tab's Scan Type column: which scan the row is queued
  * for — `Full Scan` alone, or the same scan with the SemRush agent included.
  *
  * SemRush is the one agent that costs API credits per run, so it reads hot

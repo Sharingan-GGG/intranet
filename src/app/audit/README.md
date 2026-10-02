@@ -436,6 +436,17 @@ Which team a page's assignees are on decides which findings count as theirs —
 `MARKETING_DIMS` and its exact complement. Assigned across both teams, or
 unassigned, counts everything.
 
+Filtering the Dashboard to one person overrides that with **their** department,
+for the Pending column and the Pending Task box alike: the list is then
+answering "what is on Jane's plate", so a page she shares with someone in IT
+counts her half rather than the combined total it shows unfiltered.
+
+That filter rides into the report as `?assignee=`, so Report / View open on the
+same half the row was counting, and the screen never contradicts the list that
+sent you to it. It is only a default for the view picker — picking All or the
+other team still works — and it is absent from the URL unless one person is
+filtered to.
+
 ## Things deliberately not carried over
 
 - The hand-rolled `history.pushState` router — App Router expresses the same

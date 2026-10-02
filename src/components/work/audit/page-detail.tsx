@@ -19,6 +19,7 @@ import { updateIssueDone, updateTrackerStatusById } from '@/app/audit/actions'
 import type { AuditRecord, DimensionScore } from '@/lib/audit-report'
 import { originLabel, originPath, type DetailOrigin } from '@/lib/audit-route'
 import type { IssueRow, RunHistoryEntry } from '@/lib/audit-data'
+import { celebrate } from '@/lib/celebrate'
 import {
   MARKETING_DIMS,
   SCORE_COLOR,
@@ -28,6 +29,7 @@ import {
   teamOf,
   type Assignee,
   type TaskStatus,
+  type Team,
 } from '@/lib/audit-types'
 
 import { AssignMenu } from './assign-menu'
@@ -91,7 +93,9 @@ export function PageDetail({
   assigned,
   markable,
   roster,
+  filterTeam = null,
   from,
+  userName = null,
 }: {
   record: AuditRecord
   issues: IssueRow[]
@@ -102,7 +106,14 @@ export function PageDetail({
   /** False for a content audit — its findings have no row to write back to. */
   markable: boolean
   roster: Assignee[]
+  /**
+   * The Dashboard's assignee filter, resolved to a team. Set only when the
+   * report was opened from a list narrowed to one person.
+   */
+  filterTeam?: Team | null
   from: DetailOrigin
+  /** First name of the signed-in user, for the Done celebration. */
+  userName?: string | null
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -112,8 +123,16 @@ export function PageDetail({
    * team only when every assignee is on it — a page split across both, or
    * unassigned, comes back null. Same rule the Dashboard's counts use, so the
    * number in the box matches the cards here.
+   *
+   * A report opened from a list filtered to one person takes that person's
+   * team instead, for the same reason the Dashboard's Pending column does: the
+   * question being answered is what is on their plate, and on a page shared
+   * with the other team the page's own assignment cannot answer it.
    */
-  const assignedTeam = useMemo(() => teamOf(assigned, roster), [assigned, roster])
+  const assignedTeam = useMemo(
+    () => filterTeam ?? teamOf(assigned, roster),
+    [filterTeam, assigned, roster],
+  )
 
   /**
    * Which findings the report opens on. A page assigned to Marketing opens on
@@ -188,13 +207,25 @@ export function PageDetail({
     })
   }
 
-  function markPageDone() {
+  // Full Scan tab only: Done waits until every finding in view is closed.
+  const openFindings =
+    from.tab === 'full-seo-page-scan'
+      ? issues.filter((i) => !doneAt(i) && inViewFor(assignedTeam ?? 'all', i.dimension)).length
+      : 0
+
+  function markPageDone(origin: Element) {
     if (!trackerId) return
     startTransition(async () => {
       const result = await updateTrackerStatusById(trackerId, 'done')
       if (!result.ok) toast.error(result.error)
       else {
         toast.success('Page marked as done.')
+        celebrate({
+          origin,
+          name: userName ?? undefined,
+          title: record.title,
+          findings: issues.filter((i) => doneAt(i)).length,
+        })
         router.push(originPath(from))
       }
     })
@@ -300,8 +331,9 @@ export function PageDetail({
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={pending}
-                onClick={markPageDone}
+                disabled={pending || openFindings > 0}
+                title={openFindings > 0 ? 'Resolve all pending findings first' : undefined}
+                onClick={(e) => markPageDone(e.currentTarget)}
               >
                 {pending ? <Loader2 className="animate-spin" size={14} aria-hidden /> : '✓'} Mark as
                 Done

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+import Script from 'next/script'
 import { ThemeProvider } from 'next-themes'
 import React from 'react'
 
@@ -61,6 +62,7 @@ export default function AuditLayout({ children }: { children: React.ReactNode })
               <AuditTopbar />
               <main>{children}</main>
             </TooltipProvider>
+            <Script src="/celebrate.js" strategy="lazyOnload" />
             <Toaster position="bottom-right" richColors closeButton />
           </ThemeProvider>
         </QueryProvider>

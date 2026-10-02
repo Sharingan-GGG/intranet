@@ -109,6 +109,7 @@ export default async function AuditDashboardPage({ params, searchParams }: Props
       ga4Channels={ga4Channels}
       ga4Bounce={ga4Bounce}
       ga4Views={ga4Views}
+      userName={user.name?.trim().split(/\s+/)[0] ?? null}
     />
   )
 }

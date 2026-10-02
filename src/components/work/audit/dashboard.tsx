@@ -5,7 +5,7 @@
  *
  *   Content Pre-Check   every page on the domain, against the content_audits
  *                       triage queue. The only tab that can queue a content audit.
- *   Full SEO Page Scan  pages that have a tracker row, i.e. ones Content promoted.
+ *   Full Scan           pages that have a tracker row, i.e. ones Content promoted.
  *   Archived            content_audits rows with archived = true.
  *   Completed           Full Scan rows whose tracker status is Done.
  *
@@ -84,6 +84,7 @@ import {
 
 import { AssignMenu } from './assign-menu'
 import { ContentSummaryDialog } from './content-summary-dialog'
+import { celebrate } from '@/lib/celebrate'
 import { DecisionHelp } from './decision-help'
 import { Ga4Stat, ga4DeltaOf, ga4Pct } from './ga4-stat'
 import {
@@ -172,9 +173,10 @@ const TAB_TIPS: Record<DashboardTab, string> = {
  *
  * A page handed to Marketing only ever shows its marketing findings, and one
  * handed to IT the complement, because that is the only half its owner can
- * act on; split across both teams, or unassigned, counts everything. The
- * summary boxes and the Pending column both read through here so a row can
- * never disagree with the total above it.
+ * act on; split across both teams, or unassigned, counts everything. Filtering
+ * the list to one person substitutes their team for the row's — see
+ * `countTeam`. The summary boxes and the Pending column both read through here
+ * so a row can never disagree with the total above it.
  */
 function openForTeam(counts: IssueCounts | null, team: Team | null): number | null {
   if (!counts) return null
@@ -202,6 +204,7 @@ export function AuditDashboard({
   ga4Channels,
   ga4Bounce,
   ga4Views,
+  userName = null,
 }: {
   tab: DashboardTab
   site: Site
@@ -221,6 +224,8 @@ export function AuditDashboard({
    * across all of them when none is picked. Empty with no property behind it.
    */
   ga4Views: Ga4PathViews[]
+  /** First name of the signed-in user, for the Done celebration. */
+  userName?: string | null
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -641,6 +646,30 @@ export function AuditDashboard({
 
   const scopeSub = filtersActive ? 'In the current filter' : 'Across this tab'
 
+  /**
+   * Whose half of a page's findings the counts should show.
+   *
+   * Normally it is the row's own assignment — a page handed to Marketing shows
+   * its marketing findings. Filtering to one person overrides that with their
+   * department, because the list is then answering "what is on Jane's plate":
+   * a page she shares with someone in IT should show her half, not the
+   * combined total it shows when nobody is singled out. The filter narrows
+   * which rows are listed; this narrows what each one counts.
+   */
+  const filterTeam = useMemo(() => {
+    if (assignedFilter === 'all' || assignedFilter === 'unassigned') return null
+    return roster.find((r) => r.email === assignedFilter)?.team ?? null
+  }, [assignedFilter, roster])
+
+  /**
+   * The same narrowing, handed to the report links so a report opens on the
+   * half of its findings the list was counting. Undefined unless one person is
+   * picked, which keeps it out of the URL the rest of the time.
+   */
+  const filterAssignee = filterTeam ? assignedFilter : undefined
+
+  const countTeam = (assigned: readonly string[]) => filterTeam ?? teamOf(assigned, roster)
+
   const summary = useMemo(() => {
     let open = 0
     let done = 0
@@ -649,7 +678,7 @@ export function AuditDashboard({
     let aboveCount = 0
     for (const row of visible) {
       if (row.counts) {
-        const team = teamOf(row.assigned, roster)
+        const team = filterTeam ?? teamOf(row.assigned, roster)
         open += openForTeam(row.counts, team) ?? 0
         done += doneForTeam(row.counts, team) ?? 0
       }
@@ -694,7 +723,7 @@ export function AuditDashboard({
       scored,
       above85: aboveCount,
     }
-  }, [visible, roster])
+  }, [visible, roster, filterTeam])
 
   /**
    * Run one row's action and keep the row marked busy until the screen has
@@ -714,12 +743,15 @@ export function AuditDashboard({
    * transition ends either way.
    */
   const run = useCallback(
-    (url: string | null, fn: () => Promise<ActionResult>) => {
+    (url: string | null, fn: () => Promise<ActionResult>, onSuccess?: () => void) => {
       if (url) setBusyUrls((s) => new Set(s).add(url))
       startTransition(async () => {
         const result = await fn()
         if (!result.ok) toast.error(result.error)
-        else router.refresh()
+        else {
+          onSuccess?.()
+          router.refresh()
+        }
       })
     },
     [router],
@@ -1449,7 +1481,7 @@ export function AuditDashboard({
                   )}
                   {showScanType && (
                     <Td name="pending">
-                      <PendingChip open={openForTeam(row.counts, teamOf(row.assigned, roster))} />
+                      <PendingChip open={openForTeam(row.counts, countTeam(row.assigned))} />
                     </Td>
                   )}
                   {showAssigned && (
@@ -1658,26 +1690,46 @@ export function AuditDashboard({
                                   screen: 'page-detail',
                                   trackerId: row.trackerId,
                                   from: { screen: 'dashboard', tab },
+                                  assignee: filterAssignee,
                                 })}
                               >
                                 Report
                               </Link>
                             )}
 
-                          {row.status === 'in-review' && (
-                            <button
-                              type="button"
-                              className="audit-action audit-action--done btn btn-sm btn-primary"
-                              disabled={busy || pending}
-                              onClick={() =>
-                                run(row.url, () =>
-                                  updateTrackerStatus(row.url, site.domain, 'done'),
-                                )
-                              }
-                            >
-                              Done
-                            </button>
-                          )}
+                          {row.status === 'in-review' && (() => {
+                            // Same number the Pending column shows.
+                            const openCount =
+                              openForTeam(row.counts, countTeam(row.assigned)) ?? 0
+                            return (
+                              <button
+                                type="button"
+                                className="audit-action audit-action--done btn btn-sm btn-primary"
+                                disabled={busy || pending || openCount > 0}
+                                title={
+                                  openCount > 0
+                                    ? 'Resolve all pending findings first'
+                                    : undefined
+                                }
+                                onClick={(e) => {
+                                  const origin = e.currentTarget
+                                  run(
+                                    row.url,
+                                    () => updateTrackerStatus(row.url, site.domain, 'done'),
+                                    () =>
+                                      celebrate({
+                                        origin,
+                                        name: userName ?? undefined,
+                                        title: row.title,
+                                        findings: row.counts?.done,
+                                      }),
+                                  )
+                                }}
+                              >
+                                Done
+                              </button>
+                            )
+                          })()}
                         </>
                       )}
 
@@ -1691,44 +1743,24 @@ export function AuditDashboard({
                                 screen: 'page-detail',
                                 trackerId: row.trackerId,
                                 from: { screen: 'dashboard', tab },
+                                assignee: filterAssignee,
                               })}
                             >
                               View
                             </Link>
                           )}
-                          <select
-                            className="audit-action audit-action--agent input"
-                            value={rowAgent[row.url] ?? 'full'}
-                            onChange={(e) =>
-                              setRowAgent((m) => ({
-                                ...m,
-                                [row.url]: e.target.value as AgentKind,
-                              }))
-                            }
-                            aria-label={`Scan type for ${row.title}`}
-                          >
-                            {RUNNABLE_AGENT_KINDS.map((kind) => (
-                              <option key={kind} value={kind}>
-                                {AGENT_KIND_LABELS[kind]}
-                              </option>
-                            ))}
-                          </select>
                           <button
                             type="button"
-                            className="audit-action audit-action--rerun btn btn-sm btn-primary"
-                            title="Re-run the selected scan now"
+                            className="audit-action btn btn-sm"
+                            title="Move this page back to In Review"
                             disabled={busy || pending}
                             onClick={() =>
                               run(row.url, () =>
-                                trackAgentRun({
-                                  url: row.url,
-                                  domain: site.domain,
-                                  agentKind: rowAgent[row.url] ?? 'full',
-                                }),
+                                updateTrackerStatus(row.url, site.domain, 'in-review'),
                               )
                             }
                           >
-                            Re-Run
+                            Revert
                           </button>
                         </>
                       )}

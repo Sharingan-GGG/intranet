@@ -34,16 +34,16 @@ export const BASE_PATH = '/audit'
 export const DASHBOARD_TABS = [
   'content-pre-check',
   'full-seo-page-scan',
-  'archived',
   'completed',
+  'archived',
 ] as const
 export type DashboardTab = (typeof DASHBOARD_TABS)[number]
 
 export const DASHBOARD_TAB_LABELS: Record<DashboardTab, string> = {
   'content-pre-check': 'Content Pre-Check',
-  'full-seo-page-scan': 'Full SEO Page Scan',
-  archived: 'Archived',
+  'full-seo-page-scan': 'Full Scan',
   completed: 'Completed',
+  archived: 'Archived',
 }
 
 /** Where `/audit` lands, and the tab the portal opened on. */
@@ -61,7 +61,14 @@ export type AuditRoute =
   | { screen: 'domain-list' }
   | { screen: 'traffic' }
   | { screen: 'traffic-page'; path: string; domain: string; days: number; channel?: string }
-  | { screen: 'page-detail'; trackerId: string; from: DetailOrigin }
+  /**
+   * `assignee` carries the Dashboard's assignee filter into the report, so it
+   * opens on that person's half of the findings rather than the page's own —
+   * the two disagree on a page shared across both teams. It is only ever a
+   * default for the view picker, which is why it travels in the query string
+   * and not the path: the report is the same report either way.
+   */
+  | { screen: 'page-detail'; trackerId: string; from: DetailOrigin; assignee?: string }
   | { screen: 'content-audit'; contentAuditId: string; from: DetailOrigin }
 
 /**
@@ -104,8 +111,12 @@ export function auditPath(route: AuditRoute): string {
       if (route.channel) q.set('channel', route.channel)
       return `${BASE_PATH}/traffic/page-detail?${q}`
     }
-    case 'page-detail':
-      return `${originPath(route.from)}/page-detail/${route.trackerId}`
+    case 'page-detail': {
+      const path = `${originPath(route.from)}/page-detail/${route.trackerId}`
+      return route.assignee
+        ? `${path}?${new URLSearchParams({ assignee: route.assignee })}`
+        : path
+    }
     case 'content-audit':
       return `${originPath(route.from)}/content-audit/${route.contentAuditId}`
   }
