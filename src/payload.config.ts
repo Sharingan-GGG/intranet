@@ -104,6 +104,12 @@ export default buildConfig({
     ? postgresAdapter({
         pool: {
           connectionString: process.env.POSTGRES_URL,
+          // pg defaults to 10, and the Audit Hub pool adds 3 more: together they fill most of
+          // the session pooler's 15 clients, so a second process or a hot reload tips it over.
+          max: 8,
+          // pg never closes idle clients by default, so every long-lived worker keeps its
+          // peak count forever and the shared pooler fills with idle connections.
+          idleTimeoutMillis: 10_000,
         },
         // Supabase gives us the database; Payload must not try to create one.
         disableCreateDatabase: true,

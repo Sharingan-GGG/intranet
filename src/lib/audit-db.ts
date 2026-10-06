@@ -35,7 +35,7 @@ function auditPool(): Pool {
     global.__auditPool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
-      max: 4,
+      max: 3,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
     })
