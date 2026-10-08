@@ -158,6 +158,29 @@ export async function fetchAllContent(site: Site): Promise<CompletedRow[]> {
   return lists.flat()
 }
 
+/**
+ * Published total straight from WordPress, never cached: the X-WP-Total header
+ * summed across the site's types. Null if any type fails, so the screen falls
+ * back to its own row count rather than showing a short number.
+ */
+export async function fetchLiveTotal(site: Site): Promise<number | null> {
+  try {
+    const totals = await Promise.all(
+      site.types.map(async (type) => {
+        const res = await fetch(
+          `https://${site.domain}/wp-json/wp/v2/${TYPE_TO_REST[type]}?per_page=1&status=publish&_fields=id`,
+          { headers: { Accept: 'application/json' }, cache: 'no-store' },
+        )
+        if (res.status === 404) return 0
+        if (!res.ok) throw new Error(String(res.status))
+        return Number(res.headers.get('X-WP-Total') ?? '0')
+      }),
+    )
+    return totals.reduce((a, b) => a + b, 0)
+  } catch {
+    return null
+  }
+}
 
 /**
  * Cheap per-type published counts for the Domain List screen: one request per

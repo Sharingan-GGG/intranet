@@ -197,6 +197,7 @@ export function AuditDashboard({
   tab,
   site,
   rows,
+  wpTotal = null,
   roster,
   loadError,
   ga4Channel,
@@ -209,6 +210,8 @@ export function AuditDashboard({
   tab: DashboardTab
   site: Site
   rows: DashboardRow[]
+  /** Live published total from the WP API (uncached); null if unreachable. */
+  wpTotal?: number | null
   roster: Assignee[]
   loadError: string | null
   /** The selected GA4 channel, or '' for All GA4. */
@@ -830,10 +833,10 @@ export function AuditDashboard({
         <section className="audit-summary audit-summary--six" data-cols="6">
           <SummaryBox
             name="scanned"
-            label="Scanned"
-            value={summary.scanned}
-            of={summary.pages}
-            sub={scopeSub}
+            label="Total"
+            value={summary.pages}
+            of={wpTotal ?? undefined}
+            sub={`${summary.scanned} scanned`}
             color={
               summary.scanned === summary.pages && summary.pages > 0
                 ? 'var(--score-good)'

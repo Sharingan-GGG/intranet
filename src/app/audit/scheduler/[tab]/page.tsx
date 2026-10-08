@@ -5,6 +5,7 @@ import { AuditAccessDenied } from '@/components/work/audit/access-denied'
 import { AuditDashboard } from '@/components/work/audit/dashboard'
 import { DEFAULT_SITE, siteByDomain } from '@/lib/audit-config'
 import { loadDashboard } from '@/lib/audit-dashboard'
+import { fetchLiveTotal } from '@/lib/audit-wordpress'
 import {
   loadGa4BounceCached,
   loadGa4ChannelList,
@@ -63,10 +64,11 @@ export default async function AuditDashboardPage({ params, searchParams }: Props
   // instead of reaching GA with a window it does not offer.
   const range = resolveGa4Range(days)
 
-  const [{ rows, error }, roster, propertyId] = await Promise.all([
+  const [{ rows, error }, roster, propertyId, wpTotal] = await Promise.all([
     loadDashboard(site),
     getAuditRoster(),
     loadGa4PropertyForDomain(site.domain),
+    fetchLiveTotal(site),
   ])
 
   // The GA4 filter is an extra, never a gate: a site with no property, or a GA
@@ -102,6 +104,7 @@ export default async function AuditDashboardPage({ params, searchParams }: Props
       tab={rawTab}
       site={site}
       rows={rows}
+      wpTotal={wpTotal}
       roster={roster}
       loadError={error}
       ga4Channel={channel}
