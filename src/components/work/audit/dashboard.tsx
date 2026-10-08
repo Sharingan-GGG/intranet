@@ -411,6 +411,18 @@ export function AuditDashboard({
   const [drawerTitle, setDrawerTitle] = useState('')
   const [drawer, setDrawer] = useState<PageTrafficResult | null>(null)
 
+  // The drawer's Check content goes straight to the page's content audit when
+  // it has one; without it the link falls back to the Pre-Check triage list.
+  const drawerRow = drawerPath === null ? null : rows.find((r) => r.path === drawerPath)
+  const drawerContentReportHref =
+    drawerRow?.hasContentReport && drawerRow.contentAuditId
+      ? auditPath({
+          screen: 'content-audit',
+          contentAuditId: drawerRow.contentAuditId,
+          from: { screen: 'dashboard', tab },
+        })
+      : undefined
+
   const openTraffic = useCallback(
     (path: string, title: string) => {
       setDrawerPath(path)
@@ -1545,6 +1557,8 @@ export function AuditDashboard({
                       {showContentColumns && row.hasContentReport && row.contentAuditId && (
                         <Link
                           className="audit-action audit-action--report btn btn-sm"
+                          target="_blank"
+                          rel="noopener noreferrer"
                           title="Open the content audit report"
                           href={auditPath({
                             screen: 'content-audit',
@@ -1688,6 +1702,8 @@ export function AuditDashboard({
                           {row.status === 'in-review' && row.trackerId && (
                               <Link
                                 className="audit-action audit-action--full-report btn btn-sm"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 title="Open the full scan report"
                                 href={auditPath({
                                   screen: 'page-detail',
@@ -1859,6 +1875,8 @@ export function AuditDashboard({
               error={null}
               hasProperty={drawer.hasProperty}
               variant="drawer"
+              contentReportHref={drawerContentReportHref}
+              fromTab={tab}
             />
           )}
         </AuditTrafficDrawer>

@@ -8,7 +8,9 @@ CREATE TABLE audit.audit_issues (
   created_at     timestamp with time zone DEFAULT now() NOT NULL,
   assign_role    text[],
   fingerprint    text,
-  done_at        timestamp with time zone
+  done_at        timestamp with time zone,
+  -- Set together with done_at when a finding is dismissed rather than fixed.
+  ignored_at     timestamp with time zone
 );
 
 ALTER TABLE audit.audit_issues

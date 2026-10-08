@@ -11,7 +11,7 @@ import { ArrowLeftIcon, ExternalLinkIcon } from 'lucide-react'
 import Link from 'next/link'
 
 import { Ga4Stat, ga4DeltaOf, ga4Pct } from '@/components/work/audit/ga4-stat'
-import { auditPath, contentPreCheckForPath } from '@/lib/audit-route'
+import { auditPath, contentPreCheckForPath, type DashboardTab } from '@/lib/audit-route'
 import {
   fmtNum as fmt,
   GA4_ALL_CHANNELS,
@@ -43,6 +43,10 @@ type Props = {
    * the dialog around it, and must not repeat the page's own shell padding.
    */
   variant?: 'page' | 'drawer'
+  /** The page's content audit report, when it has one — Check content opens it. */
+  contentReportHref?: string
+  /** The tab the drawer was opened from, so the report's Back returns to it. */
+  fromTab?: DashboardTab
 }
 
 export function AuditTrafficPageDetail({
@@ -55,6 +59,8 @@ export function AuditTrafficPageDetail({
   error,
   hasProperty,
   variant = 'page',
+  contentReportHref,
+  fromTab = 'completed',
 }: Props) {
   const url = `https://${site.domain}${path}`
   const back = `${auditPath({ screen: 'traffic' })}?domain=${site.domain}&days=${days}${
@@ -104,10 +110,12 @@ export function AuditTrafficPageDetail({
             <span className="stat-sub muted">{audit.status ?? 'No status'}</span>
             <Link
               className="btn btn-sm"
+              target="_blank"
+              rel="noopener noreferrer"
               href={auditPath({
                 screen: 'page-detail',
                 trackerId: audit.trackerId,
-                from: { screen: 'dashboard', tab: 'completed' },
+                from: { screen: 'dashboard', tab: fromTab },
               })}
             >
               Open report
@@ -120,7 +128,12 @@ export function AuditTrafficPageDetail({
             </span>
             {/* Hands the page straight to triage: the query marks and filters
                 to the row, the fragment jumps to it. */}
-            <Link className="btn btn-sm btn-primary" href={contentPreCheckForPath(site.domain, path)}>
+            <Link
+              className="btn btn-sm"
+              href={contentReportHref ?? contentPreCheckForPath(site.domain, path)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Check content
             </Link>
           </>

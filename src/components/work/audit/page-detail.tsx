@@ -9,7 +9,7 @@
  * recordFromContentAuditReport. The screen does not know which it got, which is
  * why the two adapters exist.
  */
-import { Check, Loader2 } from 'lucide-react'
+import { Check, EyeOff, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, useTransition } from 'react'
@@ -146,6 +146,7 @@ export function PageDetail({
   const [dimFilter, setDimFilter] = useState('all')
   const [saving, setSaving] = useState<Set<string>>(new Set())
   const [localDone, setLocalDone] = useState<Record<string, string | null>>({})
+  const [localIgnored, setLocalIgnored] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const next = assignedTeam ?? 'all'
@@ -183,14 +184,18 @@ export function PageDetail({
 
   const doneAt = (issue: IssueRow) => (issue.id in localDone ? localDone[issue.id]! : issue.doneAt)
 
-  function toggleDone(issue: IssueRow) {
+  const isIgnored = (issue: IssueRow) =>
+    issue.id in localIgnored ? localIgnored[issue.id] : issue.ignored
+
+  function toggleDone(issue: IssueRow, ignore = false) {
     const next = doneAt(issue) ? null : new Date().toISOString()
     setSaving((s) => new Set(s).add(issue.id))
+    setLocalIgnored((d) => ({ ...d, [issue.id]: next !== null && ignore }))
     // Optimistic: closing out a list of findings one by one should feel
     // immediate, and a rejected write rolls this entry back on its own.
     setLocalDone((d) => ({ ...d, [issue.id]: next }))
     startTransition(async () => {
-      const result = await updateIssueDone(issue.id, next !== null)
+      const result = await updateIssueDone(issue.id, next !== null, ignore)
       setSaving((s) => {
         const copy = new Set(s)
         copy.delete(issue.id)
@@ -198,6 +203,11 @@ export function PageDetail({
       })
       if (!result.ok) {
         setLocalDone((d) => {
+          const copy = { ...d }
+          delete copy[issue.id]
+          return copy
+        })
+        setLocalIgnored((d) => {
           const copy = { ...d }
           delete copy[issue.id]
           return copy
@@ -562,7 +572,20 @@ export function PageDetail({
                         {markable && (
                           <div className="issue-actions">
                             {done && (
-                              <span className="issue-done-stamp">✓ Done {fmtAuditDate(done)}</span>
+                              <span className="issue-done-stamp">
+                                {isIgnored(issue) ? '⊘ Ignored' : '✓ Done'} {fmtAuditDate(done)}
+                              </span>
+                            )}
+                            {!done && (
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                disabled={saving.has(issue.id)}
+                                onClick={() => toggleDone(issue, true)}
+                              >
+                                <EyeOff size={13} aria-hidden />
+                                Ignored Suggestion
+                              </button>
                             )}
                             <button
                               type="button"

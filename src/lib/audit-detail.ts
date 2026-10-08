@@ -81,6 +81,7 @@ export async function loadContentAuditDetail(id: string): Promise<PageDetailData
     title: issue.title ?? null,
     recommendation: issue.recommendation ?? null,
     doneAt: null,
+    ignored: false,
   }))
 
   return {

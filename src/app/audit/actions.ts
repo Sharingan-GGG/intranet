@@ -305,15 +305,22 @@ export async function updateTrackerAssigned(
   return { ok: true }
 }
 
-/** Mark one finding done, or reopen it. */
-export async function updateIssueDone(issueId: string, done: boolean): Promise<ActionResult> {
+/** Mark one finding done (or ignored), or reopen it. */
+export async function updateIssueDone(
+  issueId: string,
+  done: boolean,
+  ignored = false,
+): Promise<ActionResult> {
   const gate = await requireAccess()
   if (!gate.ok) return gate
   try {
-    await auditQuery(`update audit.audit_issues set done_at = $1 where id = $2`, [
-      done ? new Date().toISOString() : null,
-      issueId,
-    ])
+    // An ignored finding is closed too (done_at set), so every pending count
+    // drops without needing to know about ignored_at.
+    const now = done ? new Date().toISOString() : null
+    await auditQuery(
+      `update audit.audit_issues set done_at = $1, ignored_at = $2 where id = $3`,
+      [now, done && ignored ? now : null, issueId],
+    )
   } catch (err) {
     return {
       ok: false,

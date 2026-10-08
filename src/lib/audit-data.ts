@@ -246,6 +246,8 @@ export interface IssueRow {
   recommendation: string | null
   /** null while the finding is still open. */
   doneAt: string | null
+  /** Closed as "ignored suggestion" rather than fixed. */
+  ignored: boolean
 }
 
 export interface RunDetail {
@@ -276,8 +278,9 @@ async function fetchIssues(runId: string): Promise<IssueRow[]> {
     title: string | null
     recommendation: string | null
     done_at: string | null
+    ignored_at: string | null
   }>(
-    `select id, priority, dimension, title, recommendation, done_at
+    `select id, priority, dimension, title, recommendation, done_at, ignored_at
        from audit.audit_issues
       where run_id = $1`,
     [runId],
@@ -289,6 +292,7 @@ async function fetchIssues(runId: string): Promise<IssueRow[]> {
     title: r.title,
     recommendation: r.recommendation,
     doneAt: r.done_at,
+    ignored: r.ignored_at !== null,
   }))
 }
 
