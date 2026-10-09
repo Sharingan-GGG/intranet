@@ -19,9 +19,13 @@
 import { revalidatePath, updateTag } from 'next/cache'
 
 import { auditQuery, auditTransaction } from '@/lib/audit-db'
+import { siteByDomain, SITES } from '@/lib/audit-config'
 import {
   GA4_DASHBOARD_TAG,
   ingestGa4,
+  loadGa4BounceCached,
+  loadGa4ChannelList,
+  loadGa4PathViewsCached,
   loadGa4PageAudit,
   loadGa4PageDetail,
   loadGa4PropertyForDomain,
@@ -33,6 +37,7 @@ import {
   TASK_TO_DB_STATUS,
 } from '@/lib/audit-data'
 import type { SummaryReport } from '@/lib/audit-report'
+import { fetchAllContent } from '@/lib/audit-wordpress'
 import {
   resolveGa4Range,
   type AgentKind,
@@ -591,4 +596,30 @@ export async function getPageTraffic(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Could not load page traffic.' }
   }
+}
+
+/**
+ * Warm the caches the Dashboard reads for every site except the one on screen,
+ * so switching the Site select lands on cached WordPress and GA4 data instead
+ * of a cold fetch of every page. Fire-and-forget from the client; each read
+ * fails on its own and nothing is returned.
+ */
+export async function warmOtherSites(currentDomain: string, days?: number | string) {
+  const gate = await requireAccess()
+  if (!gate.ok) return
+  const range = resolveGa4Range(days?.toString())
+  await Promise.allSettled(
+    SITES.filter((s) => s.domain !== siteByDomain(currentDomain).domain).map(async (site) => {
+      const [, propertyId] = await Promise.all([
+        fetchAllContent(site),
+        loadGa4PropertyForDomain(site.domain),
+      ])
+      if (!propertyId) return
+      await Promise.allSettled([
+        loadGa4ChannelList(propertyId, range),
+        loadGa4PathViewsCached(propertyId, '', range),
+        loadGa4BounceCached(propertyId, range, ''),
+      ])
+    }),
+  )
 }

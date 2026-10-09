@@ -39,6 +39,7 @@ import {
   trackAgentRun,
   updateTrackerStatus,
   revertToContent,
+  warmOtherSites,
   type ActionResult,
   type PageTrafficResult,
 } from '@/app/audit/actions'
@@ -84,6 +85,7 @@ import {
 
 import { AssignMenu } from './assign-menu'
 import { ContentSummaryDialog } from './content-summary-dialog'
+import { PageLoader } from '@/components/page-loader'
 import { celebrate } from '@/lib/celebrate'
 import { DecisionHelp } from './decision-help'
 import { Ga4Stat, ga4DeltaOf, ga4Pct } from './ga4-stat'
@@ -233,6 +235,9 @@ export function AuditDashboard({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [pending, startTransition] = useTransition()
+  // Separate from `pending`: a site switch swaps the whole list, so it gets the
+  // full-page loader rather than just disabling the buttons.
+  const [switching, startSwitch] = useTransition()
 
   const { favourites, toggle: toggleFavourite } = useAuditFavourites(site.domain)
 
@@ -282,6 +287,13 @@ export function AuditDashboard({
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [page, setPage] = useState(1)
 
+  // Warm the other sites' caches once this one has rendered, so the Site
+  // select does not land on a cold fetch.
+  useEffect(() => {
+    const t = setTimeout(() => void warmOtherSites(site.domain, ga4Days), 1500)
+    return () => clearTimeout(t)
+  }, [site.domain, ga4Days])
+
   const { watch, watching } = useContentAuditPoll(() => router.refresh())
 
   // A tab or domain change invalidates a selection made against a different list.
@@ -316,7 +328,7 @@ export function AuditDashboard({
     // Channels are per-property, so one site's selection means nothing on
     // another — the same reason the Traffic screen drops it on a site change.
     params.delete('ga4')
-    router.push(`${auditPath({ screen: 'dashboard', tab })}?${params}`)
+    startSwitch(() => router.push(`${auditPath({ screen: 'dashboard', tab })}?${params}`))
   }
 
   /**
@@ -834,6 +846,7 @@ export function AuditDashboard({
 
   return (
     <div className="audit-dashboard shell">
+      {switching && <PageLoader />}
       {/* No page head: the mode switch in the toolbar is the heading. */}
       {/* Boxes above the table, per tab — Content and Archived share one strip
           (the scanned count plus the decision split), Full Scan gets its

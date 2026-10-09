@@ -15,6 +15,7 @@
 import { ArrowUpRightIcon, RefreshCwIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { PageLoader } from '@/components/page-loader'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -94,6 +95,7 @@ export function AuditTraffic({
   const router = useRouter()
   const params = useSearchParams()
   const [pending, startTransition] = useTransition()
+  const [switching, startSwitch] = useTransition()
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
   const [shown, setShown] = useState<MetricKey[]>(DEFAULT_METRICS)
@@ -159,7 +161,9 @@ export function AuditTraffic({
     // another — switching site drops the filter rather than showing an empty
     // table under a channel name that site never saw.
     if (key === 'domain') q.delete('channel')
-    startTransition(() => router.replace(`/audit/traffic?${q}`, { scroll: false }))
+    ;(key === 'domain' ? startSwitch : startTransition)(() =>
+      router.replace(`/audit/traffic?${q}`, { scroll: false }),
+    )
   }
 
   const visible = useMemo(() => {
@@ -211,6 +215,7 @@ export function AuditTraffic({
 
   return (
     <div className="shell audit-traffic">
+      {switching && <PageLoader />}
       {/* No visible page header: the topbar already brands the hub and marks
           Traffic as the current screen, so a title block under it was saying the
           same thing twice. The heading itself stays for the document outline and
