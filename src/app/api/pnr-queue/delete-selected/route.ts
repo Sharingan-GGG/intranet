@@ -47,18 +47,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const pnrs = (body?.pnrs ?? [])
+  const requested = (body?.pnrs ?? [])
     .map((p) => String(p).trim().toUpperCase())
     .filter(Boolean)
 
-  if (pnrs.length === 0) {
+  if (requested.length === 0) {
     return NextResponse.json({ success: false, error: "No PNRs specified" }, { status: 400 })
   }
 
-  const { data: queueRows, error: fetchError } = await db
+  // A `user` only sees the PNRs assigned to them, so those are all they may delete.
+  // The client's list is not trusted for that: ownership is checked here.
+  const ownOnly = profile.role === "user"
+  let queueQuery = db
     .from("pnr_queue")
     .select("pnr, brand, client_name, departure_date, consultant_name, sheet_row")
-    .in("pnr", pnrs)
+    .in("pnr", requested)
+  if (ownOnly) queueQuery = queueQuery.eq("added_by", profile.id)
+  const { data: queueRows, error: fetchError } = await queueQuery
 
   if (fetchError) {
     return NextResponse.json({ success: false, error: fetchError.message }, { status: 500 })
@@ -68,6 +73,9 @@ export async function POST(req: NextRequest) {
   if (rows.length === 0) {
     return NextResponse.json({ success: true, deleted: 0 })
   }
+  // Admins keep the full list, so legacy-only PNRs with no queue row still get
+  // their history cleared and a tombstone.
+  const pnrs = ownOnly ? rows.map((r) => r.pnr) : requested
 
   console.log(`[delete-selected] Deleting ${rows.length} PNRs:`, rows.map((r) => ({ pnr: r.pnr, brand: r.brand, sheet_row: r.sheet_row })))
 

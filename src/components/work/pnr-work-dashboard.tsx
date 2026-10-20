@@ -1647,18 +1647,17 @@ export function PnrWorkDashboard({
             </button>
           )}
 
-          {/* Delete — Admin/Super Admin only */}
-          {(role === "admin" || role === "super_admin") &&
-            isAllowed(permissions ?? null, "delete_pnr") && (
-              <button
-                type="button"
-                onClick={() => setDeleteDialogOpen(true)}
-                disabled={items.length === 0}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#EF4444] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#DC2626] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#EF4444]"
-              >
-                {totalSelected > 0 ? `Delete (${totalSelected})` : "Delete"}
-              </button>
-            )}
+          {/* Delete — any role granted delete_pnr; a `user` can only delete their own PNRs */}
+          {isAllowed(permissions ?? null, "delete_pnr") && (
+            <button
+              type="button"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={items.length === 0}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#EF4444] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#DC2626] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#EF4444]"
+            >
+              {totalSelected > 0 ? `Delete (${totalSelected})` : "Delete"}
+            </button>
+          )}
         </div>
 
         <div className="h-7 w-px shrink-0 bg-white/25" />
