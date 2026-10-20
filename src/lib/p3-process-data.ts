@@ -8,6 +8,7 @@ import {
   getP3BodyXmlFromApiResult,
   getP3PersonNames,
   getP3TkneData,
+  hasHkStatus,
   p3FetchResultToApiJson,
   type P3PersonName,
 } from "./p3-mother"
@@ -53,10 +54,33 @@ export type P3MainGridRow = {
   ctcmIsNa: boolean
   /** True when PNR expects DOCS but no A3S DOCS line found for this pax */
   docsException: boolean
-  /** True when TKNE is missing or empty ("—") */
+  /** True when TKNE is missing, empty ("—"), or not HK/KK */
   tkneException: boolean
   /** True when TKNE was found via airline fallback (not exact route match) */
   tkneRouteMismatch: boolean
+}
+
+// "—", "-", "N/A", or empty counts as a missing value
+function isMissingValue(v: string | null | undefined): boolean {
+  const t = (v ?? "").trim()
+  return t === "" || t === "—" || t === "-" || t.toUpperCase() === "N/A"
+}
+
+// Row exception: missing/unmatched data from PNR, P3 (CTCE/CTCM/DOCS) or P4 (TKNE).
+// Also drives the Mandatory Info tab dot, so the row and the tab never disagree.
+export function p3MainGridRowHasException(r: P3MainGridRow): boolean {
+  return (
+    r.ctceIsNa ||
+    r.ctcmIsNa ||
+    r.docsException ||
+    r.tkneException ||
+    r.tkneRouteMismatch ||
+    isMissingValue(r.status) ||
+    isMissingValue(r.ctce) ||
+    isMissingValue(r.ctcm) ||
+    isMissingValue(r.docs) ||
+    isMissingValue(r.tkne)
+  )
 }
 
 export type P3ContactRow = {
@@ -534,7 +558,8 @@ function buildModel(
         ctceIsNa: !ctce,
         ctcmIsNa: !ctcm,
         docsException: pnrHasDocs && !docLine,
-        tkneException: tkneResult.value === "—",
+        tkneException:
+          tkneResult.value === "—" || !hasHkStatus(tkneResult.value),
         tkneRouteMismatch: tkneResult.routeMismatch,
       })
     }

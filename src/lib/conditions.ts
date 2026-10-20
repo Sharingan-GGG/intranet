@@ -13,10 +13,9 @@ import {
   OTHER_MESSAGE_CODES as OTHER_MESSAGE_CODES_ARR,
 } from "./messages-mother"
 import {
-  evaluateP3MotherFromFetch,
-  p3FetchResultToApiJson,
-  p3MotherLabelToTabStatus,
-} from "./p3-mother"
+  p3MainGridRowHasException,
+  tryP3ModelFromFetchResult,
+} from "./p3-process-data"
 import type {
   MotherTabKey,
   P3FetchResult,
@@ -59,18 +58,18 @@ export {
   flightHasException as flightRowHasException,
 } from "./flight-details"
 
-// --- P3 — js/p3.js mother (SOAP/XML, TKNE vs flights) when PNR_JSON is available
+// --- P3 (Mandatory Info) — red when the fetch/parse fails or any grid row is red
 export function getP3TabStatusFromFetch(
   result: P3FetchResult | null,
   pnrData?: PnrJsonData | null
 ): TabStatus {
   if (pnrData != null) {
-    const api = p3FetchResultToApiJson(result)
-    const label = evaluateP3MotherFromFetch(
-      pnrData as BookingJson,
-      api ?? undefined
-    )
-    return p3MotherLabelToTabStatus(label)
+    if (!pnrData.request?.confirmationId) return "pending"
+    const parsed = tryP3ModelFromFetchResult(result, pnrData)
+    if (!parsed.ok) return "exception"
+    return parsed.model.mainGrid.some(p3MainGridRowHasException)
+      ? "exception"
+      : "pending"
   }
   if (!result) return "exception"
   if (result.error) return "exception"

@@ -7,7 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { P3MainGridRow } from "@/lib/p3-process-data"
+import {
+  p3MainGridRowHasException,
+  type P3MainGridRow,
+} from "@/lib/p3-process-data"
 import { cn } from "@/lib/utils"
 
 const P3_PNR_GRID_HEADERS = [
@@ -23,28 +26,6 @@ const P3_PNR_GRID_HEADERS = [
   "DOCS",
   "TKNE",
 ] as const
-
-// "—", "-", "N/A", or empty counts as a missing value
-function isMissingValue(v: string | null | undefined): boolean {
-  const t = (v ?? "").trim()
-  return t === "" || t === "—" || t === "-" || t.toUpperCase() === "N/A"
-}
-
-// Row exception: missing/unmatched data from PNR, P3 (CTCE/CTCM/DOCS) or P4 (TKNE)
-function rowHasException(r: P3MainGridRow): boolean {
-  return (
-    r.ctceIsNa ||
-    r.ctcmIsNa ||
-    r.docsException ||
-    r.tkneException ||
-    r.tkneRouteMismatch ||
-    isMissingValue(r.status) ||
-    isMissingValue(r.ctce) ||
-    isMissingValue(r.ctcm) ||
-    isMissingValue(r.docs) ||
-    isMissingValue(r.tkne)
-  )
-}
 
 export function P3PnrMainGridTable({
   rows,
@@ -81,7 +62,7 @@ export function P3PnrMainGridTable({
           rows.map((r) => (
             <TableRow
               key={r.flightKey}
-              className={cn(rowHasException(r) && "bg-destructive/10")}
+              className={cn(p3MainGridRowHasException(r) && "bg-destructive/10")}
             >
               <TableCell className="text-xs whitespace-nowrap">
                 {r.flightsAndConf}

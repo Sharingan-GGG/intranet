@@ -4,11 +4,11 @@
  * DB: PNR_P3.SOAP (often base64 in JSON as result.soap + result.encoded)
  *
  * API: PNR_P3 (loaded via fetchDatabase.php with { table: "PNR_P3", pnr }).
- * Mother: #p3-status → Exception on any fetch/decode/A3S/TKNE failure path; else TKNE rule.
+ * Tab status: see getP3TabStatusFromFetch (conditions.ts) — red when any Mandatory Info row is.
  */
 
 import type { BookingJson, FlightSegment } from "./flight-details"
-import type { P3FetchResult, TabStatus } from "./pnr-types"
+import type { P3FetchResult } from "./pnr-types"
 
 export type P3ApiJson = {
   error?: string
@@ -131,7 +131,7 @@ export function getP3TkneData(bodyXml: string): Record<string, string[]> {
   return tkneData
 }
 
-const hasHkStatus = (val: string) =>
+export const hasHkStatus = (val: string) =>
   val &&
   String(val).trim() !== "" &&
   (String(val).toUpperCase().includes("HK") ||
@@ -193,35 +193,4 @@ export function hasP3ExceptionFromBodyXml(
     }
   }
   return false
-}
-
-/** Same as window.getP3StatusFromResult */
-export function getP3MotherStatusFromApiResult(
-  result: P3ApiJson,
-  data: BookingJson
-): "Pending" | "Exception" {
-  try {
-    const bodyXml = getP3BodyXmlFromApiResult(result)
-    return hasP3ExceptionFromBodyXml(bodyXml, data) ? "Exception" : "Pending"
-  } catch {
-    return "Exception"
-  }
-}
-
-/**
- * If no PNR in booking JSON, legacy does not set P3 mother — treat as Pending (no signal).
- */
-export function evaluateP3MotherFromFetch(
-  data: BookingJson | null | undefined,
-  result: P3ApiJson | null | undefined
-): "Pending" | "Exception" {
-  if (!data?.request?.confirmationId) return "Pending"
-  if (!result) return "Exception"
-  return getP3MotherStatusFromApiResult(result, data)
-}
-
-export function p3MotherLabelToTabStatus(
-  m: "Pending" | "Exception"
-): TabStatus {
-  return m === "Exception" ? "exception" : "pending"
 }
