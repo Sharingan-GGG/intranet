@@ -40,6 +40,18 @@ function parseDateString(s?: string): Date | undefined {
   return s ? new Date(s + "T00:00:00") : undefined
 }
 
+function groupRouteAirlines(flights: FlightRow[]): Record<string, string[]> {
+  const sets = new Map<string, Set<string>>()
+  for (const f of flights) {
+    const set = sets.get(f.route) ?? new Set<string>()
+    for (const seg of f.segments) set.add(seg.airline)
+    sets.set(f.route, set)
+  }
+  const map: Record<string, string[]> = {}
+  for (const [route, set] of sets) map[route] = [...set].sort()
+  return map
+}
+
 export function FilterHeader({
   flights,
   allFlights,
@@ -120,18 +132,10 @@ export function FilterHeader({
     [scoped]
   )
 
-  // Route → airlines available within the selected date range (for the routes dropdown).
-  const routeAirlines = useMemo(() => {
-    const map: Record<string, string[]> = {}
-    const sets = new Map<string, Set<string>>()
-    for (const f of flightsInRange) {
-      const set = sets.get(f.route) ?? new Set<string>()
-      for (const seg of f.segments) set.add(seg.airline)
-      sets.set(f.route, set)
-    }
-    for (const [route, set] of sets) map[route] = [...set].sort()
-    return map
-  }, [flightsInRange])
+  // Route → airlines for the routes dropdown: across the whole dataset (so every
+  // route keeps its logos) and within the selected date range (what actually flies).
+  const routeAirlinesAll = useMemo(() => groupRouteAirlines(pool), [pool])
+  const routeAirlines    = useMemo(() => groupRouteAirlines(flightsInRange), [flightsInRange])
 
   // Build month×airlines side panel data from flights.
   const monthAirlines = (() => {
@@ -175,6 +179,7 @@ export function FilterHeader({
         <RouteMultiSelect
           routes={routes}
           routeAirlines={routeAirlines}
+          routeAirlinesAll={routeAirlinesAll}
           value={selectedRoutes}
           onChange={setSelectedRoutes}
           favorites={favorites}
