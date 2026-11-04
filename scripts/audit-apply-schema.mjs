@@ -39,7 +39,10 @@ const FILES = [
   'tables/drift_events.sql',
   'tables/ga4_properties.sql',
   'tables/ga4_daily.sql',
+  'tables/wp_connections.sql',
   'views/tracker_latest_run.sql',
+  // After every table it triggers on; must run as postgres (owns the function).
+  'functions/wp_notify_status.sql',
 ]
 
 const bundle = FILES.map((f) => `-- ${'='.repeat(68)}\n-- ${f}\n-- ${'='.repeat(68)}\n\n${readFileSync(join(BASE, f), 'utf8').trim()}\n`).join('\n')

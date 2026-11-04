@@ -7,6 +7,8 @@ import { SITES } from '@/lib/audit-config'
 import { auditPath, DEFAULT_DASHBOARD_TAB } from '@/lib/audit-route'
 import { getAuditSession } from '@/lib/audit-user'
 import { fetchCounts } from '@/lib/audit-wordpress'
+import { fetchWpConnectionSummaries } from '@/lib/audit-wp'
+import { fmtAuditDate } from '@/lib/audit-types'
 import { TYPE_LABELS } from '@/lib/audit-types'
 
 /**
@@ -24,7 +26,10 @@ export default async function AuditDomainListPage() {
   if (!user) redirect('/login?redirect=/audit')
   if (!canAccess) return <AuditAccessDenied />
 
-  const counts = await Promise.all(SITES.map((site) => fetchCounts(site)))
+  const [counts, plugins] = await Promise.all([
+    Promise.all(SITES.map((site) => fetchCounts(site))),
+    fetchWpConnectionSummaries(),
+  ])
 
   return (
     <div className="shell">
@@ -53,6 +58,27 @@ export default async function AuditDomainListPage() {
             <p className="eyebrow">{site.short}</p>
             <h2 className="mt-1 text-lg font-bold">{site.label}</h2>
             <p className="muted small">{site.domain}</p>
+            {/* The WordPress plugin's state in this environment — see the
+                "WordPress plugin" section of src/app/audit/README.md. */}
+            {plugins[site.domain] && (
+              <p className="mt-2">
+                <span
+                  className="status-chip"
+                  style={
+                    plugins[site.domain]!.connected
+                      ? { background: 'var(--score-good-soft)', color: 'var(--score-good)' }
+                      : { background: 'var(--score-none-soft)', color: 'var(--ink-2)' }
+                  }
+                  title={
+                    plugins[site.domain]!.lastSeenAt
+                      ? `Last call from the plugin: ${fmtAuditDate(plugins[site.domain]!.lastSeenAt)}`
+                      : 'Key issued, but the plugin has not connected yet'
+                  }
+                >
+                  {plugins[site.domain]!.connected ? 'Plugin connected' : 'Plugin key issued'}
+                </span>
+              </p>
+            )}
             <div className="mt-4 flex gap-5">
               {site.types.map((type) => (
                 <div key={type}>

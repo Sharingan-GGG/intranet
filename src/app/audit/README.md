@@ -410,6 +410,109 @@ were on.
 **Not every site has a GA4 property** — TWCT does not. Those sites stay
 selectable and say so, rather than rendering an empty table that looks broken.
 
+## WordPress plugin (Audit Hub for WP)
+
+A WordPress plugin, **Audit Hub** (source: `~/Documents/Claude/Projects/Plugin/Audit Hub/`),
+adds an Audit Hub box to the post editor sidebar on each connected site. It has
+**Run Audit**, **Full Scan** / **Full Scan + SemRush**, **View in Audit Hub**, and
+the page's current status in both. It talks to this app server to server: the
+browser never calls the intranet.
+
+**Connected sites.** Each environment's own database lists its connections in
+`audit.wp_connections`, and the Domain List shows a badge per site: "Plugin
+connected" once the plugin has connected, or "Plugin key issued" before that.
+
+```bash
+node scripts/audit-wp-key.mjs .env.staging --list
+```
+
+| Site | Staging | Production |
+| ---- | ------- | ---------- |
+| roundabouttravel.com.au | — | — |
+| roundabouttravel.co.nz | — | — |
+| thewellconnectedtraveller.com.au | — | — |
+
+(Update this table as keys are issued; `--list` is the source of truth.)
+
+### Connecting a site
+
+1. Issue a key for the site in the environment you want. The script names the
+   target project and makes you type the environment:
+   ```bash
+   node scripts/audit-wp-key.mjs .env.staging roundabouttravel.com.au
+   ```
+   The key is printed **once**. Re-running rotates it, and the old key stops
+   working immediately. `--disable` turns a site off without deleting its row.
+2. In WordPress: **Settings → Audit Hub**. Paste the key under that environment
+   and click **Test connection**. That call (`/connect`) registers the plugin's
+   webhook URL and gives the plugin its webhook secret, so there is only one
+   value to copy.
+
+### Calls from WordPress to the intranet
+
+All of these are `POST` requests with `Authorization: Bearer <key>` and a JSON body.
+Middleware lets `/api/audit/*` through when any Authorization header is present.
+The routes check the key themselves: its sha256 has to be in `wp_connections`
+(`src/lib/audit-wp.ts`). A key only works for its own domain, and every URL must
+be on that domain, bare or `www.`.
+
+| Route | Body | Does |
+| ----- | ---- | ---- |
+| `/api/audit/wp/connect` | `{ webhookUrl?, pluginVersion? }` | Saves the webhook URL, which must be https on the site's own domain. Returns `webhookSecret`. |
+| `/api/audit/wp/status` | `{ urls: string[] }` (1–100) | Returns the Audit and Full Scan status, the dates, and the intranet paths for each URL. |
+| `/api/audit/wp/run` | `{ url, kind: 'audit' \| 'full' \| 'full-agent' }` | Queues the run and returns the fresh status. |
+
+`run` uses the same queue writes as the Dashboard buttons (`src/lib/audit-queue.ts`),
+with two extra rules:
+- A Full Scan is refused with a 409 unless the page is already on the Full Scan
+  list. Staging a page stays an Audit Hub decision.
+- A run that is already queued or in progress is refused with a 409.
+
+If the worker nudge fails, the response is `ok` with a `warning`: the row is
+queued and the worker polls anyway.
+
+Pages are matched by their **exact permalink**, as everywhere else in the hub,
+so the plugin always sends `get_permalink()`. If a post's URL changes, its
+earlier audit history stays under the old URL.
+
+### Status updates from the database to WordPress
+
+The workers write to Postgres directly, so the app never sees a run finish.
+Instead, the trigger `audit.wp_notify_status()`
+(`supabase/database/schemas/audit/functions/wp_notify_status.sql`) runs on every
+status change, insert or delete in `content_audits` and `seo_agent_tracker`. It
+sends a `pg_net` POST to the site's `webhook_url`:
+
+```
+X-Audit-Hub-Timestamp: <unix seconds>
+X-Audit-Hub-Signature: hex HMAC-SHA256("<timestamp>.<raw body>", webhook_secret)
+{ "domain", "url", "kind": "audit"|"full_scan", "status", "label", "at" }
+```
+
+A delete is sent as `status: "none"`, for example when a page is reverted out of
+the Full Scan list. The plugin verifies the signature and rejects timestamps
+older than 5 minutes. A site with no connection row costs one index lookup and
+sends nothing.
+
+The plugin also rechecks in-progress posts on its own interval (15 minutes by
+default) as a fallback for lost webhooks, and it checks immediately whenever
+someone clicks a button.
+
+### Rolling out to an environment
+
+Apply `tables/wp_connections.sql`, then `functions/wp_notify_status.sql`, both
+as postgres. For staging:
+
+```bash
+npx supabase db query --linked --project-ref <ref> -f <bundle>.sql
+```
+
+Run it from outside the repo. Production uses its own postgres connection.
+Then deploy the app, issue keys, and connect each plugin. Production also needs
+`AUDIT_ENABLED=true`, because `/api/audit/*` returns 404 without it.
+
+Applied: **staging** on 2026-11-05. Production: not yet.
+
 ## Access
 
 Three layers, the same as Pre-Departure:

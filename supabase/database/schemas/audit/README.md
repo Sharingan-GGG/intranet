@@ -13,8 +13,9 @@ There is no ledger, so note what you have applied where in the PR.
 ```
 schema.sql                      CREATE SCHEMA + grants
 types/                          yes_no, schedule_type, status_type
-tables/                         7 tables
+tables/                         audit tables, incl. wp_connections (WP plugin keys)
 views/tracker_latest_run.sql    DISTINCT ON newest run per tracker
+functions/wp_notify_status.sql  status-change webhook to WordPress (pg_net), see src/app/audit/README.md
 ```
 
 ## Applying
