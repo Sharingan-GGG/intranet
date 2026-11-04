@@ -497,7 +497,7 @@ export function AuditDashboard({
 
   const years = useMemo(() => {
     const set = new Set<string>()
-    for (const r of tabRows) if (r.modifiedAt) set.add(r.modifiedAt.slice(0, 4))
+    for (const r of tabRows) if (r.publishedAt) set.add(r.publishedAt.slice(0, 4))
     return [...set].sort().reverse()
   }, [tabRows])
 
@@ -531,7 +531,7 @@ export function AuditDashboard({
         return false
       if (auditFilter !== 'all' && r.contentStatus !== auditFilter) return false
       if (decisionFilter !== 'all' && r.decision !== decisionFilter) return false
-      if (yearFilter !== 'all' && r.modifiedAt?.slice(0, 4) !== yearFilter) return false
+      if (yearFilter !== 'all' && r.publishedAt?.slice(0, 4) !== yearFilter) return false
 
       if (assignedFilter === 'unassigned') {
         if (r.assigned.length) return false
@@ -1225,7 +1225,7 @@ export function AuditDashboard({
       <div className="audit-table-wrap card">
         <table className={`audit-table audit-table--${tab} text-sm`}>
           {/* Labels, plus the three controls that belong to one column each:
-              the Page sort, the WP Updated year and the GA4 views window. The
+              the Page sort, the WP published year and the GA4 views window. The
               last two are the heading — their column has no label beside them,
               because the control already says what the column holds. Every
               filter that scopes the whole list lives in the toolbar instead,
@@ -1273,10 +1273,10 @@ export function AuditDashboard({
               <Th name="updated">
                 <span className="th-sort">
                   <select
-                    title="Filter by the year the page was last updated in WordPress"
+                    title="Filter by the year the page was published in WordPress"
                     value={yearFilter}
                     onChange={(e) => setYearFilter(e.target.value)}
-                    aria-label="Filter by WP updated year"
+                    aria-label="Filter by WP published year"
                   >
                     <option value="all">All Years</option>
                     {years.map((y) => (
@@ -1296,7 +1296,7 @@ export function AuditDashboard({
                   whole list. Disabled when the site has no GA4 property, or GA
                   was unreachable — the queue never depends on it. */}
               <Th name="ga4views">
-                {/* The select is the heading: like the WP Updated column, the
+                {/* The select is the heading: like the WP Published column, the
                     control says what the column is, and a label beside it in a
                     cell this narrow only crowded it. Hence the short forms —
                     28D, 12M — which have to read as a column title. */}
@@ -1463,7 +1463,7 @@ export function AuditDashboard({
                     </Td>
                   )}
                   <Td name="updated" className="small tnum">
-                    {fmtAuditDate(row.modifiedAt)}
+                    {fmtAuditDate(row.publishedAt)}
                   </Td>
                   {/* A page GA has never seen and a page with no property
                       behind it both read as a dash: zero would claim we
