@@ -429,7 +429,7 @@ node scripts/audit-wp-key.mjs .env.staging --list
 | Site | Staging | Production |
 | ---- | ------- | ---------- |
 | roundabouttravel.com.au | — | — |
-| roundabouttravel.co.nz | — | — |
+| roundabouttravel.co.nz | connected 2026-11-05 | — |
 | thewellconnectedtraveller.com.au | — | — |
 
 (Update this table as keys are issued; `--list` is the source of truth.)
