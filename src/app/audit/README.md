@@ -511,7 +511,7 @@ Run it from outside the repo. Production uses its own postgres connection.
 Then deploy the app, issue keys, and connect each plugin. Production also needs
 `AUDIT_ENABLED=true`, because `/api/audit/*` returns 404 without it.
 
-Applied: **staging** on 2026-11-05. Production: not yet.
+Applied: **staging** and **production** (database only) on 2026-11-05.
 
 ## Access
 
