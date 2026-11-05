@@ -530,7 +530,7 @@ Run it from outside the repo. Production uses its own postgres connection.
 Then deploy the app, issue keys, and connect each plugin. Production also needs
 `AUDIT_ENABLED=true`, because `/api/audit/*` returns 404 without it.
 
-Applied: **staging** and **production** on 2026-11-05. Connect button (`wp_connect_codes`, `connected_by`): staging only so far.
+Applied: **staging** and **production** on 2026-11-05. Connect button (`wp_connect_codes`, `connected_by`): staging and production on 2026-11-05.
 
 ## Access
 
