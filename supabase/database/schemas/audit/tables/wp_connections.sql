@@ -12,6 +12,9 @@
 --                   because the database has to sign with it; the plugin
 --                   receives it from /api/audit/wp/connect, never by hand.
 --
+-- Keys come from either the plugin's Connect button (a one-time code exchanged
+-- server to server, see wp_connect_codes.sql) or scripts/audit-wp-key.mjs.
+--
 -- webhook_url is written by the plugin on connect (its own REST endpoint), so
 -- it follows the site rather than being typed in here.
 CREATE TABLE audit.wp_connections (
@@ -21,6 +24,9 @@ CREATE TABLE audit.wp_connections (
   webhook_url     text,
   enabled         boolean                  DEFAULT true NOT NULL,
   plugin_version  text,
+  -- Who connected the site with the plugin's Connect button (intranet email);
+  -- null for keys issued by scripts/audit-wp-key.mjs.
+  connected_by    text,
   created_at      timestamp with time zone DEFAULT now() NOT NULL,
   last_seen_at    timestamp with time zone
 );

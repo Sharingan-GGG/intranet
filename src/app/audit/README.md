@@ -436,17 +436,33 @@ node scripts/audit-wp-key.mjs .env.staging --list
 
 ### Connecting a site
 
-1. Issue a key for the site in the environment you want. The script names the
-   target project and makes you type the environment:
-   ```bash
-   node scripts/audit-wp-key.mjs .env.staging roundabouttravel.com.au
-   ```
-   The key is printed **once**. Re-running rotates it, and the old key stops
-   working immediately. `--disable` turns a site off without deleting its row.
-2. In WordPress: **Settings → Audit Hub**. Paste the key under that environment
-   and click **Test connection**. That call (`/connect`) registers the plugin's
-   webhook URL and gives the plugin its webhook secret, so there is only one
-   value to copy.
+**Normal way: the Connect button.** In WordPress, go to **Settings → Audit Hub →
+Connection → Connect**. It works like OAuth's authorization code with PKCE:
+
+1. The plugin sends the browser to `/audit/wp-connect?site=…&return=…&state=…&challenge=…`
+   on this intranet. Someone signed in with `route:audit` access sees which site and
+   which environment is asking, and clicks **Connect**
+   (`src/app/audit/wp-connect/`).
+2. The intranet saves a one-time code in `audit.wp_connect_codes` (only its hash,
+   with a 10-minute expiry and a single use) and sends the browser back to the site's
+   own `wp-admin/admin-post.php` with `code` and `state`. The return URL must be
+   https and on the site's own domain.
+3. WordPress's server calls `/api/audit/wp/exchange` with the code (as a bearer
+   token) and its PKCE verifier. The intranet creates the key there, so it only ever
+   travels server to server. It records who approved it (`connected_by`) and returns
+   the key. The plugin then calls `/connect` as usual.
+
+**Reconnect** in the plugin repeats this and replaces the key. The old key stops
+working immediately.
+
+**Fallback: the key script.** It names the target project and makes you type the
+environment:
+```bash
+node scripts/audit-wp-key.mjs .env.staging roundabouttravel.com.au
+```
+The key is printed **once** and pasted into the plugin under **Paste a key instead**.
+Run it in your own terminal, so the key never appears in a chat or log. `--disable`
+turns a site off. `--list` shows every connection, including who connected it.
 
 ### Calls from WordPress to the intranet
 
@@ -458,6 +474,7 @@ be on that domain, bare or `www.`.
 
 | Route | Body | Does |
 | ----- | ---- | ---- |
+| `/api/audit/wp/exchange` | `{ verifier }`, with `Bearer <connect code>` | The one route without a site key: trades a Connect code for a new key. |
 | `/api/audit/wp/connect` | `{ webhookUrl?, pluginVersion? }` | Saves the webhook URL, which must be https on the site's own domain. Returns `webhookSecret`. |
 | `/api/audit/wp/status` | `{ urls: string[] }` (1–100) | Returns the Audit and Full Scan status, the dates, and the intranet paths for each URL. |
 | `/api/audit/wp/run` | `{ url, kind: 'audit' \| 'full' \| 'full-agent' }` | Queues the run and returns the fresh status. |
@@ -500,8 +517,10 @@ someone clicks a button.
 
 ### Rolling out to an environment
 
-Apply `tables/wp_connections.sql`, then `functions/wp_notify_status.sql`, both
-as postgres. For staging:
+Apply `tables/wp_connections.sql`, `tables/wp_connect_codes.sql`, then
+`functions/wp_notify_status.sql`, all as postgres. An environment that already has
+`wp_connections` from before the Connect button also needs
+`ALTER TABLE audit.wp_connections ADD COLUMN IF NOT EXISTS connected_by text;`. For staging:
 
 ```bash
 npx supabase db query --linked --project-ref <ref> -f <bundle>.sql
@@ -511,7 +530,7 @@ Run it from outside the repo. Production uses its own postgres connection.
 Then deploy the app, issue keys, and connect each plugin. Production also needs
 `AUDIT_ENABLED=true`, because `/api/audit/*` returns 404 without it.
 
-Applied: **staging** and **production** (database only) on 2026-11-05.
+Applied: **staging** and **production** on 2026-11-05. Connect button (`wp_connect_codes`, `connected_by`): staging only so far.
 
 ## Access
 

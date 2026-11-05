@@ -40,6 +40,7 @@ const FILES = [
   'tables/ga4_properties.sql',
   'tables/ga4_daily.sql',
   'tables/wp_connections.sql',
+  'tables/wp_connect_codes.sql',
   'views/tracker_latest_run.sql',
   // After every table it triggers on; must run as postgres (owns the function).
   'functions/wp_notify_status.sql',

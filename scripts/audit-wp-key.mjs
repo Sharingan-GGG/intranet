@@ -87,7 +87,7 @@ async function main() {
   try {
     if (list) {
       const { rows } = await client.query(
-        `select domain, enabled, webhook_url, plugin_version, created_at, last_seen_at
+        `select domain, enabled, connected_by, webhook_url, plugin_version, created_at, last_seen_at
            from audit.wp_connections order by domain`,
       )
       console.log(`${target.toUpperCase()} — ${rows.length} connection(s)`)

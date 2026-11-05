@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 
-import { auditQuery } from './audit-db'
+import { auditQuery, auditTransaction } from './audit-db'
 import { SITES, type Site } from './audit-config'
 import { auditPath, contentPreCheckForPath } from './audit-route'
 import type { ContentAuditStatus, StatusType } from './audit-types'
@@ -228,4 +228,120 @@ export async function fetchWpConnectionSummaries(): Promise<Record<string, WpCon
   } catch {
     return {}
   }
+}
+
+// ---------------------------------------------------------------------------
+// The plugin's Connect button
+// ---------------------------------------------------------------------------
+//
+// Settings → Audit Hub → Connect sends the browser to /audit/wp-connect with
+// the WordPress site, a return URL, a CSRF `state` and a PKCE `challenge`.
+// Someone signed into the intranet with Audit Hub access approves; the browser
+// goes back to WordPress with a one-time code; WordPress's server trades code +
+// verifier for a site key at /api/audit/wp/exchange. The key is minted at that
+// moment and only ever travels server to server.
+
+const CODE_TTL_MINUTES = 10
+
+const b64url = (buf: Buffer) => buf.toString('base64url')
+
+/** The Audit Hub site a WordPress host belongs to (bare or www), or null. */
+export function siteForHost(host: unknown): Site | null {
+  if (typeof host !== 'string') return null
+  const bare = host.toLowerCase().replace(/^www\./, '')
+  return SITES.find((s) => s.domain === bare) ?? null
+}
+
+/**
+ * Where the plugin wants the browser sent back, if it is safe to send it there:
+ * https, on the site's own domain, and WordPress's admin-post endpoint. The
+ * code rides on this redirect, so it must never point anywhere else.
+ */
+export function safeReturnUrl(raw: unknown, site: Site): URL | null {
+  if (typeof raw !== 'string' || raw.length > 2048) return null
+  try {
+    const u = new URL(raw)
+    if (u.protocol !== 'https:') return null
+    if (u.username || u.password) return null
+    if (!urlBelongsTo(u.toString(), site.domain)) return null
+    if (!u.pathname.endsWith('/wp-admin/admin-post.php')) return null
+    return u
+  } catch {
+    return null
+  }
+}
+
+/** A PKCE S256 challenge: 43 base64url characters. */
+export const isChallenge = (v: unknown): v is string =>
+  typeof v === 'string' && /^[A-Za-z0-9_-]{43}$/.test(v)
+
+/** Mint a one-time connect code for `domain`, approved by `createdBy`. */
+export async function issueConnectCode(
+  domain: string,
+  challenge: string,
+  createdBy: string,
+): Promise<string> {
+  const code = `ahc_${b64url(randomBytes(32))}`
+  await auditQuery(
+    `insert into audit.wp_connect_codes (code_hash, domain, challenge, created_by, expires_at)
+     values ($1, $2, $3, $4, now() + make_interval(mins => $5))`,
+    [hashWpKey(code), domain, challenge, createdBy, CODE_TTL_MINUTES],
+  )
+  // Expired codes are useless; sweep them here rather than on a schedule.
+  await auditQuery(`delete from audit.wp_connect_codes where expires_at < now() - interval '1 day'`)
+  return code
+}
+
+export type ExchangeResult =
+  | { ok: true; key: string; domain: string; site: string; connectedBy: string }
+  | { ok: false; error: string }
+
+/**
+ * Trade a connect code + PKCE verifier for a new site key.
+ *
+ * Single use, inside one transaction: the code row is locked, checked and
+ * spent, and the site's key and webhook secret are replaced in the same commit
+ * — so a second exchange of the same code, or a race between two, gets nothing.
+ * Replacing the key is the point (it is how Connect rotates), so the old key
+ * stops working the moment this succeeds.
+ */
+export async function exchangeConnectCode(code: string, verifier: string): Promise<ExchangeResult> {
+  if (!/^ahc_[A-Za-z0-9_-]{43}$/.test(code) || !/^[A-Za-z0-9_-]{43,128}$/.test(verifier)) {
+    return { ok: false, error: 'Malformed code or verifier.' }
+  }
+
+  return auditTransaction(async (q) => {
+    const rows = await q<{ domain: string; challenge: string; created_by: string }>(
+      `select domain, challenge, created_by from audit.wp_connect_codes
+        where code_hash = $1 and used_at is null and expires_at > now()
+        for update`,
+      [hashWpKey(code)],
+    )
+    const row = rows[0]
+    if (!row) return { ok: false, error: 'This connect code is invalid, used or expired. Click Connect again.' }
+
+    const expected = Buffer.from(row.challenge)
+    const actual = Buffer.from(b64url(createHash('sha256').update(verifier).digest()))
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+      return { ok: false, error: 'The connect code does not match this request.' }
+    }
+
+    const site = SITES.find((s) => s.domain === row.domain)
+    if (!site) return { ok: false, error: 'This site is no longer in the Audit Hub.' }
+
+    await q(`update audit.wp_connect_codes set used_at = now() where code_hash = $1`, [hashWpKey(code)])
+
+    const key = `ahk_${b64url(randomBytes(32))}`
+    await q(
+      `insert into audit.wp_connections (domain, key_hash, webhook_secret, connected_by)
+       values ($1, $2, $3, $4)
+       on conflict (domain) do update
+         set key_hash = excluded.key_hash,
+             webhook_secret = excluded.webhook_secret,
+             connected_by = excluded.connected_by,
+             enabled = true`,
+      [row.domain, hashWpKey(key), b64url(randomBytes(32)), row.created_by],
+    )
+    return { ok: true, key, domain: row.domain, site: site.label, connectedBy: row.created_by }
+  })
 }
