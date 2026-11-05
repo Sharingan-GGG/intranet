@@ -137,6 +137,21 @@ export async function queueContentAudits(urls: string[], domain: string): Promis
  * A failed nudge is reported but not fatal — the row is queued regardless and
  * the workers also poll, so the run is delayed rather than lost.
  */
+/**
+ * How a routine trigger token authenticates.
+ *
+ * Routine trigger tokens are OAuth tokens (`sk-ant-oat…`), which must go in
+ * `Authorization: Bearer` — sent as `x-api-key` they get a 401
+ * "Authentication failed" (found 2026-11-05: every production content-audit
+ * nudge was being refused this way). Plain API keys (`sk-ant-api…`) keep
+ * using `x-api-key`.
+ */
+function authHeader(token: string): Record<string, string> {
+  return token.startsWith('sk-ant-oat')
+    ? { Authorization: `Bearer ${token}` }
+    : { 'x-api-key': token }
+}
+
 async function fireWorker(
   url: string | undefined,
   token: string | undefined,
@@ -148,10 +163,8 @@ async function fireWorker(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // These endpoints are Claude Code routine triggers on api.anthropic.com
-        // and the tokens are `sk-ant-` API keys, which authenticate with
-        // `x-api-key` — `Authorization: Bearer` is for OAuth tokens.
-        ...(token ? { 'x-api-key': token, 'anthropic-version': '2023-06-01' } : {}),
+        // These endpoints are Claude Code routine triggers on api.anthropic.com.
+        ...(token ? { ...authHeader(token), 'anthropic-version': '2023-06-01' } : {}),
       },
       cache: 'no-store',
     })
