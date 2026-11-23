@@ -45,6 +45,18 @@ export class SabreHostError extends Error {
  * True when a SOAP call failure should invalidate the cached session and retry with a
  * new SessionCreate. Driven by Sabre fault messages — not by `soap_session_token_expires_at`.
  */
+/**
+ * True when Sabre rejected the request because the cached SOAP session itself is stuck,
+ * not because of the PNR: a half-changed PNR left in the session's work area (NAK3 /
+ * "UPDATED PNR CURRENTLY IN AAA") or another request still running on the same session
+ * ("PREVIOUS ENTRY ACTIVE"). Reusing that session fails every later fetch, so callers
+ * regenerate the tokens (a fresh session) and retry once.
+ */
+export function isSoapStuckSessionReason(reason: unknown): boolean {
+  if (!(reason instanceof Error)) return false
+  return /NAK3|UPDATED PNR CURRENTLY IN AAA|PREVIOUS ENTRY ACTIVE/i.test(reason.message)
+}
+
 export function isSoapAuthFailureReason(reason: unknown): boolean {
   if (reason instanceof SabrePlatformAuthError) return true
   if (!(reason instanceof Error)) return false

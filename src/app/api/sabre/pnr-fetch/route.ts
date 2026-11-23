@@ -11,6 +11,7 @@ import {
   fetchSoapSessionClose,
   fetchSoapToken,
   isSoapAuthFailureReason,
+  isSoapStuckSessionReason,
   refreshJsonToken,
   refreshSoapToken,
   resolveSabreSoapBaseUrl,
@@ -184,9 +185,8 @@ export async function POST(req: Request) {
             soapConfig: config,
           })
 
-          if (hasSoapAuthFailure(p3Result)) {
-            await refreshSoapToken()
-            soapToken = await fetchSoapToken(config, { forceRefresh: true })
+          if (p3Result.status === "rejected" && needsNewSoapSession(p3Result.reason)) {
+            soapToken = await regenerateSabreTokens(config, p3Result.reason)
             ;[p3Result] = await runP3SoapFetch({
               pnr,
               includeP3: true,
@@ -252,9 +252,8 @@ export async function POST(req: Request) {
                 duration_ms: Date.now() - tP4,
               }
             } catch (err) {
-              if (isSoapAuthFailureReason(err)) {
-                await refreshSoapToken()
-                soapToken = await fetchSoapToken(config, { forceRefresh: true })
+              if (needsNewSoapSession(err)) {
+                soapToken = await regenerateSabreTokens(config, err)
                 const xml = await fetchSoapP4(
                   tk,
                   soapToken,
@@ -417,13 +416,29 @@ async function runP3SoapFetch({
   return Promise.allSettled([p3Promise])
 }
 
-function hasSoapAuthFailure(
-  ...results: PromiseSettledResult<string | null>[]
-): boolean {
-  return results.some(
-    (result) =>
-      result.status === "rejected" && isSoapAuthFailureReason(result.reason)
-  )
+function needsNewSoapSession(reason: unknown): boolean {
+  return isSoapAuthFailureReason(reason) || isSoapStuckSessionReason(reason)
+}
+
+/**
+ * Drop the cached SOAP session and start a new one. When the old session was stuck
+ * (NAK3 / PREVIOUS ENTRY ACTIVE) the JSON token is regenerated as well, the same as the
+ * manual fix of regenerating both tokens in pre_departure.sabre_tokens.
+ */
+async function regenerateSabreTokens(
+  config: SabrePlatformConfig,
+  reason: unknown
+): Promise<string> {
+  if (isSoapStuckSessionReason(reason)) {
+    console.warn(
+      "[SABRE] stuck SOAP session, regenerating json_token and soap_session_token:",
+      reason instanceof Error ? reason.message : String(reason)
+    )
+    await refreshJsonToken()
+    await fetchJsonToken(config, { forceRefresh: true })
+  }
+  await refreshSoapToken()
+  return fetchSoapToken(config, { forceRefresh: true })
 }
 
 async function persistSabrePnrScan({
