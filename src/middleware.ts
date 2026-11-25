@@ -65,6 +65,17 @@ const auditEnabled =
   process.env.NODE_ENV !== 'production' || process.env.AUDIT_ENABLED === 'true'
 
 /**
+ * The Security Quiz (app/security-quiz + api/quiz), gated the same way: on in
+ * `next dev`, absent from a production build unless it was built with
+ * SECURITY_QUIZ_ENABLED=true. `/api/quiz` has no trailing slash because the
+ * quiz's own GET endpoint is `/api/quiz` itself.
+ */
+const SECURITY_QUIZ_PREFIXES = ['/security-quiz', '/api/quiz']
+
+const securityQuizEnabled =
+  process.env.NODE_ENV !== 'production' || process.env.SECURITY_QUIZ_ENABLED === 'true'
+
+/**
  * Cookies that are dead weight but never expire on their own, and so accumulate in a
  * long-lived browser profile until the Cookie header outgrows the edge's header buffer and
  * every request to the site is rejected with a 400 before it ever reaches this app.
@@ -209,7 +220,8 @@ export default async function middleware(req: NextRequest) {
   // never as a login redirect that hints the module is there.
   const disabledModule =
     (!preDepartureEnabled && PRE_DEPARTURE_PREFIXES.some((p) => pathname.startsWith(p))) ||
-    (!auditEnabled && AUDIT_PREFIXES.some((p) => pathname.startsWith(p)))
+    (!auditEnabled && AUDIT_PREFIXES.some((p) => pathname.startsWith(p))) ||
+    (!securityQuizEnabled && SECURITY_QUIZ_PREFIXES.some((p) => pathname.startsWith(p)))
 
   if (disabledModule) {
     if (pathname.startsWith('/api/')) {

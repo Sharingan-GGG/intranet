@@ -1,0 +1,42 @@
+/*
+  CTG CYBERSECURITY QUIZ: SCOPED STYLES
+  ─────────────────────────────────────
+  The quiz uses the HOST's shadcn theme (bg-background, text-foreground, text-muted-foreground,
+  border, bg-card, bg-primary, text-destructive…) and the shadcn <Button>. Inside the Intranet that
+  means the quiz automatically matches the Intranet's own colours, font, radius and dark mode.
+  The quiz defines NO colours or fonts of its own, so it can't clash with the Intranet's.
+
+  This file only adds two accessibility rules, and ONLY inside the quiz's wrapper
+  (<div class="ctg-quiz">, see QuizRoot.tsx). Outside that wrapper they do nothing.
+
+  Rules this file must keep (quiz-css.test.ts checks them):
+    - no global selectors (html, body, :root, *): every rule starts with .ctg-quiz
+    - no @import: Tailwind + shadcn are loaded once by the host's globals.css
+    - no @theme tokens that could overwrite the host's names
+
+  HOW TO USE IT IN THE INTRANET
+    In the Intranet's globals.css, after its own imports:
+        @import "<path to>/components/quiz/quiz.css";
+*/
+
+@layer base {
+  /* A clear keyboard focus ring for things that don't draw their own (option cards, red-flag
+     buttons, links). shadcn components keep their own ring: their utilities beat this base rule.
+     Uses the host's text colour, so it is visible in light AND dark mode. */
+  .ctg-quiz :focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+
+  /* People who ask their OS for less motion get (almost) no animations, inside the quiz only. */
+  @media (prefers-reduced-motion: reduce) {
+    .ctg-quiz *,
+    .ctg-quiz *::before,
+    .ctg-quiz *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
